@@ -150,7 +150,7 @@ inferirá por correo, nombre, cargo o rol local.
 
 ## Fase 3 — Conciliación temporal
 
-Estado: estructura completada; carga y conciliación pendientes.
+Estado: inventario cargado; revisión manual de pendientes en curso.
 
 Se crearán tablas temporales en `staging`.
 
@@ -191,6 +191,8 @@ eliminarán mediante una migración de cierre.
 
 ## Fase 4 — Importación de Egresos
 
+Estado: completada y validada.
+
 La importación se implementará como comandos Artisan repetibles, nunca como una
 restauración directa del respaldo MySQL.
 
@@ -219,6 +221,8 @@ El registro detectado con ingreso en 2005 y egreso en 2025 quedará marcado para
 revisión, sin corregirse automáticamente.
 
 ## Fase 5 — Migración de Cirugías
+
+Estado: datos completados; conciliación de participantes pendiente.
 
 Se migrarán desde `HSJ_DATA.sql`:
 
@@ -356,4 +360,62 @@ Resultado verificado:
 - perfil `gestor_egresos` con 12 permisos;
 - perfil `administrador` con los 12 permisos de Egresos;
 - 11 pruebas Laravel aprobadas, con 33 aserciones;
-- todavía no se importaron datos personales ni registros operativos.
+- todavía no se habían importado datos personales ni registros operativos en
+  este primer bloque.
+
+### 25 de julio de 2026 — Conciliación e importaciones
+
+Respaldos nativos de SQL Server creados y verificados antes de importar:
+
+- `Intranet_HSJ_pre_egresos_20260725_143030.bak`;
+- `Intranet_HSJ_post_egresos_pre_cirugias_20260725_143449.bak`.
+
+Conciliación registrada en `staging`:
+
+| Entidad | Total | Coincidencias | Pendientes | Ambiguos |
+| --- | ---: | ---: | ---: | ---: |
+| Usuarios legados | 23 | 3 | 20 | 0 |
+| Personal médico | 50 | 18 | 27 | 5 |
+
+Importación de Egresos:
+
+- 13,023 CIE-10;
+- 5,872 egresos;
+- 16 importaciones históricas;
+- 37 constancias;
+- 41 registros de historial;
+- cero faltantes, sobrantes o huellas diferentes;
+- cero constancias e historiales huérfanos;
+- cero constancias sin historial;
+- cero correlativos duplicados.
+
+Importación de Cirugías:
+
+- 798 cirugías;
+- 11 importaciones históricas;
+- 5,796 participaciones profesionales;
+- cero faltantes, sobrantes o huellas diferentes;
+- cero participantes huérfanos.
+
+Las 5,796 participaciones conservan el nombre histórico y permanecen
+pendientes de conciliación. No se asignaron automáticamente porque los nombres
+de la hoja no ofrecen una coincidencia inequívoca con el maestro de personal.
+
+Los importadores se ejecutaron dos veces. Los conteos permanecieron idénticos,
+confirmando que la carga es idempotente.
+
+Comandos disponibles:
+
+```powershell
+php artisan hsj:reconcile-legacy-identities <egresos_BD.sql> <HSJ_DATA.sql>
+php artisan hsj:reconcile-legacy-identities <egresos_BD.sql> <HSJ_DATA.sql> --apply
+php artisan hsj:import-egresos <egresos_BD.sql>
+php artisan hsj:import-egresos <egresos_BD.sql> --apply
+php artisan hsj:validate-egresos <egresos_BD.sql>
+php artisan hsj:import-cirugias <HSJ_DATA.sql>
+php artisan hsj:import-cirugias <HSJ_DATA.sql> --apply
+php artisan hsj:validate-cirugias <HSJ_DATA.sql>
+```
+
+Sin `--apply`, los conciliadores e importadores funcionan en modo de
+simulación y no modifican las bases.

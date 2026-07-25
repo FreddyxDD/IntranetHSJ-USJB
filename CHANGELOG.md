@@ -20,6 +20,12 @@ los principios de Keep a Changelog.
   correlativos transaccionales, auditoría y tablas temporales de conciliación.
 - Doce permisos centrales de Egresos y perfiles `consulta_egresos`,
   `operador_egresos` y `gestor_egresos`.
+- Lectura controlada de respaldos MySQL, verificación SHA-256 e importadores
+  Artisan idempotentes para Egresos y Cirugías.
+- Validadores de conteos, huellas, relaciones, historiales, correlativos y
+  participantes quirúrgicos.
+- Inventario de conciliación en `staging` sin creación automática de cuentas
+  ni modificación del personal central.
 - Estándar institucional para integrar aplicaciones nuevas con
   `HSJ_Identity`, reutilizando usuarios, perfiles y permisos centrales.
 - Permisos funcionales de Cirugías para análisis, reportes, registros,

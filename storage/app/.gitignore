@@ -1,0 +1,6 @@
+*
+!templates/
+!templates/fua_template.xlsx
+!private/
+!public/
+!.gitignore

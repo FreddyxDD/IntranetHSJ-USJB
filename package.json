@@ -1,0 +1,18 @@
+{
+  "name": "intranethsj",
+  "version": "1.0.0",
+  "description": "Intranet institucional del Hospital San José sobre Laravel 13.",
+  "scripts": {
+    "build": "npm run build:css && npm run build:preline",
+    "build:css": "tailwindcss -i ./public/assets/css/tailwind-input.css -o ./public/assets/css/tailwind.css --minify",
+    "build:preline": "node ./tools/copy-preline.cjs"
+  },
+  "keywords": [],
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "dependencies": {
+    "@tailwindcss/cli": "^4.3.2",
+    "preline": "^4.2.0",
+    "tailwindcss": "^4.3.2"
+  }
+}

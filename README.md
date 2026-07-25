@@ -46,6 +46,31 @@ Las credenciales y nombres reales de servidores se configuran únicamente en
 - La autenticación y autorización nuevas consumen la base central
   `HSJ_Identity`.
 
+## Flujo de ramas y revisión
+
+El repositorio utiliza ramas temporales y Pull Requests para que cada entrega
+pueda revisarse antes de incorporarse a la versión estable.
+
+- `main`: rama estable y base del repositorio.
+- `agent/responsive-areas-preline`: contiene la publicación inicial del
+  proyecto y los cambios responsive que se encuentran en revisión.
+
+Como el repositorio estaba completamente vacío, primero se creó `main`.
+Posteriormente, el proyecto se publicó en una rama separada para que GitHub
+pudiera mostrar y revisar los 285 archivos antes de incorporarlos.
+
+La publicación inicial se revisa mediante el
+[Pull Request #1](https://github.com/FreddyxDD/IntranetHSJ-USJB/pull/1).
+Cuando sea aprobado y fusionado:
+
+1. Todo el proyecto pasará a `main`.
+2. Se podrá eliminar la rama `agent/responsive-areas-preline`.
+3. Las siguientes mejoras partirán de `main` y utilizarán ramas temporales
+   independientes.
+
+Este flujo evita modificar directamente la rama estable sin una revisión
+previa y conserva un historial claro de cada mejora.
+
 ## Recursos frontend
 
 Preline UI y Tailwind CSS se instalan mediante npm. Para generar los recursos

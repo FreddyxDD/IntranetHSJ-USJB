@@ -3,38 +3,266 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Constancia {{ str_pad((string) $constancia->numero, 4, '0', STR_PAD_LEFT) }}-{{ $constancia->anio }}</title>
+    <title>{{ $document['correlative'] }} - Constancia de Hospitalización</title>
     <style>
-        body{font-family:Arial,sans-serif;color:#172033;margin:0;background:#eef2f7}.sheet{box-sizing:border-box;width:210mm;min-height:297mm;margin:12px auto;padding:22mm;background:#fff;box-shadow:0 8px 30px #0002}.header{display:flex;align-items:center;gap:18px;border-bottom:3px solid #0b4a8b;padding-bottom:14px}.header img{width:72px}.header h1{font-size:19px;margin:0;color:#0b4a8b}.title{text-align:center;margin:42px 0 30px}.title h2{font-size:22px;text-decoration:underline}.body{font-size:15px;line-height:1.8;text-align:justify}.data{margin:24px 0;border-collapse:collapse;width:100%}.data td{padding:7px;border-bottom:1px solid #d8dee8}.footer{margin-top:60px;text-align:center}.cancelled{border:3px solid #b91c1c;color:#b91c1c;font-size:24px;font-weight:bold;margin:24px 0;padding:12px;text-align:center}.actions{position:fixed;right:20px;top:20px}.actions button{border:0;border-radius:10px;background:#0b63ce;color:#fff;padding:12px 18px;font-weight:bold;cursor:pointer}@media print{body{background:#fff}.sheet{margin:0;box-shadow:none}.actions{display:none}}@media(max-width:850px){.sheet{width:100%;min-height:100vh;margin:0;padding:24px}.actions{position:static;padding:12px;background:#fff;text-align:right}}
+        @page { size: A4 portrait; margin: 0; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; min-height: 100%; }
+        body {
+            background: #e5e7eb;
+            color: #000;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .print-actions {
+            position: fixed;
+            right: 18px;
+            top: 18px;
+            z-index: 20;
+        }
+        .print-actions button {
+            border: 0;
+            border-radius: 9px;
+            background: #0b63ce;
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 12px 18px;
+        }
+        .sheet {
+            background: #fff;
+            box-shadow: 0 8px 30px #0002;
+            height: 297mm;
+            margin: 12px auto;
+            overflow: hidden;
+            position: relative;
+            width: 210mm;
+        }
+        .minsa-logo {
+            height: 16mm;
+            left: 35mm;
+            object-fit: contain;
+            position: absolute;
+            top: 12mm;
+            width: 22mm;
+        }
+        .institution {
+            font-size: 9pt;
+            left: 20mm;
+            line-height: 5mm;
+            position: absolute;
+            top: 34mm;
+        }
+        .institution strong {
+            display: block;
+            font-size: 10pt;
+        }
+        .correlative {
+            align-items: center;
+            border: .8mm solid #000;
+            display: flex;
+            font-size: 11pt;
+            font-weight: 700;
+            height: 15mm;
+            justify-content: center;
+            left: 135mm;
+            position: absolute;
+            top: 12mm;
+            width: 60mm;
+        }
+        .watermark {
+            height: 170mm;
+            left: 20mm;
+            object-fit: contain;
+            opacity: .075;
+            position: absolute;
+            top: 63mm;
+            width: 170mm;
+            z-index: 0;
+        }
+        .document-title {
+            font-size: 16pt;
+            font-weight: 700;
+            left: 20mm;
+            position: absolute;
+            text-align: center;
+            top: 61mm;
+            width: 170mm;
+        }
+        .content {
+            font-size: 12pt;
+            left: 25mm;
+            line-height: 7mm;
+            position: absolute;
+            text-align: justify;
+            top: 88mm;
+            width: 160mm;
+            z-index: 1;
+        }
+        .content p { margin: 0; }
+        .statement-title {
+            font-weight: 700;
+            margin-top: 9mm !important;
+        }
+        .statement {
+            margin-top: 5mm !important;
+            text-indent: 10mm;
+        }
+        .diagnoses {
+            margin-top: 6mm;
+        }
+        .diagnoses-title {
+            font-weight: 700;
+            margin-bottom: 2mm;
+        }
+        .diagnosis {
+            font-size: 11pt;
+            line-height: 6mm;
+            margin-left: 10mm;
+            padding-left: 7mm;
+            position: relative;
+            text-align: left;
+        }
+        .diagnosis-number {
+            font-weight: 700;
+            left: 0;
+            position: absolute;
+        }
+        .closing {
+            margin-top: 10mm !important;
+            text-indent: 0;
+        }
+        .issue-date {
+            margin-top: 7mm !important;
+        }
+        .signature-area {
+            height: 47mm;
+            margin-top: 7mm;
+            position: relative;
+        }
+        .signature-line {
+            border-top: .2mm solid #000;
+            position: absolute;
+            right: 5mm;
+            text-align: center;
+            top: 25mm;
+            width: 62mm;
+        }
+        .signature-line strong,
+        .signature-line span {
+            display: block;
+            font-size: 9pt;
+            line-height: 5mm;
+        }
+        .initials {
+            bottom: 0;
+            font-size: 10pt;
+            font-weight: 700;
+            left: 0;
+            line-height: 5mm;
+            position: absolute;
+        }
+        .cancelled {
+            border: 1.2mm solid #b91c1c;
+            color: #b91c1c;
+            font-size: 22pt;
+            font-weight: 700;
+            left: 42mm;
+            opacity: .75;
+            padding: 4mm 8mm;
+            position: absolute;
+            text-align: center;
+            top: 133mm;
+            transform: rotate(-20deg);
+            width: 126mm;
+            z-index: 10;
+        }
+        @media print {
+            body { background: #fff; }
+            .sheet { box-shadow: none; margin: 0; }
+            .print-actions { display: none; }
+        }
+        @media screen and (max-width: 850px) {
+            .sheet {
+                margin: 0;
+                transform-origin: top left;
+            }
+            .print-actions { position: fixed; }
+        }
     </style>
 </head>
 <body>
-    <div class="actions"><button onclick="window.print()">Imprimir / guardar PDF</button></div>
+    <div class="print-actions">
+        <button type="button" onclick="window.print()">Imprimir / guardar PDF</button>
+    </div>
+
     <article class="sheet">
-        <header class="header">
-            <img src="/assets/images/logohsj.png" alt="Hospital San José">
-            <div><h1>HOSPITAL SAN JOSÉ DE CHINCHA</h1><div>Unidad de Estadística e Informática</div></div>
-        </header>
-        <div class="title"><h2>CONSTANCIA DE EGRESO HOSPITALARIO</h2><strong>N.° {{ str_pad((string) $constancia->numero, 4, '0', STR_PAD_LEFT) }}-{{ $constancia->anio }}</strong></div>
+        <img class="watermark" src="/assets/images/fondo.png" alt="" aria-hidden="true">
+        <img class="minsa-logo" src="/assets/images/logo.jpeg" alt="Ministerio de Salud">
+
+        <div class="institution">
+            <strong>DIRECCION REGIONAL DE SALUD</strong>
+            <div>Hospital San José: Av. Alva Maurtua N°600</div>
+            <div>056-261232 Telefax: 056-261421 Chincha Alta</div>
+        </div>
+
+        <div class="correlative">{{ $document['correlative'] }}</div>
+        <h1 class="document-title">CONSTANCIA DE HOSPITALIZACION</h1>
+
         @if ($constancia->estado === 'anulada')
-            <div class="cancelled">CONSTANCIA ANULADA<br><small>{{ $constancia->motivo_anulacion }}</small></div>
+            <div class="cancelled">
+                CONSTANCIA ANULADA
+                @if ($constancia->motivo_anulacion)
+                    <div style="font-size: 10pt; margin-top: 2mm;">{{ $constancia->motivo_anulacion }}</div>
+                @endif
+            </div>
         @endif
-        <section class="body">
-            <p>Se deja constancia que la persona cuyos datos se indican a continuación registra atención de hospitalización en esta institución:</p>
-            <table class="data">
-                <tr><td><strong>Paciente</strong></td><td>{{ $constancia->paciente }}</td></tr>
-                <tr><td><strong>Documento</strong></td><td>{{ $constancia->documento ?: 'No consignado' }}</td></tr>
-                <tr><td><strong>Historia clínica</strong></td><td>{{ $constancia->numhc }}</td></tr>
-                <tr><td><strong>Fecha de ingreso</strong></td><td>{{ $constancia->fecing?->format('d/m/Y') }}</td></tr>
-                <tr><td><strong>Fecha de egreso</strong></td><td>{{ $constancia->fecegr?->format('d/m/Y') }}</td></tr>
-                <tr><td><strong>Servicio / UPS</strong></td><td>{{ $constancia->servicio ?: $constancia->ups }}</td></tr>
-                <tr><td><strong>Diagnóstico principal</strong></td><td>{{ $constancia->coddiag1 }} — {{ $constancia->descdiag1 }}</td></tr>
-            </table>
-            <p>Se expide la presente constancia a solicitud del interesado para los fines que estime convenientes.</p>
-            @if ($constancia->observacion)<p><strong>Observación:</strong> {{ $constancia->observacion }}</p>@endif
-            <p>Chincha, {{ now()->translatedFormat('d \\d\\e F \\d\\e Y') }}.</p>
+
+        <section class="content">
+            <p>El que suscribe Director Ejecutivo del Hospital “San José” de Chincha, a través de la<br>Jefatura de la Oficina de Estadística e Informática:</p>
+
+            <p class="statement-title">HACE CONSTAR:</p>
+
+            <p class="statement">
+                Que, la paciente <strong>{{ $document['patient'] }}</strong>, identificada con
+                {{ $document['document_type'] }} N° <strong>{{ $document['document'] }}</strong>,
+                registra ingreso al servicio de hospitalización de
+                <strong>{{ $document['service'] }}</strong> desde el
+                <strong>{{ $document['admission_date'] }}</strong> hasta
+                <strong>{{ $document['discharge_date'] }}</strong>. Alta por Indicación Médica,
+                con condición de Alta Mejorado y pronóstico Bueno; según se registra en la hoja
+                automatizada de epicrisis de la Historia Clínica N°
+                <strong>{{ $document['history'] }}</strong>.
+            </p>
+
+            <div class="diagnoses">
+                <div class="diagnoses-title">Diagnóstico</div>
+                @forelse ($document['diagnoses'] as $diagnosis)
+                    <div class="diagnosis">
+                        <span class="diagnosis-number">{{ $loop->iteration }}.-</span>
+                        <strong>{{ $diagnosis['code'] }}:</strong>
+                        {{ $diagnosis['description'] }}
+                    </div>
+                @empty
+                    <div class="diagnosis">CIE-10: NO REGISTRADO</div>
+                @endforelse
+            </div>
+
+            <p class="closing">Se extiende la presente Constancia para los fines que estime conveniente, según lo solicitado por el recurrente.</p>
+
+            <p class="issue-date">Chincha Alta, {{ $document['issue_date'] }}</p>
+
+            <div class="signature-area">
+                <div class="signature-line">
+                    <strong>DIRECCIÓN EJECUTIVA</strong>
+                    <span>Hospital San José - Chincha</span>
+                </div>
+                <div class="initials">
+                    <div>{{ $document['director_initials'] }}/DE-HSJCH.</div>
+                    <div>{{ $document['ccp_initials'] }}/{{ $document['lower_code'] }}</div>
+                </div>
+            </div>
         </section>
-        <footer class="footer"><div>______________________________________</div><strong>{{ $constancia->issuer_display_name ?: 'Responsable autorizado' }}</strong><div>Hospital San José de Chincha</div></footer>
     </article>
 </body>
 </html>

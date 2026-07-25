@@ -7,6 +7,7 @@ use App\Models\Egresos\Cie10;
 use App\Models\Egresos\ConfiguracionConstancia;
 use App\Models\Egresos\Constancia;
 use App\Models\Egresos\Egreso;
+use App\Services\Egresos\ConstanciaDocumentPresenter;
 use App\Services\Egresos\ConstanciaTrace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -233,13 +234,18 @@ final class ConstanciaController extends Controller
         ]);
     }
 
-    public function print(Constancia $constancia): View
-    {
+    public function print(
+        Constancia $constancia,
+        ConstanciaDocumentPresenter $presenter
+    ): View {
         if (! ueei_tiene_permiso('egresos.history.view')
             && ! ueei_tiene_permiso('egresos.certificates.create')) {
             abort(403);
         }
 
-        return view('egresos.certificate', ['constancia' => $constancia]);
+        return view('egresos.certificate', [
+            'constancia' => $constancia,
+            'document' => $presenter->present($constancia),
+        ]);
     }
 }

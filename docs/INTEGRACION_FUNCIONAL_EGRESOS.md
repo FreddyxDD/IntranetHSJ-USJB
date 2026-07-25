@@ -147,8 +147,8 @@ La emisión se ejecuta dentro de una transacción SQL Server:
 
 ## Validaciones ejecutadas
 
-- 18 pruebas Laravel aprobadas;
-- 71 aserciones;
+- 20 pruebas Laravel aprobadas;
+- 83 aserciones;
 - sintaxis PHP validada;
 - rutas verificadas con `php artisan route:list --path=egresos`;
 - consulta real validada sobre 5,872 egresos;
@@ -186,3 +186,25 @@ La emisión se ejecuta dentro de una transacción SQL Server:
 No debe retirarse definitivamente la autenticación legada restante hasta que
 las cuentas pendientes hayan sido conciliadas y los usuarios hayan superado
 las pruebas de aceptación.
+
+## Conservación del formato institucional de la constancia
+
+La migración a Laravel mantiene el formato histórico de la
+`CONSTANCIA DE HOSPITALIZACION`. La modernización del módulo no autoriza
+cambios visuales o textuales en este documento.
+
+Se conservaron:
+
+- el logotipo del Ministerio de Salud y el encabezado de la Dirección Regional
+  de Salud;
+- el correlativo `N° 000-AAAA-HSJ-SERVICIO` dentro de su recuadro;
+- la marca de agua institucional del Hospital San José;
+- el título, la introducción, `HACE CONSTAR`, el texto de hospitalización y la
+  relación de diagnósticos CIE-10;
+- la fecha de expedición, el bloque de firma y las iniciales responsables;
+- la distribución original en una sola hoja A4.
+
+Laravel ahora prepara los datos mediante
+`ConstanciaDocumentPresenter` y Blade se limita a representar esta plantilla.
+El formato fue validado mediante una prueba de regresión y una impresión real
+de control de una página A4.

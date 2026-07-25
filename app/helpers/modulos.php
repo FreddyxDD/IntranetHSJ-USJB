@@ -13,6 +13,7 @@ function intranet_module_catalog(): array
         'produccion' => ['id' => 5, 'codigo' => 'produccion', 'nombre' => 'Producción', 'descripcion' => 'Indicadores de producción y rendimiento.', 'ruta' => '/produccion', 'icono' => '/assets/icon/Total_cirugias.png'],
         'eficiencia' => ['id' => 6, 'codigo' => 'eficiencia', 'nombre' => 'Eficiencia', 'descripcion' => 'Indicadores de eficiencia hospitalaria.', 'ruta' => '/eficiencia', 'icono' => '/assets/icon/Tasa_Urgencia.png'],
         'calidad' => ['id' => 7, 'codigo' => 'calidad', 'nombre' => 'Calidad', 'descripcion' => 'Indicadores de calidad institucional.', 'ruta' => '/calidad', 'icono' => '/assets/icon/Segura.png'],
+        'egresos' => ['id' => 8, 'codigo' => 'egresos', 'nombre' => 'Egresos', 'descripcion' => 'Consulta y emisión de constancias de egreso hospitalario.', 'ruta' => '/egresos', 'icono' => '/assets/images/EgresosHSJ.png'],
     ];
 }
 
@@ -26,6 +27,7 @@ function intranet_module_permission_map(): array
         'produccion' => ['produccion.view'],
         'eficiencia' => ['eficiencia.view'],
         'calidad' => ['calidad.view'],
+        'egresos' => ['egresos.view'],
     ];
 }
 

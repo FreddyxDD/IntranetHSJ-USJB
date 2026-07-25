@@ -5,6 +5,18 @@ los principios de Keep a Changelog.
 
 ## [Sin publicar]
 
+### Egresos - entrega funcional
+
+- Módulo Laravel nativo con panel, búsqueda paginada, detalle, CIE-10,
+  historial y vista imprimible de constancias.
+- Emisión de constancias con correlativo SQL Server por cuenta y año,
+  historial obligatorio y evento central de auditoría.
+- Autorización exclusiva mediante sesión y permisos de `HSJ_Identity`.
+- Interfaz responsive compilada con Tailwind y Preline.
+- 17 pruebas Laravel aprobadas con 54 aserciones.
+- Consulta comprobada sobre 5,872 egresos y emisión validada dentro de una
+  transacción revertida, sin datos de prueba residuales.
+
 ### Planificado
 
 - Consolidación de Egresos y Cirugías en `Intranet_HSJ`, manteniendo

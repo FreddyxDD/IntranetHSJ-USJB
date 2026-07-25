@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\LegacyApplicationController;
 use App\Http\Controllers\Appointments\AppointmentApiController;
+use App\Http\Controllers\Egresos\ConstanciaController;
+use App\Http\Controllers\Egresos\EgresoController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +24,38 @@ Route::middleware('legacy.module:citas_admin')->group(function (): void {
     Route::put('/api/citas-admin/citas-diarias/{programacion}/estado', [AppointmentApiController::class, 'updateProgramState'])
         ->whereNumber('programacion')
         ->name('appointments.program-state');
+});
+
+Route::prefix('egresos')->middleware('legacy.module:egresos')->group(function (): void {
+    Route::get('/', [EgresoController::class, 'index'])
+        ->middleware('central.permission:egresos.view')
+        ->name('egresos.index');
+    Route::get('/api/dashboard', [EgresoController::class, 'dashboard'])
+        ->middleware('central.permission:egresos.records.view')
+        ->name('egresos.dashboard');
+    Route::get('/api/registros', [EgresoController::class, 'search'])
+        ->middleware('central.permission:egresos.records.view')
+        ->name('egresos.records.index');
+    Route::get('/api/registros/{egreso}', [EgresoController::class, 'show'])
+        ->whereNumber('egreso')
+        ->middleware('central.permission:egresos.records.view')
+        ->name('egresos.records.show');
+    Route::get('/api/estadisticas/mensuales', [EgresoController::class, 'monthly'])
+        ->middleware('central.permission:egresos.reports.view')
+        ->name('egresos.statistics.monthly');
+    Route::get('/api/cie10', [EgresoController::class, 'cie10'])
+        ->middleware('central.permission:egresos.records.view')
+        ->name('egresos.cie10');
+    Route::get('/api/constancias', [EgresoController::class, 'certificates'])
+        ->middleware('central.permission:egresos.history.view')
+        ->name('egresos.certificates.index');
+    Route::post('/api/constancias', [ConstanciaController::class, 'store'])
+        ->middleware('central.permission:egresos.certificates.create')
+        ->name('egresos.certificates.store');
+    Route::get('/constancias/{constancia}/imprimir', [ConstanciaController::class, 'print'])
+        ->whereNumber('constancia')
+        ->middleware('central.permission:egresos.view')
+        ->name('egresos.certificates.print');
 });
 
 Route::any('/{path?}', LegacyApplicationController::class)

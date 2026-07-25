@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureLegacyModuleAccess;
+use App\Http\Middleware\EnsureCentralPermission;
 use App\Support\UserFacingError;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'legacy.module' => EnsureLegacyModuleAccess::class,
+            'central.permission' => EnsureCentralPermission::class,
         ]);
 
         // Compatibilidad temporal: los formularios existentes conservan sus

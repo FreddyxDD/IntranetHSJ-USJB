@@ -18,6 +18,9 @@ final class EgresosViewTest extends TestCase
             'permissions' => [],
             'abilities' => [
                 'viewRecords' => true,
+                'createRecords' => true,
+                'updateRecords' => true,
+                'manageImports' => true,
                 'createCertificates' => true,
                 'updateCertificates' => true,
                 'cancelCertificates' => true,
@@ -31,6 +34,9 @@ final class EgresosViewTest extends TestCase
         self::assertStringContainsString('window.EGRESOS_CONFIG', $html);
         self::assertStringContainsString('manageConfiguration', $html);
         self::assertStringContainsString('dashboardUrl', $html);
+        self::assertStringContainsString('Registrar excepción', $html);
+        self::assertStringContainsString('Importación masiva controlada', $html);
+        self::assertStringContainsString('Exportar XLSX', $html);
         self::assertStringNotContainsString('192.168.3.246:8002/egresos/api', $html);
     }
 }

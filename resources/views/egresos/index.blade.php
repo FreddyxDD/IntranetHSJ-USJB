@@ -65,6 +65,12 @@
 
         <div class="mt-6 flex gap-2 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm" role="tablist">
             <button class="eg-tab whitespace-nowrap rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white" data-panel="records">Consultar egresos</button>
+            @if ($abilities['manageImports'])
+                <button class="eg-tab whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100" data-panel="imports">Importar</button>
+            @endif
+            @if ($abilities['viewReports'])
+                <button class="eg-tab whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100" data-panel="reports">Reportes</button>
+            @endif
             @if ($abilities['viewHistory'])
                 <button class="eg-tab whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100" data-panel="history">Historial de constancias</button>
             @endif
@@ -75,10 +81,15 @@
 
         <section id="panel-records" class="eg-panel mt-4">
             <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-                <form id="search-form" class="flex flex-col gap-3 sm:flex-row">
+                <form id="search-form" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto_auto]">
                     <label class="sr-only" for="search-query">Buscar paciente</label>
                     <input id="search-query" type="search" maxlength="150" placeholder="Historia clínica, DNI, nombres o apellidos" class="min-h-12 flex-1 rounded-xl border border-slate-300 px-4 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                    <input id="search-from" type="date" aria-label="Fecha desde" class="min-h-12 rounded-xl border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                    <input id="search-to" type="date" aria-label="Fecha hasta" class="min-h-12 rounded-xl border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
                     <button class="min-h-12 rounded-xl bg-blue-600 px-6 font-bold text-white shadow-sm hover:bg-blue-700" type="submit">Buscar</button>
+                    @if ($abilities['createRecords'])
+                        <button id="new-record" class="min-h-12 rounded-xl bg-emerald-600 px-5 font-bold text-white hover:bg-emerald-700" type="button">Registrar excepción</button>
+                    @endif
                 </form>
                 <p id="records-status" class="mt-3 text-sm text-slate-500" aria-live="polite">Cargando registros recientes…</p>
             </div>
@@ -95,6 +106,52 @@
                 <div id="records-pagination" class="flex items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm"></div>
             </div>
         </section>
+
+        @if ($abilities['manageImports'])
+            <section id="panel-imports" class="eg-panel mt-4 hidden">
+                <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,.8fr)]">
+                    <form id="import-form" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                        <h2 class="text-lg font-black text-blue-950">Importación masiva controlada</h2>
+                        <p class="mt-1 text-sm text-slate-500">Formatos admitidos: CSV, XLSX y DBF. Se validarán encabezados, fechas, CIE-10 y duplicados antes de insertar.</p>
+                        <label class="mt-5 block rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/60 p-6 text-center">
+                            <span class="block text-sm font-bold text-blue-950">Seleccione el archivo de egresos</span>
+                            <input name="archivo" type="file" required accept=".csv,.xlsx,.dbf" class="mt-4 block w-full text-sm">
+                        </label>
+                        <div class="mt-5 flex items-center justify-end gap-3">
+                            <span id="import-status" class="mr-auto text-sm text-slate-600" aria-live="polite"></span>
+                            <button type="submit" class="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">Procesar archivo</button>
+                        </div>
+                        <div id="import-result" class="mt-4 hidden rounded-xl border border-slate-200 p-4 text-sm"></div>
+                    </form>
+                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                        <h2 class="text-lg font-black text-blue-950">Importaciones recientes</h2>
+                        <div id="imports-list" class="mt-4 space-y-3"></div>
+                    </div>
+                </div>
+            </section>
+        @endif
+
+        @if ($abilities['viewReports'])
+            <section id="panel-reports" class="eg-panel mt-4 hidden">
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                        <form id="report-form" class="grid flex-1 gap-3 sm:grid-cols-3">
+                            <label><span class="mb-1 block text-xs font-bold uppercase text-slate-500">Desde</span><input name="date_from" type="date" class="min-h-11 w-full rounded-xl border border-slate-300 px-3"></label>
+                            <label><span class="mb-1 block text-xs font-bold uppercase text-slate-500">Hasta</span><input name="date_to" type="date" class="min-h-11 w-full rounded-xl border border-slate-300 px-3"></label>
+                            <button class="min-h-11 self-end rounded-xl bg-blue-600 px-5 font-bold text-white">Actualizar reporte</button>
+                        </form>
+                        <div class="flex gap-2">
+                            <a id="export-csv" href="#" class="rounded-xl border border-emerald-200 px-4 py-3 text-sm font-bold text-emerald-700 hover:bg-emerald-50">Exportar CSV</a>
+                            <a id="export-xlsx" href="#" class="rounded-xl border border-blue-200 px-4 py-3 text-sm font-bold text-blue-700 hover:bg-blue-50">Exportar XLSX</a>
+                        </div>
+                    </div>
+                    <div class="mt-6 grid gap-5 lg:grid-cols-2">
+                        <div><h3 class="font-bold text-blue-950">Egresos por mes</h3><div id="monthly-report" class="mt-3 space-y-2"></div></div>
+                        <div><h3 class="font-bold text-blue-950">Egresos por UPS</h3><div id="services-report" class="mt-3 max-h-96 space-y-2 overflow-y-auto"></div></div>
+                    </div>
+                </div>
+            </section>
+        @endif
 
         @if ($abilities['viewHistory'])
             <section id="panel-history" class="eg-panel mt-4 hidden">
@@ -154,8 +211,41 @@
                     @if ($abilities['createCertificates'])
                         <button id="create-certificate" class="rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700">Generar constancia</button>
                     @endif
+                    @if ($abilities['updateRecords'])
+                        <button id="edit-record" class="rounded-xl bg-amber-500 px-4 py-2 font-bold text-white hover:bg-amber-600">Corregir egreso</button>
+                    @endif
                 </div>
             </div>
+        </div>
+    </div>
+
+    <div id="record-modal" class="hs-overlay fixed inset-0 z-[90] hidden size-full overflow-y-auto bg-slate-950/50" role="dialog" tabindex="-1">
+        <div class="m-3 flex min-h-[calc(100%-1.5rem)] items-center justify-center py-5">
+            <form id="record-form" class="w-full max-w-4xl rounded-2xl bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 id="record-modal-title" class="font-bold text-blue-950">Registrar egreso excepcional</h2><p class="text-xs text-slate-500">Los cambios quedarán asociados a su cuenta central.</p></div><button type="button" data-hs-overlay="#record-modal" class="rounded-lg p-2 hover:bg-slate-100">✕</button></div>
+                <div class="grid max-h-[70vh] gap-4 overflow-y-auto p-5 sm:grid-cols-2 lg:grid-cols-3">
+                    @foreach ([
+                        ['numhc', 'Historia clínica', 'text', false],
+                        ['doc_iden', 'Documento', 'text', false],
+                        ['nomb', 'Nombres', 'text', true],
+                        ['apell', 'Apellidos', 'text', true],
+                        ['sexo', 'Sexo', 'text', false],
+                        ['edad', 'Edad', 'text', false],
+                        ['fecing', 'Fecha de ingreso', 'date', true],
+                        ['fecegr', 'Fecha de egreso', 'date', true],
+                        ['ups', 'UPS / Servicio', 'text', true],
+                        ['condicion', 'Condición de egreso', 'text', false],
+                        ['financia', 'Financiamiento', 'text', false],
+                        ['coddiag1', 'Diagnóstico principal CIE-10', 'text', true],
+                        ['coddiag2', 'Diagnóstico 2', 'text', false],
+                        ['coddiag3', 'Diagnóstico 3', 'text', false],
+                        ['coddiag4', 'Diagnóstico 4', 'text', false],
+                    ] as [$name, $label, $type, $required])
+                        <label><span class="mb-1.5 block text-sm font-bold text-slate-700">{{ $label }}</span><input name="{{ $name }}" type="{{ $type }}" @required($required) maxlength="150" class="min-h-11 w-full rounded-xl border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"></label>
+                    @endforeach
+                </div>
+                <div class="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4"><span id="record-status" class="mr-auto text-sm text-rose-700"></span><button type="button" data-hs-overlay="#record-modal" class="rounded-xl border border-slate-300 px-4 py-2 font-semibold">Cancelar</button><button type="submit" class="rounded-xl bg-blue-600 px-5 py-2 font-bold text-white">Guardar con auditoría</button></div>
+            </form>
         </div>
     </div>
 
@@ -198,6 +288,11 @@
         window.EGRESOS_CONFIG = {{ Illuminate\Support\Js::from([
             'dashboardUrl' => route('egresos.dashboard', [], false),
             'recordsUrl' => route('egresos.records.index', [], false),
+            'importsUrl' => route('egresos.imports.index', [], false),
+            'monthlyUrl' => route('egresos.statistics.monthly', [], false),
+            'servicesUrl' => route('egresos.statistics.services', [], false),
+            'reportCsvUrl' => route('egresos.reports.csv', [], false),
+            'reportXlsxUrl' => route('egresos.reports.xlsx', [], false),
             'historyUrl' => route('egresos.certificates.index', [], false),
             'certificateUrl' => route('egresos.certificates.store', [], false),
             'configurationUrl' => route('egresos.configuration.show', [], false),

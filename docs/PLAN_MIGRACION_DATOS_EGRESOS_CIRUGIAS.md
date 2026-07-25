@@ -5,6 +5,9 @@
 - Estado: implementación en curso.
 - Plan inicial publicado en el commit `54566fe`.
 - Fases 1 y 2 aplicadas el 25 de julio de 2026.
+- Operación funcional de Egresos completada el 25 de julio de 2026:
+  registro excepcional, corrección auditada, importación desde interfaz,
+  reportes y exportaciones.
 - Base operativa destino: `Intranet_HSJ`.
 - Base central de identidad: `HSJ_Identity`.
 - Fuente clínica externa: SIGH, exclusivamente de lectura.
@@ -190,6 +193,9 @@ conciliación, las tablas `staging` se exportarán como evidencia y luego se
 eliminarán mediante una migración de cierre.
 
 ## Fase 4 — Importación de Egresos
+
+Estado: completada para la carga histórica y habilitada para la operación
+controlada desde la interfaz.
 
 Estado: completada y validada.
 

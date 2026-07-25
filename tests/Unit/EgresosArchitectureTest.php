@@ -7,6 +7,7 @@ use App\Models\Egresos\ConfiguracionConstancia;
 use App\Models\Egresos\Constancia;
 use App\Models\Egresos\ConstanciaHistorial;
 use App\Models\Egresos\Egreso;
+use App\Models\Egresos\Importacion;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -34,6 +35,7 @@ final class EgresosArchitectureTest extends TestCase
         self::assertSame('egresos.constancia_historial', (new ConstanciaHistorial)->getTable());
         self::assertSame('catalogos.cie10', (new Cie10)->getTable());
         self::assertSame('egresos.configuracion_constancias', (new ConfiguracionConstancia)->getTable());
+        self::assertSame('egresos.importaciones', (new Importacion)->getTable());
     }
 
     public function test_routes_are_declared_before_the_legacy_fallback(): void
@@ -43,6 +45,10 @@ final class EgresosArchitectureTest extends TestCase
         $update = Route::getRoutes()->getByName('egresos.certificates.update');
         $cancel = Route::getRoutes()->getByName('egresos.certificates.cancel');
         $configuration = Route::getRoutes()->getByName('egresos.configuration.update');
+        $recordCreate = Route::getRoutes()->getByName('egresos.records.store');
+        $recordUpdate = Route::getRoutes()->getByName('egresos.records.update');
+        $import = Route::getRoutes()->getByName('egresos.imports.store');
+        $export = Route::getRoutes()->getByName('egresos.reports.xlsx');
 
         self::assertNotNull($index);
         self::assertContains('legacy.module:egresos', $index->gatherMiddleware());
@@ -52,6 +58,10 @@ final class EgresosArchitectureTest extends TestCase
         self::assertContains('central.permission:egresos.certificates.update', $update->gatherMiddleware());
         self::assertContains('central.permission:egresos.certificates.cancel', $cancel->gatherMiddleware());
         self::assertContains('central.permission:egresos.configuration.manage', $configuration->gatherMiddleware());
+        self::assertContains('central.permission:egresos.records.create', $recordCreate->gatherMiddleware());
+        self::assertContains('central.permission:egresos.records.update', $recordUpdate->gatherMiddleware());
+        self::assertContains('central.permission:egresos.imports.manage', $import->gatherMiddleware());
+        self::assertContains('central.permission:egresos.reports.view', $export->gatherMiddleware());
     }
 
     public function test_central_administrator_can_use_egresos_permissions(): void

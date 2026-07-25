@@ -1,10 +1,12 @@
 <?php
 
-use App\Http\Controllers\LegacyApplicationController;
 use App\Http\Controllers\Appointments\AppointmentApiController;
-use App\Http\Controllers\Egresos\ConstanciaController;
 use App\Http\Controllers\Egresos\ConfiguracionConstanciaController;
+use App\Http\Controllers\Egresos\ConstanciaController;
 use App\Http\Controllers\Egresos\EgresoController;
+use App\Http\Controllers\Egresos\ImportacionController;
+use App\Http\Controllers\Egresos\ReporteController;
+use App\Http\Controllers\LegacyApplicationController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
@@ -41,9 +43,31 @@ Route::prefix('egresos')->middleware('legacy.module:egresos')->group(function ()
         ->whereNumber('egreso')
         ->middleware('central.permission:egresos.records.view')
         ->name('egresos.records.show');
+    Route::post('/api/registros', [EgresoController::class, 'store'])
+        ->middleware('central.permission:egresos.records.create')
+        ->name('egresos.records.store');
+    Route::put('/api/registros/{egreso}', [EgresoController::class, 'update'])
+        ->whereNumber('egreso')
+        ->middleware('central.permission:egresos.records.update')
+        ->name('egresos.records.update');
     Route::get('/api/estadisticas/mensuales', [EgresoController::class, 'monthly'])
         ->middleware('central.permission:egresos.reports.view')
         ->name('egresos.statistics.monthly');
+    Route::get('/api/estadisticas/servicios', [EgresoController::class, 'services'])
+        ->middleware('central.permission:egresos.reports.view')
+        ->name('egresos.statistics.services');
+    Route::get('/api/importaciones', [ImportacionController::class, 'index'])
+        ->middleware('central.permission:egresos.imports.manage')
+        ->name('egresos.imports.index');
+    Route::post('/api/importaciones', [ImportacionController::class, 'store'])
+        ->middleware('central.permission:egresos.imports.manage')
+        ->name('egresos.imports.store');
+    Route::get('/reportes/egresos.csv', [ReporteController::class, 'csv'])
+        ->middleware('central.permission:egresos.reports.view')
+        ->name('egresos.reports.csv');
+    Route::get('/reportes/egresos.xlsx', [ReporteController::class, 'xlsx'])
+        ->middleware('central.permission:egresos.reports.view')
+        ->name('egresos.reports.xlsx');
     Route::get('/api/cie10', [EgresoController::class, 'cie10'])
         ->middleware('central.permission:egresos.records.view')
         ->name('egresos.cie10');

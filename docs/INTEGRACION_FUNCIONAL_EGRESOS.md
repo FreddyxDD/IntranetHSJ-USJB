@@ -32,6 +32,19 @@ El módulo usa:
 - vista institucional imprimible, compatible con impresión o PDF del navegador;
 - navbar, retorno al panel, perfil, cierre de sesión y footer institucionales;
 - interfaz responsive construida con Tailwind y Preline.
+- registro excepcional de egresos, protegido por permiso central y con
+  validación de fechas, CIE-10 y duplicidad;
+- corrección controlada de egresos con captura de valores anteriores y nuevos
+  en `auditoria.eventos`;
+- importación operativa de CSV, XLSX y DBF desde la interfaz;
+- validación previa por fila de encabezados, fechas, campos mínimos,
+  diagnósticos CIE-10 y duplicados;
+- resumen por lote con insertados, omitidos y observados, asociado a la cuenta
+  central y a la huella SHA-256 del archivo;
+- historial de importaciones recientes;
+- reportes por mes y UPS filtrables por fechas;
+- exportación de egresos a CSV UTF-8 y XLSX, protegida contra fórmulas
+  inyectadas desde los datos.
 
 No se incorporaron el login ni el CRUD de usuarios del proyecto PHP entregado.
 
@@ -46,6 +59,10 @@ No se incorporaron el login ni el CRUD de usuarios del proyecto PHP entregado.
 | Editar constancia | `egresos.certificates.update` |
 | Anular constancia | `egresos.certificates.cancel` |
 | Consultar estadísticas | `egresos.reports.view` |
+| Registrar una excepción | `egresos.records.create` |
+| Corregir un egreso | `egresos.records.update` |
+| Importar y revisar lotes | `egresos.imports.manage` |
+| Exportar CSV/XLSX | `egresos.reports.view` |
 | Configurar constancias | `egresos.configuration.manage` |
 
 La impresión requiere acceso al módulo y, adicionalmente, permiso para
@@ -59,8 +76,15 @@ consultar historial o generar constancias.
 | GET | `/egresos/api/dashboard` | Indicadores |
 | GET | `/egresos/api/registros` | Búsqueda paginada |
 | GET | `/egresos/api/registros/{id}` | Detalle |
+| POST | `/egresos/api/registros` | Registro excepcional |
+| PUT | `/egresos/api/registros/{id}` | Corrección auditada |
 | GET | `/egresos/api/cie10` | Catálogo CIE-10 |
 | GET | `/egresos/api/estadisticas/mensuales` | Serie mensual |
+| GET | `/egresos/api/estadisticas/servicios` | Totales por UPS |
+| GET | `/egresos/api/importaciones` | Historial de lotes |
+| POST | `/egresos/api/importaciones` | Procesar CSV, XLSX o DBF |
+| GET | `/egresos/reportes/egresos.csv` | Exportación CSV |
+| GET | `/egresos/reportes/egresos.xlsx` | Exportación XLSX |
 | GET | `/egresos/api/constancias` | Historial |
 | POST | `/egresos/api/constancias` | Emisión transaccional |
 | PUT | `/egresos/api/constancias/{id}` | Edición transaccional |
@@ -86,8 +110,8 @@ La emisión se ejecuta dentro de una transacción SQL Server:
 
 ## Validaciones ejecutadas
 
-- 17 pruebas Laravel aprobadas;
-- 58 aserciones;
+- 18 pruebas Laravel aprobadas;
+- 71 aserciones;
 - sintaxis PHP validada;
 - rutas verificadas con `php artisan route:list --path=egresos`;
 - consulta real validada sobre 5,872 egresos;
@@ -101,12 +125,15 @@ La emisión se ejecuta dentro de una transacción SQL Server:
 - plantillas Blade compiladas;
 - `npm.cmd run build` ejecutado correctamente;
 - Tailwind y Preline publicados en `public/assets`.
+- migración `2026_07_25_200000_enable_central_egresos_operations` aplicada
+  en `Intranet_HSJ`;
+- importación CSV verificada contra SQL Server dentro de una transacción:
+  1 insertado, 0 omitidos y 0 observados;
+- rollback de control confirmado, conservando exactamente 5,872 egresos;
+- exportación XLSX real verificada con 5,872 registros.
 
 ## Pendientes controlados
 
-- alta y corrección manual de egresos;
-- importación operativa desde la interfaz;
-- reportes gráficos y exportaciones;
 - incorporación de imágenes de firmas mediante almacenamiento seguro;
 - conciliación manual de las 20 cuentas legadas aún pendientes.
 

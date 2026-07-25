@@ -2,9 +2,9 @@
 
 ## Estado del documento
 
-- Estado: aprobado para iniciar implementación.
-- Alcance de este cambio: documentación y preparación de la fase.
-- Mutaciones de bases de datos en este cambio: ninguna.
+- Estado: implementación en curso.
+- Plan inicial publicado en el commit `54566fe`.
+- Fases 1 y 2 aplicadas el 25 de julio de 2026.
 - Base operativa destino: `Intranet_HSJ`.
 - Base central de identidad: `HSJ_Identity`.
 - Fuente clínica externa: SIGH, exclusivamente de lectura.
@@ -69,6 +69,8 @@ personal, aplicaciones, perfiles y permisos.
 
 ## Fase 1 — Esquemas y modelo definitivo
 
+Estado: completada.
+
 ### Migraciones Laravel
 
 Se crearán migraciones compatibles con SQL Server para:
@@ -113,6 +115,8 @@ Las relaciones dentro de `Intranet_HSJ` sí serán obligatorias:
 
 ## Fase 2 — Identidad, perfiles y permisos
 
+Estado: completada.
+
 ### Permisos de Egresos
 
 Se registrarán en la aplicación central `intranet_hsj`:
@@ -145,6 +149,8 @@ Los perfiles deberán crearse con operaciones idempotentes. Ningún permiso se
 inferirá por correo, nombre, cargo o rol local.
 
 ## Fase 3 — Conciliación temporal
+
+Estado: estructura completada; carga y conciliación pendientes.
 
 Se crearán tablas temporales en `staging`.
 
@@ -328,3 +334,26 @@ La fase se considerará concluida cuando:
 - se hayan aprobado las pruebas funcionales y de seguridad;
 - exista respaldo y procedimiento de reversión;
 - los logins y CRUD locales hayan sido retirados después de la aprobación.
+
+## Registro de ejecución
+
+### 25 de julio de 2026 — Estructura e identidad
+
+Se ejecutaron correctamente las migraciones:
+
+- `2026_07_25_190000_create_intranet_domain_schemas`;
+- `2026_07_25_191000_create_egresos_domain_tables`;
+- `2026_07_25_192000_create_migration_staging_tables`;
+- `2026_07_25_193000_register_egresos_central_permissions`;
+- `2026_07_25_194000_configure_egresos_central_roles`.
+
+Resultado verificado:
+
+- 11 tablas nuevas en `Intranet_HSJ`;
+- 12 permisos centrales con prefijo `egresos.`;
+- perfil `consulta_egresos` con 3 permisos;
+- perfil `operador_egresos` con 8 permisos;
+- perfil `gestor_egresos` con 12 permisos;
+- perfil `administrador` con los 12 permisos de Egresos;
+- 11 pruebas Laravel aprobadas, con 33 aserciones;
+- todavía no se importaron datos personales ni registros operativos.

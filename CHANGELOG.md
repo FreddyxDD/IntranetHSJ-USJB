@@ -14,6 +14,12 @@ los principios de Keep a Changelog.
 
 ### Añadido
 
+- Esquemas SQL Server `egresos`, `cirugias`, `catalogos`, `auditoria` y
+  `staging` administrados mediante migraciones Laravel.
+- Modelo definitivo de Egresos con relaciones internas, índices, restricciones,
+  correlativos transaccionales, auditoría y tablas temporales de conciliación.
+- Doce permisos centrales de Egresos y perfiles `consulta_egresos`,
+  `operador_egresos` y `gestor_egresos`.
 - Estándar institucional para integrar aplicaciones nuevas con
   `HSJ_Identity`, reutilizando usuarios, perfiles y permisos centrales.
 - Permisos funcionales de Cirugías para análisis, reportes, registros,

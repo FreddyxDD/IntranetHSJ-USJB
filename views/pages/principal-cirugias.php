@@ -1,7 +1,13 @@
 <?php
-$usuario = $_SESSION['cirugias_usuario'] ?? '';
+$usuario = $_SESSION['ueei_nombre'] ?? $_SESSION['cirugias_usuario'] ?? '';
+$correo = $_SESSION['ueei_correo'] ?? '';
 $rol = (int) ($_SESSION['cirugias_rol'] ?? 1);
 $esAdmin = $rol === 0;
+$puedeAnalisis = ueei_tiene_permiso('cirugias.analytics.view');
+$puedeReportes = ueei_tiene_permiso('cirugias.reports.view');
+$puedeGestionarRegistros = ueei_tiene_permiso('cirugias.records.manage');
+$puedeImportar = ueei_tiene_permiso('cirugias.imports.manage');
+$puedeGestionarPersonal = ueei_tiene_permiso('cirugias.staff.manage');
 ?>
 
 <!DOCTYPE html>
@@ -37,38 +43,60 @@ $esAdmin = $rol === 0;
     <div class="layout">
         <aside class="sidebar">
             <div class="logo">
-                <i class="fa-solid fa-notes-medical"></i>
-                <span>Historial Clínico</span>
+                <img src="<?= e(url_path('/assets/images/logohsj.png')) ?>" alt="Hospital San José">
+                <span>Cirugías HSJ</span>
             </div>
 
-            <nav>
+            <nav aria-label="Navegación del módulo Cirugías">
                 <a href="#" id="menuInicio" class="active">
                     <i class="fa-solid fa-house"></i>
                     Inicio
                 </a>
 
-                <a href="#" id="menuAnalisis">
+                <a href="#" id="menuAnalisis" class="<?= $puedeAnalisis ? '' : 'permission-hidden' ?>">
                     <i class="fa-solid fa-chart-line"></i>
                     Análisis
                 </a>
 
-                <a href="#" id="menuReportes">
+                <a href="#" id="menuReportes" class="<?= $puedeReportes ? '' : 'permission-hidden' ?>">
                     <i class="fa-solid fa-file-lines"></i>
                     Reportes
                 </a>
 
-                <a href="#" id="menuGestion">
+                <a href="#" id="menuGestion" class="<?= $puedeGestionarPersonal ? '' : 'permission-hidden' ?>">
                     <i class="fa-solid fa-gear"></i>
                     Gestión
                 </a>
 
-                <a href="#" id="btnCerrarSesion" class="btn-logout">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                    Cerrar sesión
+                <a href="<?= e(url_path('/perfil')) ?>">
+                    <i class="fa-solid fa-user-shield"></i>
+                    Mi perfil
+                </a>
+
+                <?php if ($esAdmin): ?>
+                    <a href="<?= e(url_path('/admin-ueei')) ?>">
+                        <i class="fa-solid fa-users-gear"></i>
+                        Perfiles y accesos
+                    </a>
+                <?php endif; ?>
+
+                <a href="<?= e(url_path('/areas')) ?>" id="btnCerrarSesion" class="btn-logout">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Volver a módulos
                 </a>
             </nav>
         </aside>
         <main class="contenedor">
+            <header class="portal-context">
+                <div>
+                    <span>Hospital San José · Intranet institucional</span>
+                    <strong>Módulo de Cirugías</strong>
+                </div>
+                <div class="portal-context__user">
+                    <span><?= e($usuario ?: $correo) ?></span>
+                    <small><?= e($correo) ?></small>
+                </div>
+            </header>
 
             <div id="vistaInicio">
 
@@ -81,9 +109,9 @@ $esAdmin = $rol === 0;
                     <div class="acciones-tabla acciones-header">
                         <input type="file" id="archivoExcel" accept=".xlsx,.xls" hidden>
 
-                        <button id="btnSeleccionar" type="button">Seleccionar Excel</button>
-                        <button id="btnImportar" type="button">Subir</button>
-                        <button id="btnEliminar" type="button" class="btn-eliminar">Borrar datos</button>
+                        <button id="btnSeleccionar" type="button" class="<?= $puedeImportar ? '' : 'permission-hidden' ?>">Seleccionar Excel</button>
+                        <button id="btnImportar" type="button" class="<?= $puedeImportar ? '' : 'permission-hidden' ?>">Subir</button>
+                        <button id="btnEliminar" type="button" class="btn-eliminar <?= $puedeImportar ? '' : 'permission-hidden' ?>">Borrar datos</button>
                     </div>
 
                     <button id="btnModoOscuro" class="btn-dark" aria-hidden="true" tabindex="-1">
@@ -161,7 +189,7 @@ $esAdmin = $rol === 0;
                         <button id="btnLimpiarBusqueda" type="button">Limpiar</button>
                     </div>
 
-                    <button id="btnAgregar" type="button">Agregar registro</button>
+                    <button id="btnAgregar" type="button" class="<?= $puedeGestionarRegistros ? '' : 'permission-hidden' ?>">Agregar registro</button>
                 </div>
 
                 <div id="tabsMeses" class="tabs"></div>
@@ -903,7 +931,7 @@ $esAdmin = $rol === 0;
                             </div>
 
 
-                            <button type="button" id="btnAgregarPersonal">
+                            <button type="button" id="btnAgregarPersonal" class="<?= $puedeGestionarPersonal ? '' : 'permission-hidden' ?>">
                                 <i class="fa-solid fa-plus"></i>
                                 Agregar
                             </button>
@@ -1326,7 +1354,7 @@ $esAdmin = $rol === 0;
 
                         <div class="acciones-modal">
 
-                            <button type="button" id="btnEditarVista" class="btn-secundario">
+                            <button type="button" id="btnEditarVista" class="btn-secundario <?= $puedeGestionarRegistros ? '' : 'permission-hidden' ?>">
                                 Editar
                             </button>
 
@@ -1429,6 +1457,19 @@ $esAdmin = $rol === 0;
             
             <div id="toastContainer" class="toast-container"></div>
 
+            <footer class="cirugias-footer">
+                <div>
+                    <strong>Hospital San José</strong>
+                    <span>Unidad de Estadística e Información</span>
+                </div>
+                <nav aria-label="Enlaces institucionales">
+                    <a href="<?= e(url_path('/principal')) ?>">Inicio</a>
+                    <a href="<?= e(url_path('/areas')) ?>">Módulos</a>
+                    <a href="<?= e(url_path('/perfil')) ?>">Mi perfil</a>
+                </nav>
+                <small>Acceso administrado centralmente por HSJ Identity.</small>
+            </footer>
+
         </main>
     </div>
 
@@ -1438,6 +1479,13 @@ $esAdmin = $rol === 0;
     window.CIRUGIAS_USUARIO = "<?= e($usuario) ?>";
     window.CIRUGIAS_ROL = <?= (int) $rol ?>;
     window.CIRUGIAS_ES_ADMIN = <?= $esAdmin ? 'true' : 'false' ?>;
+    window.CIRUGIAS_PERMISOS = <?= json_encode([
+        'analytics' => $puedeAnalisis,
+        'reports' => $puedeReportes,
+        'records_manage' => $puedeGestionarRegistros,
+        'imports_manage' => $puedeImportar,
+        'staff_manage' => $puedeGestionarPersonal,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 
     const fetchOriginalCirugias = window.fetch.bind(window);
 

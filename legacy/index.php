@@ -70,6 +70,12 @@ function require_cirugias_admin(): void
     }
 }
 
+function require_cirugias_permission_api(string $permission): void
+{
+    require_modulo_api('cirugias');
+    require_permiso_api($permission);
+}
+
 /*
    NUEVA LÓGICA DE CITAS:
    Ya no se usa la sesión antigua $_SESSION['citas_admin_usuario'].
@@ -330,9 +336,6 @@ match (true) {
             exit;
         })(),
 
-    $method === 'POST' && $uri === '/login-ls'
-        => CirugiasAuthController::login(),
-
     $method === 'GET' && ($uri === '/me-ls' || $uri === '/me-cirugias')
         => CirugiasAuthController::me(),
 
@@ -347,26 +350,14 @@ match (true) {
         => (require_modulo('cirugias')) ?? (require_cirugias_login()) ?? require BASE_PATH . '/views/pages/principal-cirugias.php',
 
     $method === 'GET' && $uri === '/cirugias-admin'
-        => (require_modulo('cirugias')) ?? (require_cirugias_admin()) ?? require BASE_PATH . '/views/pages/cirugias-admin.php',
+        => (function (): void {
+            require_ueei_admin();
+            header('Location: ' . url_path('/admin-ueei'));
+            exit;
+        })(),
 
     $method === 'GET' && ($uri === '/manual-cirugias' || $uri === '/pages/manualLS.html')
-        => require BASE_PATH . '/views/pages/manual-cirugias.php',
-
-    /* ==============================
-       MÓDULO CIRUGÍAS - API ADMIN USUARIOS
-    ============================== */
-
-    $method === 'GET' && $uri === '/api/cirugias/usuarios'
-        => CirugiasAuthController::listarUsuarios(),
-
-    $method === 'POST' && ($uri === '/api/cirugias/usuarios' || $uri === '/cirugias/usuarios/crear')
-        => CirugiasAuthController::crearUsuario(),
-
-    $method === 'POST' && $uri === '/api/cirugias/usuarios/estado'
-        => CirugiasAuthController::cambiarEstadoUsuario(),
-
-    $method === 'POST' && $uri === '/api/cirugias/usuarios/eliminar'
-        => CirugiasAuthController::eliminarUsuario(),
+        => (require_modulo('cirugias')) ?? require BASE_PATH . '/views/pages/manual-cirugias.php',
 
     /* ==============================
        MÓDULO CIRUGÍAS - API PRINCIPAL
@@ -376,13 +367,22 @@ match (true) {
         => CirugiasController::listar(),
 
     $method === 'POST' && $uri === '/cirugias-manual'
-        => CirugiasController::crearManual(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.records.manage');
+            CirugiasController::crearManual();
+        })(),
 
     $method === 'PUT' && $cirugiaId !== null
-        => CirugiasController::actualizar($cirugiaId),
+        => (function () use ($cirugiaId): void {
+            require_cirugias_permission_api('cirugias.records.manage');
+            CirugiasController::actualizar($cirugiaId);
+        })(),
 
     $method === 'DELETE' && $uri === '/cirugias'
-        => CirugiasController::eliminarTodo(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.imports.manage');
+            CirugiasController::eliminarTodo();
+        })(),
 
     $method === 'GET' && $uri === '/cirugias-resumen'
         => CirugiasController::resumen(),
@@ -391,13 +391,24 @@ match (true) {
         => CirugiasController::hojas(),
 
     $method === 'POST' && $uri === '/excel-hojas'
-        => CirugiasController::excelHojas(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.imports.manage');
+            CirugiasController::excelHojas();
+        })(),
 
     $method === 'POST' && $uri === '/importar-cirugias'
-        => CirugiasController::importarExcel(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.imports.manage');
+            CirugiasController::importarExcel();
+        })(),
 
     ($method === 'GET' || $method === 'POST') && $uri === '/especialidades'
-        => CirugiasController::especialidades(),
+        => (function () use ($method): void {
+            if ($method === 'POST') {
+                require_cirugias_permission_api('cirugias.records.manage');
+            }
+            CirugiasController::especialidades();
+        })(),
 
     $method === 'GET' && ($uri === '/cie10' || $uri === '/cie10/buscar')
         => CirugiasController::cie10(),
@@ -409,19 +420,34 @@ match (true) {
         => CirugiasController::cie10Sexos(),
 
     $method === 'GET' && $uri === '/personal-medico'
-        => CirugiasController::personalMedico(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.staff.manage');
+            CirugiasController::personalMedico();
+        })(),
 
     $method === 'POST' && $uri === '/personal-medico'
-        => CirugiasController::crearPersonalMedico(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.staff.manage');
+            CirugiasController::crearPersonalMedico();
+        })(),
 
     $method === 'PUT' && $personalId !== null
-        => CirugiasController::actualizarPersonalMedico($personalId),
+        => (function () use ($personalId): void {
+            require_cirugias_permission_api('cirugias.staff.manage');
+            CirugiasController::actualizarPersonalMedico($personalId);
+        })(),
 
     $method === 'PUT' && $personalEstadoId !== null
-        => CirugiasController::cambiarEstadoPersonal($personalEstadoId),
+        => (function () use ($personalEstadoId): void {
+            require_cirugias_permission_api('cirugias.staff.manage');
+            CirugiasController::cambiarEstadoPersonal($personalEstadoId);
+        })(),
 
     $method === 'GET' && $uri === '/personal-medico/profesiones'
-        => CirugiasController::personalProfesiones(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.staff.manage');
+            CirugiasController::personalProfesiones();
+        })(),
 
     $method === 'GET' && ($uri === '/pacientes' || $uri === '/pacientes/buscar')
         => CirugiasController::pacientes(),
@@ -442,31 +468,58 @@ match (true) {
         => CirugiasController::importaciones(),
 
     $method === 'GET' && $uri === '/api/analisis/meses-disponibles'
-        => CirugiasController::analisisMeses(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.analytics.view');
+            CirugiasController::analisisMeses();
+        })(),
 
     $method === 'GET' && $uri === '/api/analisis/cirugias-mensual'
-        => CirugiasController::analisisMensual(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.analytics.view');
+            CirugiasController::analisisMensual();
+        })(),
 
     $method === 'GET' && $uri === '/api/analisis/tipo-orden'
-        => CirugiasController::analisisTipoOrden(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.analytics.view');
+            CirugiasController::analisisTipoOrden();
+        })(),
 
     $method === 'GET' && $uri === '/api/analisis/resumen-periodo'
-        => CirugiasController::analisisResumenPeriodo(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.analytics.view');
+            CirugiasController::analisisResumenPeriodo();
+        })(),
 
     $method === 'GET' && $uri === '/api/analisis/mayor-menor-electiva'
-        => CirugiasController::analisisMayorMenorElectiva(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.analytics.view');
+            CirugiasController::analisisMayorMenorElectiva();
+        })(),
 
     $method === 'GET' && $uri === '/api/analisis/especialidades'
-        => CirugiasController::analisisEspecialidades(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.analytics.view');
+            CirugiasController::analisisEspecialidades();
+        })(),
 
     $method === 'GET' && $uri === '/api/analisis/detalle-especialidad'
-        => CirugiasController::analisisDetalleEspecialidad(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.analytics.view');
+            CirugiasController::analisisDetalleEspecialidad();
+        })(),
 
     $method === 'GET' && $uri === '/api/reportes/meses-disponibles'
-        => CirugiasController::reportesMeses(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.reports.view');
+            CirugiasController::reportesMeses();
+        })(),
 
     $method === 'GET' && $uri === '/api/reportes/cirugias-mensual'
-        => CirugiasController::reporteMensual(),
+        => (function (): void {
+            require_cirugias_permission_api('cirugias.reports.view');
+            CirugiasController::reporteMensual();
+        })(),
 
     $method === 'GET' && ($uri === '/tablas-sigh' || $uri === '/api/tablas-sigh')
         => CirugiasController::tablasSigh(),

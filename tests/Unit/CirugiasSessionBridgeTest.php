@@ -21,7 +21,7 @@ final class CirugiasSessionBridgeTest extends TestCase
         self::assertSame(2, $session['cirugias_usuario_id']);
         self::assertSame('Administrador HSJ', $session['cirugias_usuario']);
         self::assertSame(0, $session['cirugias_rol']);
-        self::assertSame('/cirugias-admin', CirugiasSessionBridge::destination($session));
+        self::assertSame('/principal-cirugias', CirugiasSessionBridge::destination($session));
     }
 
     public function test_authorized_non_admin_keeps_operator_scope(): void

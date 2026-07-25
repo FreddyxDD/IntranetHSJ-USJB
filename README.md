@@ -46,6 +46,10 @@ Las credenciales y nombres reales de servidores se configuran únicamente en
 - La autenticación y autorización nuevas consumen la base central
   `HSJ_Identity`.
 
+El contrato obligatorio para integrar Cirugías y futuras aplicaciones está
+documentado en
+[Arquitectura central de identidad e integración](docs/ARQUITECTURA_IDENTIDAD_Y_APLICACIONES.md).
+
 ## Flujo de ramas y revisión
 
 El repositorio utiliza ramas temporales y Pull Requests para que cada entrega

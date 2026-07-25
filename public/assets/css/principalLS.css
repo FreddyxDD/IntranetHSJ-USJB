@@ -272,6 +272,13 @@ option {
     box-shadow: 0 14px 26px rgba(9, 200, 165, 0.28);
 }
 
+.logo img {
+    width: 54px;
+    height: 54px;
+    min-width: 54px;
+    object-fit: contain;
+}
+
 .logo span {
     color: var(--text-main);
     font-size: 24px;
@@ -366,6 +373,97 @@ option {
     background: linear-gradient(135deg, #008c84 0%, #006b66 100%);
     color: #ffffff;
     transform: none;
+}
+
+.permission-hidden {
+    display: none !important;
+}
+
+.portal-context {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 28px;
+    padding: 16px 20px;
+    border: 1px solid rgba(11, 111, 198, 0.14);
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.88);
+    box-shadow: var(--shadow-sm);
+    backdrop-filter: blur(14px);
+}
+
+.portal-context > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.portal-context span,
+.portal-context small {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.portal-context strong {
+    color: var(--text-main);
+    font-size: 18px;
+}
+
+.portal-context__user {
+    align-items: flex-end;
+    text-align: right;
+}
+
+.portal-context__user span {
+    color: var(--text-main);
+    font-weight: 800;
+}
+
+.cirugias-footer {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+    align-items: center;
+    gap: 24px;
+    margin-top: 36px;
+    padding: 24px 28px;
+    border-top: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    background: #ffffff;
+    box-shadow: 0 -8px 26px rgba(7, 63, 68, 0.05);
+}
+
+.cirugias-footer > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.cirugias-footer strong {
+    color: var(--text-main);
+}
+
+.cirugias-footer span,
+.cirugias-footer small {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.cirugias-footer nav {
+    display: flex;
+    justify-content: center;
+    gap: 18px;
+}
+
+.cirugias-footer a {
+    color: var(--color-primary-dark);
+    font-size: 13px;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.cirugias-footer > small {
+    text-align: right;
 }
 
 
@@ -3336,6 +3434,28 @@ body.dark-mode #modalForm {
         overflow: visible;
     }
 
+    .portal-context,
+    .cirugias-footer {
+        grid-template-columns: 1fr;
+        flex-direction: column;
+        align-items: stretch;
+        text-align: left;
+    }
+
+    .portal-context__user {
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .cirugias-footer nav {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .cirugias-footer > small {
+        text-align: left;
+    }
+
     .header,
     .header-cirugias,
     .analisis-toolbar,
@@ -4681,4 +4801,3 @@ body.zoom-reporte-abierto {
         min-width: 100%;
     }
 }
- 

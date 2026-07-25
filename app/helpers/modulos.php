@@ -121,6 +121,35 @@ function modulo_autorizado(string $codigo): bool
     return false;
 }
 
+function ueei_tiene_permiso(string $codigo): bool
+{
+    if (empty($_SESSION['ueei_id'])) {
+        return false;
+    }
+
+    if (ueei_usuario_es_admin()) {
+        return true;
+    }
+
+    $permissions = $_SESSION['identity_permissions'] ?? [];
+
+    return in_array($codigo, is_array($permissions) ? $permissions : [], true);
+}
+
+function require_permiso_api(string $codigo): void
+{
+    if (empty($_SESSION['ueei_id'])) {
+        json_response(['ok' => false, 'message' => 'Sesión no iniciada.'], 401);
+    }
+
+    if (! ueei_tiene_permiso($codigo)) {
+        json_response([
+            'ok' => false,
+            'message' => 'No tienes permiso para realizar esta acción.',
+        ], 403);
+    }
+}
+
 function require_modulo(string $codigo): void
 {
     require_ueei_login();

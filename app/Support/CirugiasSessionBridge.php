@@ -29,8 +29,6 @@ final class CirugiasSessionBridge
 
     public static function destination(array $session): string
     {
-        return (int) ($session['cirugias_rol'] ?? 1) === 0
-            ? '/cirugias-admin'
-            : '/principal-cirugias';
+        return '/principal-cirugias';
     }
 }

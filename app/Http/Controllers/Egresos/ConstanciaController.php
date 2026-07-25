@@ -115,7 +115,7 @@ final class ConstanciaController extends Controller
             'ok' => true,
             'message' => 'Constancia generada correctamente.',
             'data' => $certificate,
-            'print_url' => route('egresos.certificates.print', $certificate),
+            'print_url' => route('egresos.certificates.print', $certificate, false),
         ], 201);
     }
 

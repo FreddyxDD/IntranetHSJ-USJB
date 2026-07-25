@@ -12,7 +12,7 @@
     <div class="actions"><button onclick="window.print()">Imprimir / guardar PDF</button></div>
     <article class="sheet">
         <header class="header">
-            <img src="{{ asset('assets/images/logohsj.png') }}" alt="Hospital San José">
+            <img src="/assets/images/logohsj.png" alt="Hospital San José">
             <div><h1>HOSPITAL SAN JOSÉ DE CHINCHA</h1><div>Unidad de Estadística e Informática</div></div>
         </header>
         <div class="title"><h2>CONSTANCIA DE EGRESO HOSPITALARIO</h2><strong>N.° {{ str_pad((string) $constancia->numero, 4, '0', STR_PAD_LEFT) }}-{{ $constancia->anio }}</strong></div>

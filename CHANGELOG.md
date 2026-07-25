@@ -59,6 +59,10 @@ los principios de Keep a Changelog.
 
 ### Corregido
 
+- Error interno al abrir `/egresos` causado por la compilación del bloque de
+  configuración JavaScript de Blade.
+- Recursos y endpoints de Egresos ahora respetan el host y puerto actuales en
+  lugar de depender del `APP_URL` configurado para otro entorno.
 - Retorno visible desde Cirugías al portal de módulos y acceso al perfil
   central.
 - Opciones y endpoints de Cirugías protegidos por capacidades centrales, no

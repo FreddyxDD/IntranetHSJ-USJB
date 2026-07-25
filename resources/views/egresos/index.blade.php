@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Egresos - Intranet HSJ</title>
-    <link rel="icon" href="{{ asset('assets/images/logohsj.png') }}">
-    <link rel="stylesheet" href="{{ asset('assets/css/tailwind.css') }}">
+    <link rel="icon" href="/assets/images/logohsj.png">
+    <link rel="stylesheet" href="/assets/css/tailwind.css">
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-800">
     <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur">
         <div class="mx-auto flex max-w-screen-2xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
             <div class="flex min-w-0 items-center gap-3">
                 <a href="/areas" class="grid size-11 shrink-0 place-items-center rounded-xl bg-blue-50 ring-1 ring-blue-100">
-                    <img src="{{ asset('assets/images/logohsj.png') }}" alt="Hospital San José" class="size-9 object-contain">
+                    <img src="/assets/images/logohsj.png" alt="Hospital San José" class="size-9 object-contain">
                 </a>
                 <div class="min-w-0">
                     <p class="truncate text-sm font-bold text-blue-950 sm:text-base">Hospital San José de Chincha</p>
@@ -195,16 +195,16 @@
     </footer>
 
     <script>
-        window.EGRESOS_CONFIG = @json([
-            'dashboardUrl' => route('egresos.dashboard'),
-            'recordsUrl' => route('egresos.records.index'),
-            'historyUrl' => route('egresos.certificates.index'),
-            'certificateUrl' => route('egresos.certificates.store'),
-            'configurationUrl' => route('egresos.configuration.show'),
+        window.EGRESOS_CONFIG = {{ Illuminate\Support\Js::from([
+            'dashboardUrl' => route('egresos.dashboard', [], false),
+            'recordsUrl' => route('egresos.records.index', [], false),
+            'historyUrl' => route('egresos.certificates.index', [], false),
+            'certificateUrl' => route('egresos.certificates.store', [], false),
+            'configurationUrl' => route('egresos.configuration.show', [], false),
             'abilities' => $abilities,
-        ]);
+        ]) }};
     </script>
-    <script src="{{ asset('assets/vendor/preline/preline.js') }}"></script>
-    <script src="{{ asset('assets/js/egresos.js') }}"></script>
+    <script src="/assets/vendor/preline/preline.js"></script>
+    <script src="/assets/js/egresos.js"></script>
 </body>
 </html>

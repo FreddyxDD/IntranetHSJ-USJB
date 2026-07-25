@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Models\Egresos\Cie10;
+use App\Models\Egresos\ConfiguracionConstancia;
 use App\Models\Egresos\Constancia;
 use App\Models\Egresos\ConstanciaHistorial;
 use App\Models\Egresos\Egreso;
@@ -32,18 +33,25 @@ final class EgresosArchitectureTest extends TestCase
         self::assertSame('egresos.constancias', (new Constancia)->getTable());
         self::assertSame('egresos.constancia_historial', (new ConstanciaHistorial)->getTable());
         self::assertSame('catalogos.cie10', (new Cie10)->getTable());
+        self::assertSame('egresos.configuracion_constancias', (new ConfiguracionConstancia)->getTable());
     }
 
     public function test_routes_are_declared_before_the_legacy_fallback(): void
     {
         $index = Route::getRoutes()->getByName('egresos.index');
         $create = Route::getRoutes()->getByName('egresos.certificates.store');
+        $update = Route::getRoutes()->getByName('egresos.certificates.update');
+        $cancel = Route::getRoutes()->getByName('egresos.certificates.cancel');
+        $configuration = Route::getRoutes()->getByName('egresos.configuration.update');
 
         self::assertNotNull($index);
         self::assertContains('legacy.module:egresos', $index->gatherMiddleware());
         self::assertContains('central.permission:egresos.view', $index->gatherMiddleware());
         self::assertNotNull($create);
         self::assertContains('central.permission:egresos.certificates.create', $create->gatherMiddleware());
+        self::assertContains('central.permission:egresos.certificates.update', $update->gatherMiddleware());
+        self::assertContains('central.permission:egresos.certificates.cancel', $cancel->gatherMiddleware());
+        self::assertContains('central.permission:egresos.configuration.manage', $configuration->gatherMiddleware());
     }
 
     public function test_central_administrator_can_use_egresos_permissions(): void

@@ -24,7 +24,11 @@ El módulo usa:
 - detalle del egreso y resolución de diagnósticos contra CIE-10;
 - consulta del historial de constancias;
 - emisión de constancias con correlativo por cuenta y año;
+- edición controlada de constancias no anuladas;
+- anulación con motivo obligatorio;
 - historial obligatorio y evento de auditoría al emitir;
+- historial y auditoría con valores anteriores y nuevos al editar o anular;
+- configuración central de iniciales, responsables y cargos institucionales;
 - vista institucional imprimible, compatible con impresión o PDF del navegador;
 - navbar, retorno al panel, perfil, cierre de sesión y footer institucionales;
 - interfaz responsive construida con Tailwind y Preline.
@@ -39,7 +43,10 @@ No se incorporaron el login ni el CRUD de usuarios del proyecto PHP entregado.
 | Consultar panel, registros y CIE-10 | `egresos.records.view` |
 | Ver historial | `egresos.history.view` |
 | Generar constancia | `egresos.certificates.create` |
+| Editar constancia | `egresos.certificates.update` |
+| Anular constancia | `egresos.certificates.cancel` |
 | Consultar estadísticas | `egresos.reports.view` |
+| Configurar constancias | `egresos.configuration.manage` |
 
 La impresión requiere acceso al módulo y, adicionalmente, permiso para
 consultar historial o generar constancias.
@@ -56,6 +63,10 @@ consultar historial o generar constancias.
 | GET | `/egresos/api/estadisticas/mensuales` | Serie mensual |
 | GET | `/egresos/api/constancias` | Historial |
 | POST | `/egresos/api/constancias` | Emisión transaccional |
+| PUT | `/egresos/api/constancias/{id}` | Edición transaccional |
+| DELETE | `/egresos/api/constancias/{id}` | Anulación transaccional |
+| GET | `/egresos/api/configuracion-constancias` | Leer configuración |
+| PUT | `/egresos/api/configuracion-constancias` | Actualizar configuración |
 | GET | `/egresos/constancias/{id}/imprimir` | Documento imprimible |
 
 Estas rutas están declaradas antes del puente PHP legado y son atendidas
@@ -76,24 +87,27 @@ La emisión se ejecuta dentro de una transacción SQL Server:
 ## Validaciones ejecutadas
 
 - 17 pruebas Laravel aprobadas;
-- 54 aserciones;
+- 58 aserciones;
 - sintaxis PHP validada;
 - rutas verificadas con `php artisan route:list --path=egresos`;
 - consulta real validada sobre 5,872 egresos;
 - búsqueda real validada por nombre;
 - emisión completa verificada dentro de una transacción revertida;
+- edición, anulación y configuración verificadas dentro de una transacción
+  revertida;
 - conteo posterior confirmado en 37 constancias, sin datos de prueba;
+- historial posterior confirmado en 41 registros y constancia de control
+  restaurada a su estado original;
 - plantillas Blade compiladas;
 - `npm.cmd run build` ejecutado correctamente;
 - Tailwind y Preline publicados en `public/assets`.
 
 ## Pendientes controlados
 
-- editar y anular constancias con motivo e historial;
 - alta y corrección manual de egresos;
 - importación operativa desde la interfaz;
 - reportes gráficos y exportaciones;
-- configuración institucional de firmas e iniciales;
+- incorporación de imágenes de firmas mediante almacenamiento seguro;
 - conciliación manual de las 20 cuentas legadas aún pendientes.
 
 No debe retirarse definitivamente la autenticación legada restante hasta que

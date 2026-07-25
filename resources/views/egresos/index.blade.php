@@ -68,6 +68,9 @@
             @if ($abilities['viewHistory'])
                 <button class="eg-tab whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100" data-panel="history">Historial de constancias</button>
             @endif
+            @if ($abilities['manageConfiguration'])
+                <button class="eg-tab whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100" data-panel="configuration">Configuración</button>
+            @endif
         </div>
 
         <section id="panel-records" class="eg-panel mt-4">
@@ -104,6 +107,41 @@
                 <div id="history-list" class="mt-4 grid gap-3"></div>
             </section>
         @endif
+
+        @if ($abilities['manageConfiguration'])
+            <section id="panel-configuration" class="eg-panel mt-4 hidden">
+                <form id="configuration-form" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                    <div class="mb-5">
+                        <h2 class="text-lg font-black text-blue-950">Configuración institucional de constancias</h2>
+                        <p class="mt-1 text-sm text-slate-500">Estos valores se copian a las nuevas constancias. Las constancias históricas conservan sus datos originales.</p>
+                    </div>
+                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        @foreach ([
+                            ['iniciales_director', 'Iniciales del director', 20],
+                            ['iniciales_jefe', 'Iniciales del jefe', 20],
+                            ['iniciales_ccp', 'Iniciales CCP', 20],
+                            ['nombre_director', 'Nombre del director', 180],
+                            ['nombre_jefe', 'Nombre del jefe', 180],
+                            ['cargo_director', 'Cargo del director', 180],
+                            ['cargo_jefe', 'Cargo del jefe', 180],
+                        ] as [$name, $label, $max])
+                            <label class="block">
+                                <span class="mb-1.5 block text-sm font-bold text-slate-700">{{ $label }}</span>
+                                <input name="{{ $name }}" maxlength="{{ $max }}" class="min-h-11 w-full rounded-xl border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                            </label>
+                        @endforeach
+                        <label class="block sm:col-span-2 lg:col-span-3">
+                            <span class="mb-1.5 block text-sm font-bold text-slate-700">Observación institucional</span>
+                            <textarea name="observacion" maxlength="2000" rows="3" class="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"></textarea>
+                        </label>
+                    </div>
+                    <div class="mt-5 flex items-center justify-end gap-3">
+                        <span id="configuration-status" class="mr-auto text-sm text-slate-500" aria-live="polite"></span>
+                        <button type="submit" class="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">Guardar configuración</button>
+                    </div>
+                </form>
+            </section>
+        @endif
     </main>
 
     <div id="detail-modal" class="hs-overlay fixed inset-0 z-[80] hidden size-full overflow-y-auto bg-slate-950/50" role="dialog" tabindex="-1">
@@ -121,6 +159,37 @@
         </div>
     </div>
 
+    <div id="edit-certificate-modal" class="hs-overlay fixed inset-0 z-[90] hidden size-full overflow-y-auto bg-slate-950/50" role="dialog" tabindex="-1">
+        <div class="m-3 flex min-h-[calc(100%-1.5rem)] items-center justify-center py-5">
+            <form id="edit-certificate-form" class="w-full max-w-4xl rounded-2xl bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4"><h2 class="font-bold text-blue-950">Editar constancia</h2><button type="button" data-hs-overlay="#edit-certificate-modal" class="rounded-lg p-2 hover:bg-slate-100">✕</button></div>
+                <div class="grid max-h-[70vh] gap-4 overflow-y-auto p-5 sm:grid-cols-2">
+                    @foreach ([
+                        ['paciente', 'Paciente', 'text', true],
+                        ['numhc', 'Historia clínica', 'text', true],
+                        ['doc_iden', 'Documento', 'text', false],
+                        ['servicio', 'Servicio', 'text', false],
+                        ['fecing', 'Fecha de ingreso', 'date', false],
+                        ['fecegr', 'Fecha de egreso', 'date', false],
+                        ['ups', 'Código UPS', 'text', false],
+                        ['sigla_servicio', 'Sigla del servicio', 'text', false],
+                        ['coddiag1', 'Diagnóstico principal', 'text', false],
+                        ['coddiag2', 'Diagnóstico secundario 2', 'text', false],
+                        ['coddiag3', 'Diagnóstico secundario 3', 'text', false],
+                        ['coddiag4', 'Diagnóstico secundario 4', 'text', false],
+                    ] as [$name, $label, $type, $required])
+                        <label class="block">
+                            <span class="mb-1.5 block text-sm font-bold text-slate-700">{{ $label }}</span>
+                            <input name="{{ $name }}" type="{{ $type }}" @required($required) class="min-h-11 w-full rounded-xl border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                        </label>
+                    @endforeach
+                    <label class="block sm:col-span-2"><span class="mb-1.5 block text-sm font-bold text-slate-700">Observación</span><textarea name="observacion" maxlength="1000" rows="3" class="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"></textarea></label>
+                </div>
+                <div class="flex items-center justify-end gap-3 border-t border-slate-200 px-5 py-4"><span id="edit-status" class="mr-auto text-sm text-rose-700"></span><button type="button" data-hs-overlay="#edit-certificate-modal" class="rounded-xl border border-slate-300 px-4 py-2 font-semibold">Cancelar</button><button type="submit" class="rounded-xl bg-blue-600 px-4 py-2 font-bold text-white">Guardar cambios</button></div>
+            </form>
+        </div>
+    </div>
+
     <footer class="mt-10 border-t border-slate-200 bg-white">
         <div class="mx-auto flex max-w-screen-2xl flex-col gap-2 px-4 py-5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8"><span>Hospital San José de Chincha · Unidad de Estadística e Informática</span><span>Intranet HSJ · {{ now()->year }}</span></div>
     </footer>
@@ -131,6 +200,7 @@
             'recordsUrl' => route('egresos.records.index'),
             'historyUrl' => route('egresos.certificates.index'),
             'certificateUrl' => route('egresos.certificates.store'),
+            'configurationUrl' => route('egresos.configuration.show'),
             'abilities' => $abilities,
         ]);
     </script>

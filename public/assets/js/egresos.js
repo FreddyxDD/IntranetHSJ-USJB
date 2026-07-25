@@ -2,7 +2,7 @@
     'use strict';
 
     const config = window.EGRESOS_CONFIG;
-    const state = { page: 1, query: '', selected: null };
+    const state = { page: 1, query: '', selected: null, selectedCertificate: null };
     const $ = (selector) => document.querySelector(selector);
     const element = (tag, classes, text) => {
         const node = document.createElement(tag);
@@ -31,6 +31,14 @@
             $('#detail-modal')?.classList.remove('hidden');
             document.body.classList.add('overflow-hidden');
         }
+    };
+    const openOverlay = (selector) => {
+        if (window.HSOverlay) window.HSOverlay.open(selector);
+        else document.querySelector(selector)?.classList.remove('hidden');
+    };
+    const closeOverlay = (selector) => {
+        if (window.HSOverlay) window.HSOverlay.close(selector);
+        else document.querySelector(selector)?.classList.add('hidden');
     };
 
     async function loadDashboard() {
@@ -167,16 +175,126 @@
             response.data.data.forEach((item) => {
                 const card = element('article', 'flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between');
                 const info = element('div');
-                info.append(element('div', 'font-bold text-blue-950', `Constancia N.° ${String(item.numero).padStart(4, '0')}-${item.anio}`), element('div', 'mt-1 text-sm text-slate-600', `${item.paciente || 'Paciente'} · HC ${item.numhc || '—'}`), element('div', 'mt-1 text-xs text-slate-500', `Estado: ${item.estado} · ${item.issuer_display_name || item.issuer_username || 'Importación histórica'}`));
+                const stateClass = item.estado === 'anulada' ? 'text-rose-700' : 'text-emerald-700';
+                info.append(element('div', 'font-bold text-blue-950', `Constancia N.° ${String(item.numero).padStart(4, '0')}-${item.anio}`), element('div', 'mt-1 text-sm text-slate-600', `${item.paciente || 'Paciente'} · HC ${item.numhc || '—'}`), element('div', `mt-1 text-xs font-semibold ${stateClass}`, `Estado: ${item.estado} · ${item.issuer_display_name || item.issuer_username || 'Importación histórica'}`));
+                const actions = element('div', 'flex flex-wrap justify-end gap-2');
                 const link = element('a', 'rounded-xl border border-blue-200 px-4 py-2 text-center text-sm font-bold text-blue-700 hover:bg-blue-50', 'Ver / imprimir');
                 link.href = `/egresos/constancias/${item.id}/imprimir`;
                 link.target = '_blank';
-                card.append(info, link);
+                actions.append(link);
+                if (config.abilities.updateCertificates && item.estado !== 'anulada') {
+                    const edit = element('button', 'rounded-xl border border-amber-200 px-4 py-2 text-sm font-bold text-amber-700 hover:bg-amber-50', 'Editar');
+                    edit.addEventListener('click', () => openCertificateEdit(item));
+                    actions.append(edit);
+                }
+                if (config.abilities.cancelCertificates && item.estado !== 'anulada') {
+                    const cancel = element('button', 'rounded-xl border border-rose-200 px-4 py-2 text-sm font-bold text-rose-700 hover:bg-rose-50', 'Anular');
+                    cancel.addEventListener('click', () => cancelCertificate(item));
+                    actions.append(cancel);
+                }
+                card.append(info, actions);
                 list.append(card);
             });
             if (!response.data.data.length) list.append(element('div', 'rounded-xl bg-white p-8 text-center text-slate-500', 'No se encontraron constancias.'));
         } catch (error) {
             list.replaceChildren(element('div', 'rounded-xl bg-rose-50 p-5 font-semibold text-rose-700', error.message));
+        }
+    }
+
+    function openCertificateEdit(item) {
+        state.selectedCertificate = item;
+        const form = $('#edit-certificate-form');
+        ['paciente', 'numhc', 'doc_iden', 'servicio', 'fecing', 'fecegr', 'ups', 'sigla_servicio', 'coddiag1', 'coddiag2', 'coddiag3', 'coddiag4', 'observacion'].forEach((name) => {
+            if (form.elements[name]) {
+                const value = item[name] ? String(item[name]) : '';
+                form.elements[name].value = name.startsWith('fec') ? value.slice(0, 10) : value;
+            }
+        });
+        $('#edit-status').textContent = '';
+        openOverlay('#edit-certificate-modal');
+    }
+
+    async function saveCertificate(event) {
+        event.preventDefault();
+        if (!state.selectedCertificate) return;
+        const form = event.currentTarget;
+        const button = form.querySelector('button[type="submit"]');
+        const payload = Object.fromEntries(new FormData(form).entries());
+        button.disabled = true;
+        $('#edit-status').textContent = 'Guardando cambios…';
+        try {
+            const response = await request(`${config.certificateUrl}/${state.selectedCertificate.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload),
+            });
+            $('#edit-status').className = 'mr-auto text-sm font-semibold text-emerald-700';
+            $('#edit-status').textContent = response.message;
+            closeOverlay('#edit-certificate-modal');
+            await loadHistory();
+        } catch (error) {
+            $('#edit-status').className = 'mr-auto text-sm font-semibold text-rose-700';
+            $('#edit-status').textContent = error.message;
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    async function cancelCertificate(item) {
+        const reason = window.prompt(`Indique el motivo de anulación de la constancia ${String(item.numero).padStart(4, '0')}-${item.anio}:`);
+        if (reason === null) return;
+        if (reason.trim().length < 5) {
+            window.alert('El motivo debe tener al menos 5 caracteres.');
+            return;
+        }
+        if (!window.confirm('Esta acción dejará la constancia anulada y registrada en auditoría. ¿Desea continuar?')) return;
+        try {
+            const response = await request(`${config.certificateUrl}/${item.id}`, {
+                method: 'DELETE',
+                body: JSON.stringify({ motivo: reason.trim() }),
+            });
+            window.alert(response.message);
+            await Promise.all([loadHistory(), loadDashboard()]);
+        } catch (error) {
+            window.alert(error.message);
+        }
+    }
+
+    async function loadConfiguration() {
+        const form = $('#configuration-form');
+        if (!form) return;
+        const status = $('#configuration-status');
+        status.textContent = 'Cargando configuración…';
+        try {
+            const response = await request(config.configurationUrl);
+            Object.entries(response.data).forEach(([name, value]) => {
+                if (form.elements[name]) form.elements[name].value = value || '';
+            });
+            status.textContent = 'Configuración cargada.';
+        } catch (error) {
+            status.textContent = error.message;
+            status.className = 'mr-auto text-sm font-semibold text-rose-700';
+        }
+    }
+
+    async function saveConfiguration(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const status = $('#configuration-status');
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        status.textContent = 'Guardando…';
+        try {
+            const response = await request(config.configurationUrl, {
+                method: 'PUT',
+                body: JSON.stringify(Object.fromEntries(new FormData(form).entries())),
+            });
+            status.className = 'mr-auto text-sm font-semibold text-emerald-700';
+            status.textContent = response.message;
+        } catch (error) {
+            status.className = 'mr-auto text-sm font-semibold text-rose-700';
+            status.textContent = error.message;
+        } finally {
+            button.disabled = false;
         }
     }
 
@@ -186,6 +304,8 @@
         loadRecords(1);
     });
     $('#history-form')?.addEventListener('submit', (event) => { event.preventDefault(); loadHistory(); });
+    $('#edit-certificate-form')?.addEventListener('submit', saveCertificate);
+    $('#configuration-form')?.addEventListener('submit', saveConfiguration);
     $('#create-certificate')?.addEventListener('click', createCertificate);
     document.querySelectorAll('.eg-tab').forEach((tab) => tab.addEventListener('click', () => {
         document.querySelectorAll('.eg-tab').forEach((item) => item.className = 'eg-tab whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100');
@@ -193,6 +313,7 @@
         document.querySelectorAll('.eg-panel').forEach((panel) => panel.classList.add('hidden'));
         $(`#panel-${tab.dataset.panel}`)?.classList.remove('hidden');
         if (tab.dataset.panel === 'history') loadHistory();
+        if (tab.dataset.panel === 'configuration') loadConfiguration();
     }));
 
     loadDashboard();

@@ -3,6 +3,7 @@
 use App\Http\Controllers\LegacyApplicationController;
 use App\Http\Controllers\Appointments\AppointmentApiController;
 use App\Http\Controllers\Egresos\ConstanciaController;
+use App\Http\Controllers\Egresos\ConfiguracionConstanciaController;
 use App\Http\Controllers\Egresos\EgresoController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
@@ -52,6 +53,20 @@ Route::prefix('egresos')->middleware('legacy.module:egresos')->group(function ()
     Route::post('/api/constancias', [ConstanciaController::class, 'store'])
         ->middleware('central.permission:egresos.certificates.create')
         ->name('egresos.certificates.store');
+    Route::put('/api/constancias/{constancia}', [ConstanciaController::class, 'update'])
+        ->whereNumber('constancia')
+        ->middleware('central.permission:egresos.certificates.update')
+        ->name('egresos.certificates.update');
+    Route::delete('/api/constancias/{constancia}', [ConstanciaController::class, 'cancel'])
+        ->whereNumber('constancia')
+        ->middleware('central.permission:egresos.certificates.cancel')
+        ->name('egresos.certificates.cancel');
+    Route::get('/api/configuracion-constancias', [ConfiguracionConstanciaController::class, 'show'])
+        ->middleware('central.permission:egresos.configuration.manage')
+        ->name('egresos.configuration.show');
+    Route::put('/api/configuracion-constancias', [ConfiguracionConstanciaController::class, 'update'])
+        ->middleware('central.permission:egresos.configuration.manage')
+        ->name('egresos.configuration.update');
     Route::get('/constancias/{constancia}/imprimir', [ConstanciaController::class, 'print'])
         ->whereNumber('constancia')
         ->middleware('central.permission:egresos.view')

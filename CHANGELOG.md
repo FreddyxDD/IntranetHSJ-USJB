@@ -11,9 +11,14 @@ los principios de Keep a Changelog.
   historial y vista imprimible de constancias.
 - Emisión de constancias con correlativo SQL Server por cuenta y año,
   historial obligatorio y evento central de auditoría.
+- Edición y anulación transaccionales con permisos separados, motivo
+  obligatorio y registro de valores anteriores y nuevos.
+- Configuración institucional de responsables, cargos e iniciales protegida
+  por `egresos.configuration.manage`.
+- Marca visible de anulación en la vista imprimible.
 - Autorización exclusiva mediante sesión y permisos de `HSJ_Identity`.
 - Interfaz responsive compilada con Tailwind y Preline.
-- 17 pruebas Laravel aprobadas con 54 aserciones.
+- 17 pruebas Laravel aprobadas con 58 aserciones.
 - Consulta comprobada sobre 5,872 egresos y emisión validada dentro de una
   transacción revertida, sin datos de prueba residuales.
 

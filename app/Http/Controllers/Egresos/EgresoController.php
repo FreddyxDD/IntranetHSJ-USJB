@@ -26,8 +26,11 @@ final class EgresoController extends Controller
             'abilities' => [
                 'viewRecords' => ueei_tiene_permiso('egresos.records.view'),
                 'createCertificates' => ueei_tiene_permiso('egresos.certificates.create'),
+                'updateCertificates' => ueei_tiene_permiso('egresos.certificates.update'),
+                'cancelCertificates' => ueei_tiene_permiso('egresos.certificates.cancel'),
                 'viewHistory' => ueei_tiene_permiso('egresos.history.view'),
                 'viewReports' => ueei_tiene_permiso('egresos.reports.view'),
+                'manageConfiguration' => ueei_tiene_permiso('egresos.configuration.manage'),
             ],
         ]);
     }

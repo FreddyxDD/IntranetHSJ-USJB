@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Egresos;
 
 use App\Http\Controllers\Controller;
 use App\Models\Egresos\Cie10;
+use App\Models\Egresos\ConfiguracionConstancia;
 use App\Models\Egresos\Constancia;
-use App\Models\Egresos\ConstanciaHistorial;
 use App\Models\Egresos\Egreso;
+use App\Services\Egresos\ConstanciaTrace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 final class ConstanciaController extends Controller
@@ -27,7 +28,7 @@ final class ConstanciaController extends Controller
         $year = now()->year;
         $ownerKey = $actor['account_id'] ? 'account:'.$actor['account_id'] : 'user:'.$actor['user_id'];
 
-        $certificate = DB::transaction(function () use ($egreso, $validated, $actor, $year, $ownerKey): Constancia {
+        $certificate = DB::transaction(function () use ($egreso, $validated, $actor, $year, $ownerKey, $request): Constancia {
             $counter = DB::table('egresos.correlativos')
                 ->where('sequence_owner_key', $ownerKey)
                 ->where('anio', $year)
@@ -59,6 +60,7 @@ final class ConstanciaController extends Controller
                     ->map(fn (int $i): string => strtoupper(str_replace('.', '', (string) $egreso->getAttribute("coddiag{$i}"))))
                     ->filter())
                 ->pluck('descripcion', 'codigo_normalizado');
+            $configuration = ConfiguracionConstancia::query()->find(1);
             $payload = [
                 'egreso_id' => $egreso->id,
                 'numero' => $number,
@@ -78,6 +80,9 @@ final class ConstanciaController extends Controller
                 'servicio' => $egreso->ups,
                 'condicion' => $egreso->condicion,
                 'financia' => $egreso->financia,
+                'iniciales_director' => $configuration?->iniciales_director,
+                'iniciales_jefe' => $configuration?->iniciales_jefe,
+                'iniciales_ccp' => $configuration?->iniciales_ccp,
                 'observacion' => $validated['observacion'] ?? null,
                 'estado' => 'generada',
                 'source_system' => 'intranet_hsj',
@@ -93,37 +98,15 @@ final class ConstanciaController extends Controller
             $payload['source_fingerprint'] = hash('sha256', json_encode($payload, JSON_UNESCAPED_UNICODE));
             $certificate = Constancia::query()->create($payload);
 
-            ConstanciaHistorial::query()->create([
-                'source_system' => 'intranet_hsj',
-                'constancia_id' => $certificate->id,
-                'accion' => 'generar',
-                'descripcion' => 'Constancia generada desde el módulo central de Egresos.',
-                'datos_nuevos' => $certificate->toArray(),
-                'actor_account_id' => $actor['account_id'],
-                'actor_username' => $actor['username'],
-                'actor_display_name' => $actor['display_name'],
-                'ip' => request()->ip(),
-                'source_fingerprint' => hash('sha256', 'generate:'.$certificate->id.':'.now()->toISOString()),
-                'occurred_at' => now(),
-            ]);
-            DB::table('auditoria.eventos')->insert([
-                'event_uuid' => (string) Str::uuid(),
-                'application_code' => 'intranet_hsj',
-                'module' => 'egresos',
-                'event_type' => 'certificate.generated',
-                'action' => 'generate',
-                'subject_type' => Constancia::class,
-                'subject_id' => (string) $certificate->id,
-                'actor_account_id' => $actor['account_id'],
-                'actor_username' => $actor['username'],
-                'actor_display_name' => $actor['display_name'],
-                'ip' => request()->ip(),
-                'user_agent' => mb_substr((string) request()->userAgent(), 0, 510),
-                'data_after' => json_encode($certificate->toArray(), JSON_UNESCAPED_UNICODE),
-                'occurred_at' => now(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            app(ConstanciaTrace::class)->record(
+                $certificate,
+                'generar',
+                'Constancia generada desde el módulo central de Egresos.',
+                null,
+                $certificate->toArray(),
+                $actor,
+                $request
+            );
 
             return $certificate;
         }, 3);
@@ -134,6 +117,118 @@ final class ConstanciaController extends Controller
             'data' => $certificate,
             'print_url' => route('egresos.certificates.print', $certificate),
         ], 201);
+    }
+
+    public function update(Request $request, Constancia $constancia): JsonResponse
+    {
+        $validated = $request->validate([
+            'paciente' => ['required', 'string', 'max:250'],
+            'nombres' => ['nullable', 'string', 'max:150'],
+            'apellidos' => ['nullable', 'string', 'max:150'],
+            'doc_iden' => ['nullable', 'string', 'max:30'],
+            'numhc' => ['required', 'string', 'max:50'],
+            'fecing' => ['nullable', 'date'],
+            'fecegr' => ['nullable', 'date', 'after_or_equal:fecing'],
+            'ups' => ['nullable', 'string', 'max:100'],
+            'servicio' => ['nullable', 'string', 'max:150'],
+            'condicion' => ['nullable', 'string', 'max:100'],
+            'financia' => ['nullable', 'string', 'max:100'],
+            'coddiag1' => ['nullable', 'string', 'max:50'],
+            'coddiag2' => ['nullable', 'string', 'max:50'],
+            'coddiag3' => ['nullable', 'string', 'max:50'],
+            'coddiag4' => ['nullable', 'string', 'max:50'],
+            'sigla_servicio' => ['nullable', 'string', 'max:30'],
+            'observacion' => ['nullable', 'string', 'max:1000'],
+        ]);
+        $actor = EgresoController::centralActor();
+
+        $updated = DB::transaction(function () use ($constancia, $validated, $actor, $request): Constancia {
+            $locked = Constancia::query()->lockForUpdate()->findOrFail($constancia->id);
+            if ($locked->estado === 'anulada') {
+                throw ValidationException::withMessages([
+                    'constancia' => 'No se puede editar una constancia anulada.',
+                ]);
+            }
+
+            $before = $locked->toArray();
+            $values = collect($validated)->map(
+                fn ($value) => is_string($value) ? trim($value) ?: null : $value
+            )->all();
+            foreach (range(1, 4) as $position) {
+                $code = $values["coddiag{$position}"] ?? $locked->getAttribute("coddiag{$position}");
+                $normalized = strtoupper(str_replace('.', '', (string) $code));
+                $values["descdiag{$position}"] = $normalized === ''
+                    ? null
+                    : Cie10::query()->where('codigo_normalizado', $normalized)->value('descripcion');
+            }
+            $values['estado'] = 'editada';
+            $locked->fill($values)->save();
+            $after = $locked->fresh()->toArray();
+
+            app(ConstanciaTrace::class)->record(
+                $locked,
+                'editar',
+                "Se editó la constancia {$locked->numero}-{$locked->anio}.",
+                $before,
+                $after,
+                $actor,
+                $request
+            );
+
+            return $locked->fresh();
+        }, 3);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Constancia actualizada correctamente.',
+            'data' => $updated,
+        ]);
+    }
+
+    public function cancel(Request $request, Constancia $constancia): JsonResponse
+    {
+        $validated = $request->validate([
+            'motivo' => ['required', 'string', 'min:5', 'max:1000'],
+        ]);
+        $actor = EgresoController::centralActor();
+
+        $cancelled = DB::transaction(function () use ($constancia, $validated, $actor, $request): Constancia {
+            $locked = Constancia::query()->lockForUpdate()->findOrFail($constancia->id);
+            if ($locked->estado === 'anulada') {
+                throw ValidationException::withMessages([
+                    'constancia' => 'La constancia ya se encuentra anulada.',
+                ]);
+            }
+
+            $before = $locked->toArray();
+            $locked->update([
+                'estado' => 'anulada',
+                'motivo_anulacion' => trim($validated['motivo']),
+                'cancelled_by_account_id' => $actor['account_id'],
+                'cancelled_by_username' => $actor['username'],
+                'cancelled_by_display_name' => $actor['display_name'],
+                'cancelled_at' => now(),
+            ]);
+            $after = $locked->fresh()->toArray();
+
+            app(ConstanciaTrace::class)->record(
+                $locked,
+                'anular',
+                "Se anuló la constancia {$locked->numero}-{$locked->anio}. Motivo: {$validated['motivo']}",
+                $before,
+                $after,
+                $actor,
+                $request
+            );
+
+            return $locked->fresh();
+        }, 3);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Constancia anulada correctamente.',
+            'data' => $cancelled,
+        ]);
     }
 
     public function print(Constancia $constancia): View

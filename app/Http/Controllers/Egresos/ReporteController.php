@@ -7,6 +7,8 @@ use App\Models\Egresos\Egreso;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -53,7 +55,11 @@ final class ReporteController extends Controller
         $line = 2;
         $this->query($request)->chunkById(500, function ($rows) use ($sheet, &$line): void {
             foreach ($rows as $row) {
-                $sheet->fromArray($this->values($row), null, 'A'.$line++);
+                foreach ($this->values($row) as $index => $value) {
+                    $cell = Coordinate::stringFromColumnIndex($index + 1).$line;
+                    $sheet->setCellValueExplicit($cell, (string) ($value ?? ''), DataType::TYPE_STRING);
+                }
+                $line++;
             }
         });
         foreach (range('A', 'N') as $column) {
@@ -83,6 +89,7 @@ final class ReporteController extends Controller
             $query->where(function ($builder) use ($text): void {
                 $like = '%'.str_replace(['[', '%', '_'], ['[[]', '[%]', '[_]'], $text).'%';
                 $builder->where('numhc', 'like', $like)
+                    ->orWhere('doc_numero', 'like', $like)
                     ->orWhere('doc_iden', 'like', $like)
                     ->orWhere('nomb', 'like', $like)
                     ->orWhere('apell', 'like', $like);
@@ -98,7 +105,7 @@ final class ReporteController extends Controller
     private function values(Egreso $row): array
     {
         return collect(self::FIELDS)->map(function (string $field) use ($row) {
-            $value = $row->getAttribute($field);
+            $value = $field === 'doc_iden' ? $row->documento : $row->getAttribute($field);
 
             $value = $value instanceof \DateTimeInterface ? $value->format('Y-m-d') : $value;
             if (is_string($value) && preg_match('/^[=+\-@]/', $value)) {

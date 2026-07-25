@@ -128,6 +128,20 @@ return [
             'allow_writes' => env('SIGH_ALLOW_WRITES', false),
         ],
 
+        'sigh_local' => [
+            'driver' => 'sqlsrv',
+            'host' => env('SIGH_LOCAL_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('SIGH_LOCAL_DB_PORT', env('DB_PORT')) ?: null,
+            'database' => env('SIGH_LOCAL_DB_DATABASE', 'SIGH_202607_LOCAL'),
+            'username' => env('SIGH_LOCAL_DB_USERNAME', env('DB_USERNAME')) ?: null,
+            'password' => env('SIGH_LOCAL_DB_PASSWORD', env('DB_PASSWORD')) ?: null,
+            'charset' => env('SIGH_LOCAL_DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'trust_server_certificate' => env('SIGH_LOCAL_DB_TRUST_SERVER_CERTIFICATE', true),
+            'allow_writes' => false,
+        ],
+
         'identity' => [
             'driver' => 'sqlsrv',
             'host' => env('IDENTITY_DB_HOST', '127.0.0.1'),

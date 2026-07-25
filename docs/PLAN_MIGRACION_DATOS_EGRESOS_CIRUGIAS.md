@@ -8,6 +8,8 @@
 - Operación funcional de Egresos completada el 25 de julio de 2026:
   registro excepcional, corrección auditada, importación desde interfaz,
   reportes y exportaciones.
+- Documentos de pacientes normalizados y conciliados contra
+  `SIGH_202607_LOCAL.dbo.Pacientes`, conservando el dato histórico original.
 - Base operativa destino: `Intranet_HSJ`.
 - Base central de identidad: `HSJ_Identity`.
 - Fuente clínica externa: SIGH, exclusivamente de lectura.

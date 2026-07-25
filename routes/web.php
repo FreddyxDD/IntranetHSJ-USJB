@@ -43,6 +43,9 @@ Route::prefix('egresos')->middleware('legacy.module:egresos')->group(function ()
         ->whereNumber('egreso')
         ->middleware('central.permission:egresos.records.view')
         ->name('egresos.records.show');
+    Route::get('/api/pacientes-sigh', [EgresoController::class, 'patients'])
+        ->middleware('central.permission:egresos.records.view')
+        ->name('egresos.patients.search');
     Route::post('/api/registros', [EgresoController::class, 'store'])
         ->middleware('central.permission:egresos.records.create')
         ->name('egresos.records.store');

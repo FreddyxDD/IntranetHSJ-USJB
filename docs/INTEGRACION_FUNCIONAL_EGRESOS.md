@@ -15,6 +15,37 @@ El módulo usa:
 - `Intranet_HSJ.catalogos` para CIE-10;
 - `Intranet_HSJ.auditoria` para trazabilidad funcional.
 
+## Fuente maestra de pacientes y documentos
+
+La HC, el tipo y el número de documento nacen de `dbo.Pacientes` en SIGH.
+Mientras el equipo se encuentra fuera de la red hospitalaria, el módulo usa la
+copia local de solo lectura `SIGH_202607_LOCAL`, mediante la conexión Laravel
+`sigh_local`.
+
+El aplicativo no vuelve a concatenar el tipo con el número de documento:
+
+- `doc_tipo_id` conserva `Pacientes.IdDocIdentidad`;
+- `doc_numero` conserva `Pacientes.NroDocumento`;
+- `doc_iden_original` preserva el valor recibido en la entrega histórica;
+- `patient_source_id` conserva `Pacientes.IdPaciente` cuando existe cruce;
+- `doc_source` identifica si el dato fue confirmado por SIGH o normalizado
+  desde el legado;
+- `document_verified_at` registra cuándo se confirmó el documento.
+
+Para utilizar el SIGH institucional dentro de la red solo debe configurarse:
+
+```dotenv
+EGRESOS_PATIENT_CONNECTION=sigh
+EGRESOS_PATIENT_SOURCE_CODE=sigh
+```
+
+Fuera de la red se mantienen los valores predeterminados:
+
+```dotenv
+EGRESOS_PATIENT_CONNECTION=sigh_local
+EGRESOS_PATIENT_SOURCE_CODE=sigh_202607_local
+```
+
 ## Alcance implementado
 
 - nuevo módulo visible en `/areas` según `egresos.view`;
@@ -45,6 +76,11 @@ El módulo usa:
 - reportes por mes y UPS filtrables por fechas;
 - exportación de egresos a CSV UTF-8 y XLSX, protegida contra fórmulas
   inyectadas desde los datos.
+- consulta de pacientes por HC o documento contra `SIGH_202607_LOCAL`;
+- normalización de documentos históricos sin perder el valor entregado;
+- conciliación idempotente mediante `hsj:sync-egresos-patients`;
+- constancias y exportaciones usando el número de documento sin el prefijo de
+  tipo.
 
 No se incorporaron el login ni el CRUD de usuarios del proyecto PHP entregado.
 
@@ -76,6 +112,7 @@ consultar historial o generar constancias.
 | GET | `/egresos/api/dashboard` | Indicadores |
 | GET | `/egresos/api/registros` | Búsqueda paginada |
 | GET | `/egresos/api/registros/{id}` | Detalle |
+| GET | `/egresos/api/pacientes-sigh` | Buscar paciente por HC o documento |
 | POST | `/egresos/api/registros` | Registro excepcional |
 | PUT | `/egresos/api/registros/{id}` | Corrección auditada |
 | GET | `/egresos/api/cie10` | Catálogo CIE-10 |
@@ -131,6 +168,15 @@ La emisión se ejecuta dentro de una transacción SQL Server:
   1 insertado, 0 omitidos y 0 observados;
 - rollback de control confirmado, conservando exactamente 5,872 egresos;
 - exportación XLSX real verificada con 5,872 registros.
+- 5,601 documentos normalizados;
+- 419 egresos conciliados por HC contra `SIGH_202607_LOCAL`;
+- 363 documentos confirmados, 16 corregidos y 40 completados;
+- 271 registros permanecen sin documento válido y no reciben valores
+  inventados;
+- 5,872 valores originales preservados en `doc_iden_original`;
+- 37 constancias normalizadas, conservando sus 37 valores originales;
+- segunda conciliación en simulación: 419 confirmados y cero cambios, lo que
+  verifica la idempotencia.
 
 ## Pendientes controlados
 

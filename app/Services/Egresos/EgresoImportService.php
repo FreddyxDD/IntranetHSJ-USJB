@@ -76,7 +76,7 @@ final class EgresoImportService
 
             $cie10 = Cie10::query()->pluck('codigo_normalizado')->flip();
             $existing = Egreso::query()
-                ->get(['numhc', 'doc_iden', 'fecegr'])
+                ->get(['numhc', 'doc_numero', 'doc_iden', 'fecegr'])
                 ->flatMap(fn (Egreso $item) => $this->duplicateKeys($item->toArray()))
                 ->flip();
             $valid = [];
@@ -110,7 +110,7 @@ final class EgresoImportService
             DB::transaction(function () use ($valid, $import, $actor, $request, $observations, $omitted): void {
                 $this->lockEgresoWrites();
                 $current = Egreso::query()
-                    ->get(['numhc', 'doc_iden', 'fecegr'])
+                    ->get(['numhc', 'doc_numero', 'doc_iden', 'fecegr'])
                     ->flatMap(fn (Egreso $item) => $this->duplicateKeys($item->toArray()))
                     ->flip();
                 $accepted = [];
@@ -133,6 +133,9 @@ final class EgresoImportService
                     Egreso::query()->create([
                         ...$data,
                         'source_system' => 'intranet_hsj_import',
+                        'doc_numero' => $data['doc_iden'] ?? null,
+                        'doc_iden_original' => $data['doc_iden'] ?? null,
+                        'doc_source' => 'intranet_hsj_import',
                         'source_id' => null,
                         'importacion_id' => $import->id,
                         'source_fingerprint' => $this->fingerprint($data),
@@ -283,8 +286,9 @@ final class EgresoImportService
         if (! empty($data['numhc'])) {
             $keys[] = 'hc:'.mb_strtoupper(trim((string) $data['numhc'])).':'.$date;
         }
-        if (! empty($data['doc_iden'])) {
-            $keys[] = 'doc:'.mb_strtoupper(trim((string) $data['doc_iden'])).':'.$date;
+        $document = $data['doc_numero'] ?? $data['doc_iden'] ?? null;
+        if (! empty($document)) {
+            $keys[] = 'doc:'.mb_strtoupper(trim((string) $document)).':'.$date;
         }
 
         return $keys;

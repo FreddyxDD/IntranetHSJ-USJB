@@ -163,7 +163,7 @@
         $('#record-modal-title').textContent = item ? 'Corregir egreso' : 'Registrar egreso excepcional';
         $('#record-status').textContent = '';
         if (item) {
-            ['numhc', 'doc_iden', 'nomb', 'apell', 'sexo', 'edad', 'fecing', 'fecegr', 'ups', 'condicion', 'financia', 'coddiag1', 'coddiag2', 'coddiag3', 'coddiag4'].forEach((name) => {
+            ['numhc', 'doc_iden', 'doc_tipo_id', 'nomb', 'apell', 'sexo', 'edad', 'fecing', 'fecegr', 'ups', 'condicion', 'financia', 'coddiag1', 'coddiag2', 'coddiag3', 'coddiag4'].forEach((name) => {
                 const field = form.elements[name];
                 if (!field) return;
                 const value = item[name] ? String(item[name]) : '';
@@ -194,6 +194,33 @@
             $('#record-status').textContent = error.message;
         } finally {
             button.disabled = false;
+        }
+    }
+
+    async function lookupPatient() {
+        const form = $('#record-form');
+        const query = form.elements.numhc.value.trim() || form.elements.doc_iden.value.trim();
+        const status = $('#patient-search-status');
+        if (query.length < 3) {
+            status.textContent = 'Ingrese una HC o documento válido.';
+            return;
+        }
+        status.textContent = 'Consultando…';
+        try {
+            const response = await request(`${config.patientSearchUrl}?q=${encodeURIComponent(query)}`);
+            const patient = response.data[0];
+            if (!patient) {
+                status.textContent = 'Paciente no encontrado en la copia local.';
+                return;
+            }
+            form.elements.numhc.value = patient.historia_clinica || '';
+            form.elements.doc_iden.value = patient.documento || '';
+            form.elements.doc_tipo_id.value = patient.tipo_documento_id || '';
+            form.elements.nomb.value = patient.nombres || '';
+            form.elements.apell.value = patient.apellidos || '';
+            status.textContent = `Datos recuperados de ${patient.source}.`;
+        } catch (error) {
+            status.textContent = error.message;
         }
     }
 
@@ -450,6 +477,7 @@
     $('#new-record')?.addEventListener('click', () => openRecordForm());
     $('#edit-record')?.addEventListener('click', () => state.selected && openRecordForm(state.selected));
     $('#record-form')?.addEventListener('submit', saveRecord);
+    $('#lookup-patient')?.addEventListener('click', lookupPatient);
     $('#import-form')?.addEventListener('submit', importRecords);
     $('#report-form')?.addEventListener('submit', loadReports);
     $('#history-form')?.addEventListener('submit', (event) => { event.preventDefault(); loadHistory(); });

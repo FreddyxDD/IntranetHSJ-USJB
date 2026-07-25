@@ -38,6 +38,24 @@ final class EgresosArchitectureTest extends TestCase
         self::assertSame('egresos.importaciones', (new Importacion)->getTable());
     }
 
+    public function test_legacy_documents_are_exposed_without_the_type_prefix(): void
+    {
+        $egreso = new Egreso(['doc_numero' => '77882264']);
+        $constancia = new Constancia([
+            'source_system' => 'egresos_legacy',
+            'doc_iden_original' => '177882264',
+            'doc_iden' => '77882264',
+        ]);
+        $newCertificate = new Constancia([
+            'source_system' => 'intranet_hsj',
+            'doc_iden' => '12345678',
+        ]);
+
+        self::assertSame('77882264', $egreso->documento);
+        self::assertSame('77882264', $constancia->documento);
+        self::assertSame('12345678', $newCertificate->documento);
+    }
+
     public function test_routes_are_declared_before_the_legacy_fallback(): void
     {
         $index = Route::getRoutes()->getByName('egresos.index');
@@ -49,6 +67,7 @@ final class EgresosArchitectureTest extends TestCase
         $recordUpdate = Route::getRoutes()->getByName('egresos.records.update');
         $import = Route::getRoutes()->getByName('egresos.imports.store');
         $export = Route::getRoutes()->getByName('egresos.reports.xlsx');
+        $patientSearch = Route::getRoutes()->getByName('egresos.patients.search');
 
         self::assertNotNull($index);
         self::assertContains('legacy.module:egresos', $index->gatherMiddleware());
@@ -62,6 +81,7 @@ final class EgresosArchitectureTest extends TestCase
         self::assertContains('central.permission:egresos.records.update', $recordUpdate->gatherMiddleware());
         self::assertContains('central.permission:egresos.imports.manage', $import->gatherMiddleware());
         self::assertContains('central.permission:egresos.reports.view', $export->gatherMiddleware());
+        self::assertContains('central.permission:egresos.records.view', $patientSearch->gatherMiddleware());
     }
 
     public function test_central_administrator_can_use_egresos_permissions(): void

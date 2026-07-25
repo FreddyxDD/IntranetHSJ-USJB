@@ -23,7 +23,7 @@
             <p>Se deja constancia que la persona cuyos datos se indican a continuación registra atención de hospitalización en esta institución:</p>
             <table class="data">
                 <tr><td><strong>Paciente</strong></td><td>{{ $constancia->paciente }}</td></tr>
-                <tr><td><strong>Documento</strong></td><td>{{ $constancia->doc_iden ?: 'No consignado' }}</td></tr>
+                <tr><td><strong>Documento</strong></td><td>{{ $constancia->documento ?: 'No consignado' }}</td></tr>
                 <tr><td><strong>Historia clínica</strong></td><td>{{ $constancia->numhc }}</td></tr>
                 <tr><td><strong>Fecha de ingreso</strong></td><td>{{ $constancia->fecing?->format('d/m/Y') }}</td></tr>
                 <tr><td><strong>Fecha de egreso</strong></td><td>{{ $constancia->fecegr?->format('d/m/Y') }}</td></tr>

@@ -223,7 +223,15 @@
         <div class="m-3 flex min-h-[calc(100%-1.5rem)] items-center justify-center py-5">
             <form id="record-form" class="w-full max-w-4xl rounded-2xl bg-white shadow-2xl">
                 <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 id="record-modal-title" class="font-bold text-blue-950">Registrar egreso excepcional</h2><p class="text-xs text-slate-500">Los cambios quedarán asociados a su cuenta central.</p></div><button type="button" data-hs-overlay="#record-modal" class="rounded-lg p-2 hover:bg-slate-100">✕</button></div>
+                <div class="border-b border-blue-100 bg-blue-50 px-5 py-3">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <p class="mr-auto text-sm text-blue-900">Ingrese la HC o documento y consulte la fuente maestra de pacientes.</p>
+                        <span id="patient-search-status" class="text-xs font-semibold text-blue-700" aria-live="polite"></span>
+                        <button id="lookup-patient" type="button" class="rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-bold text-blue-700 hover:bg-blue-100">Buscar en SIGH local</button>
+                    </div>
+                </div>
                 <div class="grid max-h-[70vh] gap-4 overflow-y-auto p-5 sm:grid-cols-2 lg:grid-cols-3">
+                    <label><span class="mb-1.5 block text-sm font-bold text-slate-700">Tipo de documento</span><select name="doc_tipo_id" class="min-h-11 w-full rounded-xl border border-slate-300 px-3 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"><option value="">No especificado</option><option value="1">DNI</option><option value="2">Carnet de extranjería</option><option value="3">Pasaporte</option><option value="4">Documento extranjero</option><option value="5">Código de recién nacido</option><option value="8">Documento de madre + hijo</option></select></label>
                     @foreach ([
                         ['numhc', 'Historia clínica', 'text', false],
                         ['doc_iden', 'Documento', 'text', false],
@@ -288,6 +296,7 @@
         window.EGRESOS_CONFIG = {{ Illuminate\Support\Js::from([
             'dashboardUrl' => route('egresos.dashboard', [], false),
             'recordsUrl' => route('egresos.records.index', [], false),
+            'patientSearchUrl' => route('egresos.patients.search', [], false),
             'importsUrl' => route('egresos.imports.index', [], false),
             'monthlyUrl' => route('egresos.statistics.monthly', [], false),
             'servicesUrl' => route('egresos.statistics.services', [], false),

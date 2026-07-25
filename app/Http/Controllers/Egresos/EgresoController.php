@@ -9,6 +9,7 @@ use App\Models\Egresos\Cie10;
 use App\Models\Egresos\Constancia;
 use App\Models\Egresos\Egreso;
 use App\Services\Egresos\EgresoTrace;
+use App\Services\Egresos\SighPatientSource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -84,6 +85,7 @@ final class EgresoController extends Controller
             $query->where(function ($builder) use ($escaped): void {
                 $like = '%'.$escaped.'%';
                 $builder->where('numhc', 'like', $like)
+                    ->orWhere('doc_numero', 'like', $like)
                     ->orWhere('doc_iden', 'like', $like)
                     ->orWhere('nomb', 'like', $like)
                     ->orWhere('apell', 'like', $like);
@@ -131,9 +133,39 @@ final class EgresoController extends Controller
         ]);
     }
 
-    public function store(SaveEgresoRequest $request, EgresoTrace $trace): JsonResponse
+    public function patients(Request $request, SighPatientSource $source): JsonResponse
     {
-        $data = $request->validated();
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'min:3', 'max:20'],
+        ]);
+
+        $rows = $source->search($validated['q'])->map(fn ($patient): array => [
+            'id' => (int) $patient->IdPaciente,
+            'historia_clinica' => (string) $patient->NroHistoriaClinica,
+            'documento' => trim((string) $patient->NroDocumento),
+            'tipo_documento_id' => $patient->IdDocIdentidad ? (int) $patient->IdDocIdentidad : null,
+            'tipo_documento' => (string) ($patient->TipoDocumento ?? ''),
+            'nombres' => trim(implode(' ', array_filter([
+                $patient->PrimerNombre,
+                $patient->SegundoNombre,
+                $patient->TercerNombre,
+            ]))),
+            'apellidos' => trim(implode(' ', array_filter([
+                $patient->ApellidoPaterno,
+                $patient->ApellidoMaterno,
+            ]))),
+            'source' => $source->sourceCode(),
+        ]);
+
+        return response()->json(['ok' => true, 'data' => $rows]);
+    }
+
+    public function store(
+        SaveEgresoRequest $request,
+        EgresoTrace $trace,
+        SighPatientSource $patientSource
+    ): JsonResponse {
+        $data = $this->withVerifiedPatientDocument($request->validated(), $patientSource);
         $actor = self::centralActor();
 
         $egreso = DB::transaction(function () use ($data, $actor, $request, $trace): Egreso {
@@ -163,16 +195,21 @@ final class EgresoController extends Controller
     public function update(
         SaveEgresoRequest $request,
         Egreso $egreso,
-        EgresoTrace $trace
+        EgresoTrace $trace,
+        SighPatientSource $patientSource
     ): JsonResponse {
-        $data = $request->validated();
+        $data = $this->withVerifiedPatientDocument($request->validated(), $patientSource);
         $actor = self::centralActor();
 
         DB::transaction(function () use ($data, $egreso, $actor, $request, $trace): void {
             $this->lockEgresoWrites();
             $this->ensureNotDuplicate($data, $egreso->id);
             $before = $egreso->toArray();
-            $egreso->fill($data);
+            $updates = $data;
+            $updates['doc_numero'] = $data['doc_iden'] ?? null;
+            $updates['doc_source'] = $data['doc_source'] ?? 'intranet_hsj';
+            unset($updates['doc_iden']);
+            $egreso->fill($updates);
             $egreso->source_fingerprint = $this->fingerprint($egreso->getAttributes());
             $egreso->save();
             $trace->record(
@@ -259,6 +296,7 @@ final class EgresoController extends Controller
             $query->where(function ($builder) use ($text): void {
                 $like = '%'.$text.'%';
                 $builder->where('numhc', 'like', $like)
+                    ->orWhere('doc_numero', 'like', $like)
                     ->orWhere('doc_iden', 'like', $like)
                     ->orWhere('paciente', 'like', $like);
             });
@@ -271,6 +309,8 @@ final class EgresoController extends Controller
     {
         $data = $egreso->toArray();
         $data['paciente'] = $egreso->paciente;
+        $data['doc_iden_original'] = $egreso->doc_iden_original ?: $egreso->doc_iden;
+        $data['doc_iden'] = $egreso->documento;
         $data['diagnosticos'] = collect(range(1, 4))
             ->map(function (int $position) use ($egreso, $diagnoses): ?array {
                 $code = trim((string) $egreso->getAttribute("coddiag{$position}"));
@@ -303,8 +343,13 @@ final class EgresoController extends Controller
 
     private function operationalData(array $data): array
     {
+        $document = $data['doc_iden'] ?? null;
+
         return [
             ...$data,
+            'doc_numero' => $document,
+            'doc_iden_original' => $document,
+            'doc_source' => $data['doc_source'] ?? 'intranet_hsj',
             'source_system' => 'intranet_hsj',
             'source_id' => null,
             'source_fingerprint' => $this->fingerprint($data),
@@ -316,7 +361,7 @@ final class EgresoController extends Controller
     {
         $tracked = collect($data)
             ->only([
-                'numhc', 'doc_iden', 'nomb', 'apell', 'fecing', 'fecegr', 'ups',
+                'numhc', 'doc_numero', 'doc_iden', 'nomb', 'apell', 'fecing', 'fecegr', 'ups',
                 'condicion', 'financia', 'coddiag1', 'coddiag2', 'coddiag3', 'coddiag4',
             ])
             ->map(fn ($value) => $value instanceof \DateTimeInterface ? $value->format('Y-m-d') : $value)
@@ -336,7 +381,7 @@ final class EgresoController extends Controller
                 }
                 if (! empty($data['doc_iden'])) {
                     $method = ! empty($data['numhc']) ? 'orWhere' : 'where';
-                    $builder->{$method}('doc_iden', $data['doc_iden']);
+                    $builder->{$method}('doc_numero', $data['doc_iden']);
                 }
             });
 
@@ -362,5 +407,30 @@ final class EgresoController extends Controller
         if ((int) ($result->result ?? -999) < 0) {
             throw new \RuntimeException('No fue posible obtener el bloqueo de escritura de Egresos.');
         }
+    }
+
+    private function withVerifiedPatientDocument(
+        array $data,
+        SighPatientSource $source
+    ): array {
+        $history = trim((string) ($data['numhc'] ?? ''));
+        if ($history === '') {
+            return $data;
+        }
+
+        $patient = $source->byHistories([$history])->get($history);
+        $document = trim((string) ($patient->NroDocumento ?? ''));
+        if (! $patient || $document === '') {
+            return $data;
+        }
+
+        return [
+            ...$data,
+            'doc_iden' => $document,
+            'doc_tipo_id' => $patient->IdDocIdentidad ?: null,
+            'patient_source_id' => $patient->IdPaciente,
+            'doc_source' => $source->sourceCode(),
+            'document_verified_at' => now(),
+        ];
     }
 }

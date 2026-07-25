@@ -18,6 +18,7 @@ final class Egreso extends Model
             'fecegr' => 'date',
             'fecparto' => 'date',
             'fechareg' => 'date',
+            'document_verified_at' => 'datetime',
         ];
     }
 
@@ -29,5 +30,12 @@ final class Egreso extends Model
     public function getPacienteAttribute(): string
     {
         return trim((string) $this->nomb.' '.(string) $this->apell);
+    }
+
+    public function getDocumentoAttribute(): ?string
+    {
+        $document = trim((string) $this->doc_numero);
+
+        return $document !== '' ? $document : null;
     }
 }

@@ -17,6 +17,7 @@ final class SaveEgresoRequest extends FormRequest
         return [
             'numhc' => ['required_without:doc_iden', 'nullable', 'string', 'max:50'],
             'doc_iden' => ['required_without:numhc', 'nullable', 'string', 'max:50'],
+            'doc_tipo_id' => ['nullable', 'integer', 'between:1,10'],
             'nomb' => ['required', 'string', 'max:150'],
             'apell' => ['required', 'string', 'max:150'],
             'sexo' => ['nullable', 'string', 'max:10'],

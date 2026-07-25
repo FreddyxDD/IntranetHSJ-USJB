@@ -21,6 +21,15 @@ final class Constancia extends Model
         ];
     }
 
+    public function getDocumentoAttribute(): ?string
+    {
+        $document = trim((string) $this->doc_iden);
+
+        return $document !== '' && ! in_array($document, ['0', '9'], true)
+            ? $document
+            : null;
+    }
+
     public function egreso(): BelongsTo
     {
         return $this->belongsTo(Egreso::class, 'egreso_id');

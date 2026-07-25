@@ -50,6 +50,11 @@ El contrato obligatorio para integrar Cirugías y futuras aplicaciones está
 documentado en
 [Arquitectura central de identidad e integración](docs/ARQUITECTURA_IDENTIDAD_Y_APLICACIONES.md).
 
+La consolidación de las bases operativas entregadas para Egresos y Cirugías,
+incluyendo conciliación de identidad, secuencia de importación, validaciones y
+reversión, se encuentra definida en el
+[Plan de consolidación de Egresos y Cirugías](docs/PLAN_MIGRACION_DATOS_EGRESOS_CIRUGIAS.md).
+
 ## Flujo de ramas y revisión
 
 El repositorio utiliza ramas temporales y Pull Requests para que cada entrega

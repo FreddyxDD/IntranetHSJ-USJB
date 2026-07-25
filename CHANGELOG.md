@@ -5,6 +5,13 @@ los principios de Keep a Changelog.
 
 ## [Sin publicar]
 
+### Planificado
+
+- Consolidación de Egresos y Cirugías en `Intranet_HSJ`, manteniendo
+  `HSJ_Identity` y SIGH como límites independientes.
+- Esquemas operativos, permisos de Egresos, conciliación temporal, secuencia
+  de importación, conteos de validación y procedimiento de reversión.
+
 ### Añadido
 
 - Estándar institucional para integrar aplicaciones nuevas con

@@ -115,22 +115,22 @@
                 <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,.8fr)]">
                     <form id="import-form" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                         <h2 class="text-lg font-black text-blue-950">Importación masiva controlada</h2>
-                        <p class="mt-1 text-sm text-slate-500">Formatos admitidos: CSV, XLSX y DBF. Se validarán encabezados, fechas, CIE-10 y duplicados antes de insertar.</p>
+                        <p class="mt-1 text-sm text-slate-500">Formatos admitidos: CSV, XLSX y DBF. Primero se analizará cada fila; ningún dato se insertará hasta que revise el resultado y confirme la carga.</p>
                         <label class="mt-5 block rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/60 p-6 text-center">
                             <span class="block text-sm font-bold text-blue-950">Seleccione el archivo de egresos</span>
                             <input name="archivo" type="file" required accept=".csv,.xlsx,.dbf" class="mt-4 block w-full text-sm">
                         </label>
                         <div class="mt-5 flex items-center justify-end gap-3">
                             <span id="import-status" class="mr-auto text-sm text-slate-600" aria-live="polite"></span>
-                            <button type="submit" class="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">Procesar archivo</button>
+                            <button type="submit" class="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">Analizar archivo</button>
                         </div>
-                        <div id="import-result" class="mt-4 hidden rounded-xl border border-slate-200 p-4 text-sm"></div>
                     </form>
                     <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                         <h2 class="text-lg font-black text-blue-950">Importaciones recientes</h2>
                         <div id="imports-list" class="mt-4 space-y-3"></div>
                     </div>
                 </div>
+                <div id="import-result" class="mt-4 hidden rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:p-6"></div>
             </section>
         @endif
 
@@ -259,6 +259,7 @@
                             <option value="certificate_configuration.updated">Configuración</option>
                             <option value="record.create">Egresos registrados</option>
                             <option value="record.update">Egresos corregidos</option>
+                            <option value="import.previewed">Archivos analizados</option>
                             <option value="import.completed">Importaciones</option>
                         </select>
                         <input id="audit-from" type="date" aria-label="Auditoría desde" class="min-h-11 rounded-xl border border-slate-300 px-3">

@@ -66,6 +66,14 @@ Route::prefix('egresos')->middleware('legacy.module:egresos')->group(function ()
     Route::post('/api/importaciones', [ImportacionController::class, 'store'])
         ->middleware('central.permission:egresos.imports.manage')
         ->name('egresos.imports.store');
+    Route::get('/api/importaciones/{importacion}', [ImportacionController::class, 'show'])
+        ->whereNumber('importacion')
+        ->middleware('central.permission:egresos.imports.manage')
+        ->name('egresos.imports.show');
+    Route::post('/api/importaciones/{importacion}/confirmar', [ImportacionController::class, 'commit'])
+        ->whereNumber('importacion')
+        ->middleware('central.permission:egresos.imports.manage')
+        ->name('egresos.imports.commit');
     Route::get('/reportes/egresos.csv', [ReporteController::class, 'csv'])
         ->middleware('central.permission:egresos.reports.view')
         ->name('egresos.reports.csv');

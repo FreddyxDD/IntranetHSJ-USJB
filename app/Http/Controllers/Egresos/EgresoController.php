@@ -128,9 +128,12 @@ final class EgresoController extends Controller
             ->pluck('descripcion', 'codigo_normalizado')
             ->all();
 
+        $data = $this->mapEgreso($egreso, $diagnoses);
+        $data['timeline'] = $this->patientTimeline($egreso);
+
         return response()->json([
             'ok' => true,
-            'data' => $this->mapEgreso($egreso, $diagnoses),
+            'data' => $data,
         ]);
     }
 
@@ -331,6 +334,46 @@ final class EgresoController extends Controller
             ->all();
 
         return $data;
+    }
+
+    private function patientTimeline(Egreso $egreso): array
+    {
+        $history = trim((string) $egreso->numhc);
+        $document = trim((string) $egreso->documento);
+        $episodes = Egreso::query()
+            ->when(
+                $history !== '',
+                fn ($query) => $query->where('numhc', $history),
+                fn ($query) => $query->where('doc_numero', $document)
+            )
+            ->orderBy('fecing')
+            ->orderBy('fecegr')
+            ->orderBy('id')
+            ->get();
+        $previousDischarge = null;
+
+        return $episodes->map(function (Egreso $episode, int $index) use (&$previousDischarge): array {
+            $gapDays = $previousDischarge && $episode->fecing
+                ? $previousDischarge->diffInDays($episode->fecing, false)
+                : null;
+            $result = [
+                'id' => $episode->id,
+                'position' => $index + 1,
+                'is_readmission' => $index > 0,
+                'gap_days' => $gapDays,
+                'fecing' => $episode->fecing?->format('Y-m-d'),
+                'fecegr' => $episode->fecegr?->format('Y-m-d'),
+                'ups' => $episode->ups,
+                'condicion' => $episode->condicion,
+                'coddiag1' => $episode->coddiag1,
+                'source_system' => $episode->source_system,
+            ];
+            if ($episode->fecegr) {
+                $previousDischarge = $episode->fecegr;
+            }
+
+            return $result;
+        })->all();
     }
 
     public static function centralActor(): array

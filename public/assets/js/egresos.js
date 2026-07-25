@@ -5,6 +5,7 @@
     const state = {
         page: 1, query: '', dateFrom: '', dateTo: '',
         selected: null, selectedCertificate: null, editingRecord: null, auditPage: 1,
+        activeImport: null,
     };
     const $ = (selector) => document.querySelector(selector);
     const element = (tag, classes, text) => {
@@ -153,7 +154,29 @@
             (data.diagnosticos || []).forEach((item) => list.append(element('li', 'rounded-xl border border-slate-200 p-3 text-sm', `${item.codigo} — ${item.descripcion}`)));
             if (!(data.diagnosticos || []).length) list.append(element('li', 'text-sm text-slate-500', 'No se registraron diagnósticos.'));
             diagnosis.append(list);
-            content.replaceChildren(grid, diagnosis);
+            const timeline = element('div', 'mt-6 border-t border-slate-200 pt-5');
+            timeline.append(
+                element('h3', 'font-bold text-blue-950', 'Línea de tiempo de hospitalizaciones'),
+                element('p', 'mt-1 text-xs text-slate-500', 'Cada elemento corresponde a un episodio. Una historia clínica repetida no es un duplicado si las fechas o el servicio son diferentes.')
+            );
+            const timelineList = element('ol', 'relative mt-4 ml-3 space-y-4 border-l-2 border-blue-100 pl-6');
+            (data.timeline || []).forEach((episode) => {
+                const item = element('li', 'relative rounded-xl border border-slate-200 bg-white p-3');
+                const dot = element('span', `absolute -left-[31px] top-4 grid size-4 place-items-center rounded-full ring-4 ring-white ${episode.is_readmission ? 'bg-cyan-500' : 'bg-blue-600'}`);
+                const title = episode.is_readmission
+                    ? `Reingreso ${episode.position}${episode.gap_days !== null ? ` · ${episode.gap_days} día(s) después` : ''}`
+                    : 'Primer ingreso registrado';
+                item.append(
+                    dot,
+                    element('div', `text-sm font-black ${episode.is_readmission ? 'text-cyan-800' : 'text-blue-900'}`, title),
+                    element('div', 'mt-1 text-xs text-slate-600', `${formatDate(episode.fecing)} → ${formatDate(episode.fecegr)} · UPS ${episode.ups || '—'} · CIE-10 ${episode.coddiag1 || '—'}`),
+                    element('div', 'mt-1 text-[11px] text-slate-400', `Episodio #${episode.id} · ${episode.source_system || 'sin fuente'}`)
+                );
+                timelineList.append(item);
+            });
+            if (!(data.timeline || []).length) timelineList.append(element('li', 'text-sm text-slate-500', 'No se encontraron otros episodios.'));
+            timeline.append(timelineList);
+            content.replaceChildren(grid, diagnosis, timeline);
         } catch (error) {
             content.textContent = error.message;
         }
@@ -256,16 +279,162 @@
             list.replaceChildren();
             response.data.forEach((item) => {
                 const card = element('article', 'rounded-xl border border-slate-200 p-3');
+                const actions = element('div', 'mt-3 flex justify-end');
+                const review = element('button', 'rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50', item.estado === 'pending' ? 'Revisar y confirmar' : 'Ver resultado');
+                review.addEventListener('click', () => showImportAnalysis(item));
+                actions.append(review);
                 card.append(
                     element('div', 'truncate text-sm font-bold text-blue-950', item.archivo),
-                    element('div', 'mt-1 text-xs text-slate-500', `${item.insertados} insertados · ${item.omitidos} omitidos · ${item.errores} observados`),
-                    element('div', `mt-1 text-xs font-semibold ${item.estado === 'completed' ? 'text-emerald-700' : 'text-rose-700'}`, item.estado)
+                    element('div', 'mt-1 text-xs text-slate-500', importSummaryText(item)),
+                    element('div', `mt-1 text-xs font-semibold ${item.estado === 'completed' ? 'text-emerald-700' : item.estado === 'pending' ? 'text-amber-700' : 'text-rose-700'}`, item.estado),
+                    actions
                 );
                 list.append(card);
             });
             if (!response.data.length) list.append(element('p', 'text-sm text-slate-500', 'Todavía no hay importaciones.'));
         } catch (error) {
             list.replaceChildren(element('p', 'text-sm font-semibold text-rose-700', error.message));
+        }
+    }
+
+    function importSummaryText(item) {
+        const summary = item.detalle?.resumen_final || item.detalle?.resumen;
+        if (!summary) return `${item.insertados} insertados · ${item.omitidos} omitidos · ${item.errores} observados`;
+        return `${summary.nuevo || 0} nuevos · ${summary.reingreso || 0} reingresos · ${summary.duplicado || 0} duplicados · ${(summary.observado || 0) + (summary.error || 0)} por revisar`;
+    }
+
+    const importStatusMeta = {
+        nuevo: ['Nuevo episodio', 'bg-blue-50 text-blue-800 border-blue-200'],
+        reingreso: ['Reingreso', 'bg-cyan-50 text-cyan-800 border-cyan-200'],
+        duplicado: ['Duplicado', 'bg-slate-100 text-slate-700 border-slate-200'],
+        observado: ['Requiere revisión', 'bg-amber-50 text-amber-800 border-amber-200'],
+        error: ['Error bloqueante', 'bg-rose-50 text-rose-800 border-rose-200'],
+        insertado: ['Insertado', 'bg-emerald-50 text-emerald-800 border-emerald-200'],
+    };
+
+    async function showImportAnalysis(item) {
+        state.activeImport = item;
+        const result = $('#import-result');
+        result.classList.remove('hidden');
+        result.replaceChildren();
+
+        const title = element('div', 'flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between');
+        title.append(
+            element('div', 'font-black text-blue-950', `Análisis del lote #${item.id}`),
+            element('div', `text-xs font-bold ${item.estado === 'pending' ? 'text-amber-700' : 'text-emerald-700'}`, item.estado === 'pending' ? 'Pendiente de confirmación' : 'Carga finalizada')
+        );
+        result.append(title, element('p', 'mt-1 text-xs text-slate-500', item.archivo));
+
+        const summary = item.detalle?.resumen_final || item.detalle?.resumen || {};
+        const cards = element('div', 'mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5');
+        ['nuevo', 'reingreso', 'duplicado', 'observado', 'error'].forEach((status) => {
+            const [label, classes] = importStatusMeta[status];
+            const card = element('div', `rounded-xl border p-3 ${classes}`);
+            card.append(element('div', 'text-xl font-black', Number(summary[status] || 0).toLocaleString('es-PE')), element('div', 'text-xs font-bold', label));
+            cards.append(card);
+        });
+        result.append(cards);
+
+        if (item.detalle?.mensaje_fuente) {
+            result.append(element('div', 'mt-3 rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800', item.detalle.mensaje_fuente));
+        }
+
+        const controls = element('div', 'mt-4 flex flex-col gap-2 sm:flex-row sm:items-center');
+        const filter = element('select', 'min-h-10 rounded-xl border border-slate-300 px-3 text-sm');
+        filter.append(element('option', '', 'Todas las filas'));
+        filter.firstChild.value = '';
+        Object.entries(importStatusMeta).forEach(([status, [label]]) => {
+            const option = element('option', '', label);
+            option.value = status;
+            filter.append(option);
+        });
+        filter.addEventListener('change', () => loadImportRows(item.id, filter.value));
+        controls.append(filter);
+        if (item.estado === 'pending') {
+            const eligible = Number(summary.nuevo || 0) + Number(summary.reingreso || 0);
+            const confirm = element('button', 'sm:ml-auto rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 disabled:opacity-50', `Confirmar ${eligible} episodio(s)`);
+            confirm.disabled = eligible === 0;
+            confirm.addEventListener('click', () => confirmImport(item, confirm));
+            controls.append(confirm);
+        }
+        result.append(controls);
+        result.append(element('div', 'mt-4 space-y-2', 'Cargando detalle de filas…'));
+        result.lastChild.id = 'import-rows';
+        await loadImportRows(item.id);
+        result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function loadImportRows(importId, status = '', page = 1) {
+        const container = $('#import-rows');
+        if (!container) return;
+        container.replaceChildren(element('div', 'text-slate-500', 'Cargando filas…'));
+        try {
+            const url = new URL(`${config.importsUrl}/${importId}`, window.location.origin);
+            url.searchParams.set('page', page);
+            if (status) url.searchParams.set('estado', status);
+            const response = await request(url);
+            const pageData = response.data.filas;
+            container.replaceChildren();
+            pageData.data.forEach((row) => {
+                const [label, classes] = importStatusMeta[row.estado] || [row.estado, 'bg-slate-50 text-slate-700 border-slate-200'];
+                const card = element('article', 'rounded-xl border border-slate-200 bg-white p-3');
+                const header = element('div', 'flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between');
+                const data = row.datos || {};
+                const identity = element('div');
+                identity.append(
+                    element('div', 'font-bold text-blue-950', `Fila ${row.fila} · ${[data.nomb, data.apell].filter(Boolean).join(' ') || 'Paciente sin nombre'}`),
+                    element('div', 'mt-1 text-xs text-slate-500', `HC ${row.numhc || '—'} · Documento ${row.doc_iden || '—'} · ${formatDate(data.fecing)} → ${formatDate(data.fecegr)} · UPS ${data.ups || '—'}`)
+                );
+                header.append(identity, element('span', `rounded-full border px-3 py-1 text-xs font-bold ${classes}`, label));
+                card.append(header);
+                const messages = row.mensajes || [];
+                if (messages.length) {
+                    const list = element('ul', 'mt-3 space-y-1 text-xs');
+                    messages.forEach((message) => {
+                        const color = message.severity === 'error' ? 'text-rose-700' : message.severity === 'warning' ? 'text-amber-700' : 'text-slate-600';
+                        list.append(element('li', color, `• ${message.message}`));
+                    });
+                    card.append(list);
+                }
+                container.append(card);
+            });
+            if (!pageData.data.length) container.append(element('div', 'rounded-xl bg-slate-50 p-5 text-center text-slate-500', 'No hay filas en este estado.'));
+            if (pageData.last_page > 1) {
+                const pager = element('div', 'flex items-center justify-between pt-2');
+                pager.append(element('span', 'text-xs text-slate-500', `Página ${pageData.current_page} de ${pageData.last_page}`));
+                const actions = element('div', 'flex gap-2');
+                [['Anterior', pageData.current_page - 1, pageData.current_page <= 1], ['Siguiente', pageData.current_page + 1, pageData.current_page >= pageData.last_page]].forEach(([label, targetPage, disabled]) => {
+                    const button = element('button', 'rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-bold disabled:opacity-40', label);
+                    button.disabled = disabled;
+                    button.addEventListener('click', () => loadImportRows(importId, status, targetPage));
+                    actions.append(button);
+                });
+                pager.append(actions);
+                container.append(pager);
+            }
+        } catch (error) {
+            container.replaceChildren(element('div', 'rounded-xl bg-rose-50 p-4 font-semibold text-rose-700', error.message));
+        }
+    }
+
+    async function confirmImport(item, button) {
+        const summary = item.detalle?.resumen || {};
+        const eligible = Number(summary.nuevo || 0) + Number(summary.reingreso || 0);
+        if (!window.confirm(`Se insertarán ${eligible} episodio(s). Los duplicados y filas observadas no se cargarán. ¿Desea continuar?`)) return;
+        button.disabled = true;
+        button.textContent = 'Confirmando carga…';
+        try {
+            const response = await request(`${config.importsUrl}/${item.id}/confirmar`, {
+                method: 'POST',
+                body: JSON.stringify({}),
+            });
+            window.alert(response.message);
+            await Promise.all([loadImports(), loadRecords(1), loadDashboard()]);
+            await showImportAnalysis(response.data);
+        } catch (error) {
+            window.alert(error.message);
+            button.disabled = false;
+            button.textContent = `Confirmar ${eligible} episodio(s)`;
         }
     }
 
@@ -276,29 +445,16 @@
         const status = $('#import-status');
         const result = $('#import-result');
         button.disabled = true;
-        status.textContent = 'Procesando y validando el archivo…';
+        status.textContent = 'Analizando filas, pacientes y episodios…';
         result.classList.add('hidden');
         try {
             const response = await request(config.importsUrl, { method: 'POST', body: new FormData(form) });
             const item = response.data;
             status.textContent = response.message;
-            status.className = 'mr-auto text-sm font-semibold text-emerald-700';
-            result.classList.remove('hidden');
-            result.replaceChildren(
-                element('div', 'font-bold text-blue-950', 'Resumen de importación'),
-                element('div', 'mt-2', `${item.insertados} insertados · ${item.omitidos} duplicados · ${item.errores} observados`)
-            );
-            const observations = item.detalle?.observaciones || [];
-            if (observations.length) {
-                const details = element('details', 'mt-3');
-                details.append(element('summary', 'cursor-pointer font-semibold text-amber-700', `Ver observaciones (${observations.length})`));
-                const list = element('ul', 'mt-2 max-h-56 space-y-1 overflow-y-auto text-xs text-slate-600');
-                observations.forEach((observation) => list.append(element('li', '', `Fila ${observation.fila}: ${observation.errores.join(' ')}`)));
-                details.append(list);
-                result.append(details);
-            }
+            status.className = 'mr-auto text-sm font-semibold text-blue-700';
             form.reset();
-            await Promise.all([loadImports(), loadRecords(1), loadDashboard()]);
+            await loadImports();
+            await showImportAnalysis(item);
         } catch (error) {
             status.className = 'mr-auto text-sm font-semibold text-rose-700';
             status.textContent = error.message;
@@ -496,6 +652,7 @@
         'certificate_configuration.updated': 'Configuración actualizada',
         'record.create': 'Egreso registrado',
         'record.update': 'Egreso corregido',
+        'import.previewed': 'Archivo analizado',
         'import.completed': 'Importación completada',
         'patients.reconciled': 'Pacientes conciliados',
     };

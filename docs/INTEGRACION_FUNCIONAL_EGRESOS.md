@@ -119,7 +119,9 @@ consultar historial o generar constancias.
 | GET | `/egresos/api/estadisticas/mensuales` | Serie mensual |
 | GET | `/egresos/api/estadisticas/servicios` | Totales por UPS |
 | GET | `/egresos/api/importaciones` | Historial de lotes |
-| POST | `/egresos/api/importaciones` | Procesar CSV, XLSX o DBF |
+| POST | `/egresos/api/importaciones` | Analizar CSV, XLSX o DBF sin insertar |
+| GET | `/egresos/api/importaciones/{id}` | Consultar filas y observaciones del análisis |
+| POST | `/egresos/api/importaciones/{id}/confirmar` | Confirmar episodios válidos |
 | GET | `/egresos/reportes/egresos.csv` | Exportación CSV |
 | GET | `/egresos/reportes/egresos.xlsx` | Exportación XLSX |
 | GET | `/egresos/api/constancias` | Historial |
@@ -148,7 +150,7 @@ La emisión se ejecuta dentro de una transacción SQL Server:
 ## Validaciones ejecutadas
 
 - 20 pruebas Laravel aprobadas y 1 prueba SQL Server omitida en SQLite;
-- 84 aserciones;
+- 89 aserciones;
 - sintaxis PHP validada;
 - rutas verificadas con `php artisan route:list --path=egresos`;
 - consulta real validada sobre 5,872 egresos;
@@ -249,3 +251,67 @@ usuario o evento, tipo y rango de fechas. Expone:
 Los 41 movimientos históricos existentes en
 `egresos.constancia_historial` fueron incorporados a la vista unificada de
 auditoría sin duplicar ni modificar las constancias.
+
+## Importación por etapas y línea de tiempo del paciente
+
+La importación masiva ya no inserta el archivo inmediatamente. El proceso tiene
+dos etapas:
+
+1. **Analizar:** normaliza campos, consulta la fuente maestra de pacientes,
+   valida fechas y CIE-10, compara identidades y clasifica cada episodio.
+2. **Confirmar:** inserta únicamente filas nuevas o reingresos válidos. Los
+   duplicados, errores y conflictos de identidad permanecen fuera de la tabla
+   operativa.
+
+Cada fila queda persistida en `egresos.importacion_filas` con uno de estos
+estados:
+
+| Estado | Tratamiento |
+| --- | --- |
+| `nuevo` | Primer episodio identificado para el paciente |
+| `reingreso` | Paciente conocido con fechas o servicio diferentes |
+| `duplicado` | Mismo paciente, ingreso, egreso y servicio |
+| `observado` | Conflicto entre documento e historia clínica |
+| `error` | Datos mínimos, fechas o CIE-10 inválidos |
+| `insertado` | Episodio confirmado e incorporado |
+
+La identidad del paciente se usa para reunir episodios, pero no constituye por
+sí sola una regla de duplicidad. Un DNI o una historia clínica repetidos son
+esperables cuando existe una nueva hospitalización.
+
+La clave de un episodio combina:
+
+- historia clínica o documento normalizado;
+- fecha de ingreso;
+- fecha de egreso;
+- UPS o servicio.
+
+Antes de confirmar se vuelve a comprobar la clave dentro de un bloqueo
+transaccional de SQL Server, evitando duplicados producidos por dos usuarios
+que confirmen cargas simultáneamente.
+
+La pantalla de análisis muestra el número de filas nuevas, reingresos,
+duplicados, observadas y erróneas. Cada fila explica el motivo en lenguaje
+funcional, incluyendo documentos completados o corregidos desde
+`SIGH_202607_LOCAL`.
+
+El detalle del paciente incorpora una línea de tiempo ordenada por fecha. El
+primer episodio y cada reingreso muestran ingreso, egreso, UPS, diagnóstico,
+fuente y días transcurridos desde el alta anterior.
+
+### Validación con el archivo mensual entregado
+
+El archivo `0000003414_EG_202507.xlsx` contiene:
+
+- 510 episodios;
+- 500 historias clínicas únicas;
+- 10 historias con reingresos legítimos;
+- 19 filas sin documento;
+- 491 documentos legados con prefijo de tipo, normalizados antes de comparar;
+- 5 historias con variaciones de escritura en el nombre;
+- 2 documentos asociados a historias distintas que requieren validación;
+- 0 filas exactamente repetidas dentro del archivo.
+
+Como este archivo ya había sido cargado previamente en el lote histórico, la
+nueva prevalidación identificó sus 510 filas como episodios existentes y no
+insertó registros adicionales.

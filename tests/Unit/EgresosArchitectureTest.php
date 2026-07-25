@@ -8,6 +8,7 @@ use App\Models\Egresos\Constancia;
 use App\Models\Egresos\ConstanciaHistorial;
 use App\Models\Egresos\Egreso;
 use App\Models\Egresos\Importacion;
+use App\Models\Egresos\ImportacionFila;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -36,6 +37,7 @@ final class EgresosArchitectureTest extends TestCase
         self::assertSame('catalogos.cie10', (new Cie10)->getTable());
         self::assertSame('egresos.configuracion_constancias', (new ConfiguracionConstancia)->getTable());
         self::assertSame('egresos.importaciones', (new Importacion)->getTable());
+        self::assertSame('egresos.importacion_filas', (new ImportacionFila)->getTable());
     }
 
     public function test_legacy_documents_are_exposed_without_the_type_prefix(): void
@@ -67,6 +69,8 @@ final class EgresosArchitectureTest extends TestCase
         $recordCreate = Route::getRoutes()->getByName('egresos.records.store');
         $recordUpdate = Route::getRoutes()->getByName('egresos.records.update');
         $import = Route::getRoutes()->getByName('egresos.imports.store');
+        $importShow = Route::getRoutes()->getByName('egresos.imports.show');
+        $importCommit = Route::getRoutes()->getByName('egresos.imports.commit');
         $export = Route::getRoutes()->getByName('egresos.reports.xlsx');
         $patientSearch = Route::getRoutes()->getByName('egresos.patients.search');
 
@@ -82,6 +86,8 @@ final class EgresosArchitectureTest extends TestCase
         self::assertContains('central.permission:egresos.records.create', $recordCreate->gatherMiddleware());
         self::assertContains('central.permission:egresos.records.update', $recordUpdate->gatherMiddleware());
         self::assertContains('central.permission:egresos.imports.manage', $import->gatherMiddleware());
+        self::assertContains('central.permission:egresos.imports.manage', $importShow->gatherMiddleware());
+        self::assertContains('central.permission:egresos.imports.manage', $importCommit->gatherMiddleware());
         self::assertContains('central.permission:egresos.reports.view', $export->gatherMiddleware());
         self::assertContains('central.permission:egresos.records.view', $patientSearch->gatherMiddleware());
     }

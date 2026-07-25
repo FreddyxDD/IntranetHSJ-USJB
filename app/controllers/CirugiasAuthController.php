@@ -4,8 +4,24 @@ declare(strict_types=1);
 require_once BASE_PATH . '/app/config/database.php';
 require_once BASE_PATH . '/app/helpers/response.php';
 
+use App\Support\CirugiasSessionBridge;
+
 final class CirugiasAuthController
 {
+    public static function bootstrapCentralSession(): bool
+    {
+        self::ensureSession();
+
+        return CirugiasSessionBridge::sync($_SESSION);
+    }
+
+    public static function centralDestination(): string
+    {
+        self::bootstrapCentralSession();
+
+        return CirugiasSessionBridge::destination($_SESSION);
+    }
+
     public static function login(): void
     {
         try {
@@ -76,6 +92,7 @@ final class CirugiasAuthController
     public static function me(): void
     {
         self::ensureSession();
+        self::bootstrapCentralSession();
 
         if (empty($_SESSION['cirugias_usuario'])) {
             json_response([
@@ -107,7 +124,7 @@ final class CirugiasAuthController
             'success' => true,
             'ok' => true,
             'message' => 'Sesión de Cirugías cerrada correctamente',
-            'redirect' => url_path('/cirugias-login'),
+            'redirect' => url_path('/areas'),
         ]);
     }
 
@@ -369,6 +386,21 @@ public static function eliminarUsuario(): void
     private static function requireAdmin(): void
     {
         self::ensureSession();
+
+        if (! empty($_SESSION['ueei_id']) && function_exists('require_modulo_api')) {
+            require_modulo_api('cirugias');
+            self::bootstrapCentralSession();
+
+            if (! function_exists('ueei_usuario_es_admin') || ! ueei_usuario_es_admin()) {
+                json_response([
+                    'success' => false,
+                    'ok' => false,
+                    'message' => 'No tienes permisos de administrador',
+                ], 403);
+            }
+
+            return;
+        }
 
         if (empty($_SESSION['cirugias_usuario'])) {
             json_response([

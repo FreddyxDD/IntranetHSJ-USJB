@@ -56,17 +56,15 @@ function require_ueei_admin(): void
 
 function require_cirugias_login(): void
 {
-    if (empty($_SESSION['cirugias_usuario'])) {
-        header('Location: ' . url_path('/cirugias-login'));
-        exit;
-    }
+    require_modulo('cirugias');
+    CirugiasAuthController::bootstrapCentralSession();
 }
 
 function require_cirugias_admin(): void
 {
     require_cirugias_login();
 
-    if ((int) ($_SESSION['cirugias_rol'] ?? 1) !== 0) {
+    if (! ueei_usuario_es_admin()) {
         header('Location: ' . url_path('/principal-cirugias'));
         exit;
     }
@@ -326,7 +324,11 @@ match (true) {
     ============================== */
 
     $method === 'GET' && ($uri === '/cirugias-login' || $uri === '/pages/LoginLS.html')
-        => (require_modulo('cirugias')) ?? require BASE_PATH . '/views/pages/cirugias-login.php',
+        => (function (): void {
+            require_cirugias_login();
+            header('Location: ' . url_path(CirugiasAuthController::centralDestination()));
+            exit;
+        })(),
 
     $method === 'POST' && $uri === '/login-ls'
         => CirugiasAuthController::login(),

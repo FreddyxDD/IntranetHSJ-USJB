@@ -49,6 +49,9 @@ if (!function_exists('cirugias_logueado')) {
     function cirugias_logueado(): bool
     {
         cirugias_session_start();
+        if (class_exists(\App\Support\CirugiasSessionBridge::class)) {
+            \App\Support\CirugiasSessionBridge::sync($_SESSION);
+        }
         return isset($_SESSION['cirugias_usuario_id']);
     }
 }
@@ -65,6 +68,12 @@ if (!function_exists('cirugias_require_login_page')) {
     function cirugias_require_login_page(): void
     {
         cirugias_session_start();
+
+        if (function_exists('require_modulo')) {
+            require_modulo('cirugias');
+            \App\Support\CirugiasSessionBridge::sync($_SESSION);
+            return;
+        }
 
         if (!cirugias_logueado()) {
             header('Location: ' . cirugias_path('/login-ls'));
@@ -94,6 +103,20 @@ if (!function_exists('cirugias_require_admin_api')) {
     function cirugias_require_admin_api(): void
     {
         cirugias_session_start();
+
+        if (function_exists('require_modulo_api')) {
+            require_modulo_api('cirugias');
+            \App\Support\CirugiasSessionBridge::sync($_SESSION);
+
+            if (!function_exists('ueei_usuario_es_admin') || !ueei_usuario_es_admin()) {
+                cirugias_json([
+                    'ok' => false,
+                    'message' => 'No tienes permiso para realizar esta acciÃ³n.'
+                ], 403);
+            }
+
+            return;
+        }
 
         if (!cirugias_logueado()) {
             cirugias_json([

@@ -109,6 +109,11 @@ final class UeeiAuthController
             ->all() ?? [];
     }
 
+    public static function refrescarSesion(User $user): void
+    {
+        self::establecerSesion($user);
+    }
+
     private static function respondAuthenticated(User $user, ?string $message = null): never
     {
         $payload = [

@@ -298,18 +298,18 @@ $adminRol = $_SESSION['ueei_rol'] ?? 'admin';
                             </div>
 
                             <div class="form-group">
-                                <label for="areaId">Área</label>
-                                <select id="areaId" name="area_id">
-                                    <option value="">Sin área</option>
+                                <label for="areaId">Perfil de acceso</label>
+                                <select id="areaId" name="area_id" required>
+                                    <option value="">Selecciona un perfil</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="form-group">
                             <div class="modules-header">
-                                <label>Módulos asignados</label>
-                                <button type="button" class="btn-link" id="btnSeleccionarTodo">
-                                    Seleccionar todo
+                                <label>Módulos heredados del perfil</label>
+                                <button type="button" class="btn-link" id="btnSeleccionarTodo" disabled>
+                                    Asignación central
                                 </button>
                             </div>
 

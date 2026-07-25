@@ -49,12 +49,17 @@ final class AdminUeeiController
     {
         self::requireAdmin();
 
-        $roles = self::rolesQuery()->orderBy('name')->get(['access_roles.id', 'access_roles.code', 'access_roles.name', 'access_roles.description']);
+        $roles = self::rolesQuery()
+            ->with(['permissions.application'])
+            ->orderBy('name')
+            ->get(['access_roles.id', 'access_roles.code', 'access_roles.name', 'access_roles.description']);
         $areas = $roles->map(fn (AccessRole $role): array => [
             'id' => (int) $role->id,
             'codigo' => $role->code,
             'nombre' => $role->name,
             'descripcion' => $role->description,
+            'rol' => self::legacyRole($role->code),
+            'modulo_ids' => self::moduleIdsForRole($role),
         ])->all();
 
         json_response([
@@ -165,7 +170,19 @@ final class AdminUeeiController
             $account->roles()->sync([$role->id]);
         });
 
-        json_response(['ok' => true, 'message' => 'Usuario actualizado correctamente.']);
+        $updatedUser = User::query()
+            ->with(['accessAccount.roles.application', 'accessAccount.roles.permissions.application'])
+            ->findOrFail($id);
+
+        if ($id === (int) ($_SESSION['ueei_id'] ?? 0)) {
+            UeeiAuthController::refrescarSesion($updatedUser);
+        }
+
+        json_response([
+            'ok' => true,
+            'message' => 'Usuario actualizado correctamente.',
+            'data' => self::serializeUser($updatedUser),
+        ]);
     }
 
     public static function cambiarEstado(int $id): void
@@ -286,9 +303,36 @@ final class AdminUeeiController
     {
         return match ($code) {
             'administrador' => 'admin',
-            'supervisor' => 'supervisor',
+            'indicadores', 'director' => 'director',
+            'consulta_citas', 'supervisor' => 'supervisor',
             default => 'trabajador',
         };
+    }
+
+    private static function moduleIdsForRole(AccessRole $role): array
+    {
+        if ($role->code === 'administrador') {
+            return array_column(modulos_todos_activos(), 'id');
+        }
+
+        $application = (string) config('access.application');
+        $permissionCodes = $role->permissions
+            ->filter(fn ($permission): bool => $permission->application?->code === $application)
+            ->pluck('code')
+            ->unique()
+            ->all();
+        $mapping = intranet_module_permission_map();
+
+        return array_values(array_map(
+            static fn (array $module): int => (int) $module['id'],
+            array_filter(
+                modulos_todos_activos(),
+                static fn (array $module): bool => array_intersect(
+                    $mapping[$module['codigo']] ?? [],
+                    $permissionCodes
+                ) !== []
+            )
+        ));
     }
 
     private static function displayNameFromEmail(string $email): string

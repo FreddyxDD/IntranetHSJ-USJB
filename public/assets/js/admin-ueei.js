@@ -190,6 +190,11 @@
     function actualizarTextoSeleccionarTodo() {
         const inputs = $$(".modulo-check-input");
 
+        if (elementos.btnSeleccionarTodo?.disabled) {
+            elementos.btnSeleccionarTodo.textContent = "Asignación central";
+            return;
+        }
+
         if (inputs.length === 0) {
             state.seleccionTodoActiva = false;
             if (elementos.btnSeleccionarTodo) {
@@ -342,7 +347,7 @@
         if (!elementos.areaId) return;
 
         const options = [
-            `<option value="">Sin área</option>`,
+            `<option value="">Selecciona un perfil</option>`,
             ...state.catalogos.areas.map((area) => {
                 return `
                     <option value="${Number(area.id)}">
@@ -374,6 +379,7 @@
                         type="checkbox"
                         class="modulo-check-input"
                         value="${Number(modulo.id)}"
+                        disabled
                     >
                     <strong>${escapeHtml(modulo.nombre)}</strong>
                     <span>${escapeHtml(modulo.descripcion || modulo.codigo || "Módulo del sistema")}</span>
@@ -381,11 +387,33 @@
             `;
         }).join("");
 
-        $$(".modulo-check-input").forEach((input) => {
-            input.addEventListener("change", actualizarTextoSeleccionarTodo);
-        });
-
         actualizarTextoSeleccionarTodo();
+    }
+
+    function aplicarPerfilSeleccionado() {
+        const perfilId = Number(elementos.areaId?.value || 0);
+        const perfil = state.catalogos.areas.find((item) => Number(item.id) === perfilId);
+
+        if (!perfil) {
+            marcarModulosSeleccionados([]);
+            return;
+        }
+
+        if (elementos.rol) {
+            elementos.rol.value = perfil.rol || "trabajador";
+        }
+
+        marcarModulosSeleccionados(perfil.modulo_ids || []);
+    }
+
+    function aplicarRolSeleccionado() {
+        const rol = elementos.rol?.value || "trabajador";
+        const perfil = state.catalogos.areas.find((item) => item.rol === rol);
+
+        if (perfil && elementos.areaId) {
+            elementos.areaId.value = String(perfil.id);
+            aplicarPerfilSeleccionado();
+        }
     }
 
     function renderModulosCards() {
@@ -665,7 +693,7 @@
             elementos.btnGuardarUsuario.textContent = "Actualizar usuario";
         }
 
-        marcarModulosSeleccionados(usuario.modulo_ids || []);
+        aplicarPerfilSeleccionado();
 
         abrirModalUsuario();
     }
@@ -690,6 +718,12 @@
         if (!payload.correo) {
             mostrarAlerta("Ingrese el correo institucional.", "error");
             elementos.correo?.focus();
+            return;
+        }
+
+        if (!payload.area_id) {
+            mostrarAlerta("Selecciona el perfil de acceso del usuario.", "error");
+            elementos.areaId?.focus();
             return;
         }
 
@@ -769,17 +803,7 @@
     }
 
     function seleccionarTodoModulos() {
-        const inputs = $$(".modulo-check-input");
-
-        if (inputs.length === 0) return;
-
-        const nuevoEstado = !state.seleccionTodoActiva;
-
-        inputs.forEach((input) => {
-            input.checked = nuevoEstado;
-        });
-
-        actualizarTextoSeleccionarTodo();
+        aplicarPerfilSeleccionado();
     }
 
     /* =========================================================
@@ -977,6 +1001,8 @@
         elementos.btnNuevoUsuario?.addEventListener("click", nuevoUsuario);
         elementos.btnCancelarEdicion?.addEventListener("click", limpiarFormulario);
         elementos.btnSeleccionarTodo?.addEventListener("click", seleccionarTodoModulos);
+        elementos.areaId?.addEventListener("change", aplicarPerfilSeleccionado);
+        elementos.rol?.addEventListener("change", aplicarRolSeleccionado);
 
         elementos.formUsuario?.addEventListener("submit", guardarUsuario);
 

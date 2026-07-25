@@ -116,6 +116,11 @@ final class CirugiasController
 
     private static function requireLoginJson(): void
     {
+        if (function_exists('require_modulo_api')) {
+            require_modulo_api('cirugias');
+            CirugiasAuthController::bootstrapCentralSession();
+        }
+
         if (empty($_SESSION['cirugias_usuario'])) {
             json_response([
                 'success' => false,
@@ -128,7 +133,11 @@ final class CirugiasController
     {
         self::requireLoginJson();
 
-        if ((int) ($_SESSION['cirugias_rol'] ?? 1) !== 0) {
+        $isAdmin = function_exists('ueei_usuario_es_admin')
+            ? ueei_usuario_es_admin()
+            : (int) ($_SESSION['cirugias_rol'] ?? 1) === 0;
+
+        if (! $isAdmin) {
             json_response([
                 'success' => false,
                 'message' => 'Acceso denegado. Solo administrador.'

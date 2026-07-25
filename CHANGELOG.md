@@ -16,6 +16,16 @@ los principios de Keep a Changelog.
 
 ### Corregido
 
+- Acceso a Cirugías reutilizando la sesión y los permisos centrales de
+  `HSJ_Identity`, sin solicitar un segundo inicio de sesión.
+- Redirección automática del administrador central al panel administrativo de
+  Cirugías y del personal autorizado al panel operativo.
+- Persistencia del perfil de acceso al editar usuarios: el formulario ya no
+  mezcla el rol central con un área anterior y recarga el registro guardado.
+- Los módulos del usuario se muestran como permisos heredados del perfil
+  central, evitando selecciones visuales que antes no se almacenaban.
+- Actualización inmediata de la sesión cuando el administrador modifica su
+  propio correo o perfil.
 - Deformación de la página `/areas` en resoluciones intermedias y móviles.
 - Desbordamiento horizontal de tarjetas y accesos rápidos.
 - Tamaño sin restricciones de imágenes utilizadas como iconos de módulos.
@@ -24,6 +34,8 @@ los principios de Keep a Changelog.
 
 ### Validación
 
+- Pruebas unitarias del puente de sesión central hacia Cirugías.
+- Verificación de sintaxis PHP y compilación de recursos frontend.
 - Visualización comprobada en escritorio y viewport móvil.
 - Navbar colapsable y menú de perfil comprobados con Preline.
 - Seis pruebas Laravel aprobadas con 19 aserciones.

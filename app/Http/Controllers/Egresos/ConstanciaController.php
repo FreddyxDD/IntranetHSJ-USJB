@@ -7,6 +7,7 @@ use App\Models\Egresos\Cie10;
 use App\Models\Egresos\ConfiguracionConstancia;
 use App\Models\Egresos\Constancia;
 use App\Models\Egresos\Egreso;
+use App\Services\Egresos\AnnualCertificateSequence;
 use App\Services\Egresos\ConstanciaDocumentPresenter;
 use App\Services\Egresos\ConstanciaTrace;
 use Illuminate\Http\JsonResponse;
@@ -18,8 +19,10 @@ use Illuminate\View\View;
 
 final class ConstanciaController extends Controller
 {
-    public function store(Request $request): JsonResponse
-    {
+    public function store(
+        Request $request,
+        AnnualCertificateSequence $sequence
+    ): JsonResponse {
         $validated = $request->validate([
             'egreso_id' => ['required', 'integer', Rule::exists(Egreso::class, 'id')],
             'observacion' => ['nullable', 'string', 'max:1000'],
@@ -27,35 +30,10 @@ final class ConstanciaController extends Controller
         $actor = EgresoController::centralActor();
         $egreso = Egreso::query()->findOrFail($validated['egreso_id']);
         $year = now()->year;
-        $ownerKey = $actor['account_id'] ? 'account:'.$actor['account_id'] : 'user:'.$actor['user_id'];
+        $ownerKey = AnnualCertificateSequence::OWNER_KEY;
 
-        $certificate = DB::transaction(function () use ($egreso, $validated, $actor, $year, $ownerKey, $request): Constancia {
-            $counter = DB::table('egresos.correlativos')
-                ->where('sequence_owner_key', $ownerKey)
-                ->where('anio', $year)
-                ->lockForUpdate()
-                ->first();
-
-            if (! $counter) {
-                DB::table('egresos.correlativos')->insert([
-                    'sequence_owner_key' => $ownerKey,
-                    'anio' => $year,
-                    'ultimo_numero' => 0,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-                $counter = DB::table('egresos.correlativos')
-                    ->where('sequence_owner_key', $ownerKey)
-                    ->where('anio', $year)
-                    ->lockForUpdate()
-                    ->first();
-            }
-
-            $number = ((int) $counter->ultimo_numero) + 1;
-            DB::table('egresos.correlativos')
-                ->where('id', $counter->id)
-                ->update(['ultimo_numero' => $number, 'updated_at' => now()]);
-
+        $certificate = DB::transaction(function () use ($egreso, $validated, $actor, $year, $ownerKey, $request, $sequence): Constancia {
+            $number = $sequence->next($year);
             $diagnoses = Cie10::query()
                 ->whereIn('codigo_normalizado', collect(range(1, 4))
                     ->map(fn (int $i): string => strtoupper(str_replace('.', '', (string) $egreso->getAttribute("coddiag{$i}"))))
@@ -86,6 +64,11 @@ final class ConstanciaController extends Controller
                 'iniciales_director' => $configuration?->iniciales_director,
                 'iniciales_jefe' => $configuration?->iniciales_jefe,
                 'iniciales_ccp' => $configuration?->iniciales_ccp,
+                'nombre_director' => $configuration?->nombre_director,
+                'nombre_jefe' => $configuration?->nombre_jefe,
+                'cargo_director' => $configuration?->cargo_director,
+                'cargo_jefe' => $configuration?->cargo_jefe,
+                'configuracion_observacion' => $configuration?->observacion,
                 'observacion' => $validated['observacion'] ?? null,
                 'estado' => 'generada',
                 'source_system' => 'intranet_hsj',

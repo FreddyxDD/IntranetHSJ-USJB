@@ -74,6 +74,9 @@
             @if ($abilities['viewHistory'])
                 <button class="eg-tab whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100" data-panel="history">Historial de constancias</button>
             @endif
+            @if ($abilities['viewAudit'] ?? false)
+                <button class="eg-tab whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100" data-panel="audit">Auditoría</button>
+            @endif
             @if ($abilities['manageConfiguration'])
                 <button class="eg-tab whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100" data-panel="configuration">Configuración</button>
             @endif
@@ -192,11 +195,79 @@
                             <textarea name="observacion" maxlength="2000" rows="3" class="w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100"></textarea>
                         </label>
                     </div>
+                    <div class="mt-8 border-t border-slate-200 pt-6">
+                        <div class="mb-4">
+                            <h3 class="font-black text-blue-950">Vista preliminar del documento</h3>
+                            <p class="mt-1 text-sm text-slate-500">Referencia visual en tiempo real. Los cambios solo se aplican a nuevas constancias después de guardar.</p>
+                        </div>
+                        <div class="overflow-x-auto rounded-2xl bg-slate-100 p-3 sm:p-6">
+                            <article id="certificate-preview" class="relative mx-auto aspect-[210/297] min-w-[420px] max-w-[560px] overflow-hidden bg-white p-[7%] text-[7px] leading-relaxed text-black shadow-xl sm:text-[9px]">
+                                <img src="/assets/images/fondo.png" alt="" class="pointer-events-none absolute left-1/2 top-1/2 w-[78%] -translate-x-1/2 -translate-y-1/2 opacity-[0.07]">
+                                <div class="relative z-10">
+                                    <div class="flex items-start justify-between">
+                                        <div class="w-32 text-center"><img src="/assets/images/logo.jpeg" alt="Ministerio de Salud" class="mx-auto w-16"></div>
+                                        <div class="border-2 border-black px-5 py-3 text-center font-black">N° 0001-{{ now()->year }}-HSJ-GIN</div>
+                                    </div>
+                                    <div class="mt-5 font-black">DIRECCIÓN REGIONAL DE SALUD</div>
+                                    <div>Hospital San José: Av. Alva Maurtua N°600</div>
+                                    <div>056-261232 Telefax: 056-261421 Chincha Alta</div>
+                                    <h4 class="mt-10 text-center text-base font-black">CONSTANCIA DE HOSPITALIZACIÓN</h4>
+                                    <p class="mt-8">El que suscribe Director Ejecutivo del Hospital “San José” de Chincha, a través de la Jefatura de la Oficina de Estadística e Informática:</p>
+                                    <p class="mt-5 font-black">HACE CONSTAR:</p>
+                                    <p class="mt-4 text-justify">Que, la paciente <strong>PACIENTE DE REFERENCIA</strong>, identificada con DNI N° <strong>00000000</strong>, registra ingreso al servicio de hospitalización de <strong>GINECOLOGÍA</strong> desde el <strong>01/01/{{ now()->year }}</strong> hasta <strong>02/01/{{ now()->year }}</strong>. Alta por Indicación Médica, con condición de Alta Mejorado y pronóstico Bueno; según se registra en la hoja automatizada de epicrisis de la Historia Clínica N° <strong>000000</strong>.</p>
+                                    <p class="mt-4 font-black">Diagnóstico</p>
+                                    <p class="ml-5"><strong>1.- Z00.0:</strong> Diagnóstico de referencia</p>
+                                    <p class="mt-6">Se extiende la presente Constancia para los fines que estime conveniente, según lo solicitado por el recurrente.</p>
+                                    <p class="mt-5">Chincha Alta, {{ now()->translatedFormat('d \\d\\e F \\d\\e Y') }}</p>
+                                    <div class="mt-10 flex items-end justify-between">
+                                        <div class="font-black">
+                                            <div><span data-preview="iniciales_jefe">MASG</span>/DE-HSJCH.</div>
+                                            <div><span data-preview="iniciales_ccp">KRJ</span>/J-GIN</div>
+                                        </div>
+                                        <div class="w-44 border-t border-black pt-1 text-center">
+                                            <strong data-preview="cargo_director">DIRECCIÓN EJECUTIVA</strong>
+                                            <span data-preview="nombre_director" class="block"></span>
+                                            <span class="block">Hospital San José - Chincha</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </article>
+                        </div>
+                    </div>
                     <div class="mt-5 flex items-center justify-end gap-3">
                         <span id="configuration-status" class="mr-auto text-sm text-slate-500" aria-live="polite"></span>
                         <button type="submit" class="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">Guardar configuración</button>
                     </div>
                 </form>
+            </section>
+        @endif
+
+        @if ($abilities['viewAudit'] ?? false)
+            <section id="panel-audit" class="eg-panel mt-4 hidden">
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+                    <div>
+                        <h2 class="text-lg font-black text-blue-950">Auditoría del módulo de Egresos</h2>
+                        <p class="mt-1 text-sm text-slate-500">Generaciones, modificaciones, anulaciones, configuraciones, importaciones y mantenimientos registrados con usuario, fecha, IP y valores modificados.</p>
+                    </div>
+                    <form id="audit-form" class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_220px_auto_auto_auto]">
+                        <input id="audit-query" type="search" maxlength="150" placeholder="Usuario, evento o identificador" class="min-h-11 rounded-xl border border-slate-300 px-3">
+                        <select id="audit-type" class="min-h-11 rounded-xl border border-slate-300 px-3">
+                            <option value="">Todos los eventos</option>
+                            <option value="certificate.generar">Constancias generadas</option>
+                            <option value="certificate.editar">Constancias editadas</option>
+                            <option value="certificate.anular">Constancias anuladas</option>
+                            <option value="certificate_configuration.updated">Configuración</option>
+                            <option value="record.create">Egresos registrados</option>
+                            <option value="record.update">Egresos corregidos</option>
+                            <option value="import.completed">Importaciones</option>
+                        </select>
+                        <input id="audit-from" type="date" aria-label="Auditoría desde" class="min-h-11 rounded-xl border border-slate-300 px-3">
+                        <input id="audit-to" type="date" aria-label="Auditoría hasta" class="min-h-11 rounded-xl border border-slate-300 px-3">
+                        <button class="rounded-xl bg-slate-800 px-5 font-bold text-white">Filtrar</button>
+                    </form>
+                </div>
+                <div id="audit-list" class="mt-4 space-y-3"></div>
+                <div id="audit-pagination" class="mt-4 flex items-center justify-between text-sm"></div>
             </section>
         @endif
     </main>
@@ -305,6 +376,7 @@
             'historyUrl' => route('egresos.certificates.index', [], false),
             'certificateUrl' => route('egresos.certificates.store', [], false),
             'configurationUrl' => route('egresos.configuration.show', [], false),
+            'auditUrl' => route('egresos.audit.index', [], false),
             'abilities' => $abilities,
         ]) }};
     </script>

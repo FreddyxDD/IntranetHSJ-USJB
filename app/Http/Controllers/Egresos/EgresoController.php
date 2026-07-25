@@ -39,6 +39,7 @@ final class EgresoController extends Controller
                 'viewHistory' => ueei_tiene_permiso('egresos.history.view'),
                 'viewReports' => ueei_tiene_permiso('egresos.reports.view'),
                 'manageConfiguration' => ueei_tiene_permiso('egresos.configuration.manage'),
+                'viewAudit' => ueei_tiene_permiso('egresos.history.view'),
             ],
         ]);
     }
@@ -290,7 +291,11 @@ final class EgresoController extends Controller
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
         $text = trim((string) ($validated['q'] ?? ''));
-        $query = Constancia::query()->with('historial')->orderByDesc('created_at');
+        $query = Constancia::query()
+            ->with('historial')
+            ->orderByDesc('anio')
+            ->orderByDesc('numero')
+            ->orderByDesc('id');
 
         if ($text !== '') {
             $query->where(function ($builder) use ($text): void {

@@ -54,7 +54,7 @@ EGRESOS_PATIENT_SOURCE_CODE=sigh_202607_local
 - búsqueda paginada por historia clínica, documento, nombres o apellidos;
 - detalle del egreso y resolución de diagnósticos contra CIE-10;
 - consulta del historial de constancias;
-- emisión de constancias con correlativo por cuenta y año;
+- emisión de constancias con correlativo institucional único por año;
 - edición controlada de constancias no anuladas;
 - anulación con motivo obligatorio;
 - historial obligatorio y evento de auditoría al emitir;
@@ -137,7 +137,7 @@ Estas rutas están declaradas antes del puente PHP legado y son atendidas
 
 La emisión se ejecuta dentro de una transacción SQL Server:
 
-1. bloquea el correlativo de la cuenta y año;
+1. bloquea el correlativo institucional del año;
 2. incrementa el número;
 3. copia la información histórica del egreso y sus descripciones CIE-10;
 4. registra la constancia;
@@ -147,8 +147,8 @@ La emisión se ejecuta dentro de una transacción SQL Server:
 
 ## Validaciones ejecutadas
 
-- 20 pruebas Laravel aprobadas;
-- 83 aserciones;
+- 20 pruebas Laravel aprobadas y 1 prueba SQL Server omitida en SQLite;
+- 84 aserciones;
 - sintaxis PHP validada;
 - rutas verificadas con `php artisan route:list --path=egresos`;
 - consulta real validada sobre 5,872 egresos;
@@ -197,7 +197,7 @@ Se conservaron:
 
 - el logotipo del Ministerio de Salud y el encabezado de la Dirección Regional
   de Salud;
-- el correlativo `N° 000-AAAA-HSJ-SERVICIO` dentro de su recuadro;
+- el correlativo `N° 0000-AAAA-HSJ-SERVICIO` dentro de su recuadro;
 - la marca de agua institucional del Hospital San José;
 - el título, la introducción, `HACE CONSTAR`, el texto de hospitalización y la
   relación de diagnósticos CIE-10;
@@ -208,3 +208,44 @@ Laravel ahora prepara los datos mediante
 `ConstanciaDocumentPresenter` y Blade se limita a representar esta plantilla.
 El formato fue validado mediante una prueba de regresión y una impresión real
 de control de una página A4.
+
+## Correlativo anual, configuración y auditoría funcional
+
+Desde la migración
+`2026_07_25_203000_enable_global_annual_certificate_sequence`, las constancias
+nuevas utilizan una única secuencia institucional del módulo:
+
+- el propietario técnico del correlativo es `application:egresos`;
+- la secuencia es independiente del usuario que emite el documento;
+- el número se presenta con cuatro dígitos;
+- cada año mantiene su propio contador;
+- la primera emisión de 2027 será `N° 0001-2027-HSJ-SERVICIO`;
+- el historial se ordena por año y número, del más reciente al más antiguo;
+- las constancias históricas no se renumeran.
+
+Para 2026 se conservó el máximo histórico `0028`, por lo que la siguiente
+emisión institucional será `0029`. La reserva utiliza un bloqueo transaccional
+de SQL Server para impedir números duplicados ante emisiones simultáneas.
+
+La configuración institucional está relacionada con la emisión mediante una
+copia histórica. Al generar una constancia se guardan dentro del documento las
+iniciales, nombres, cargos y observación de configuración vigentes en ese
+momento. Los cambios posteriores no alteran documentos ya emitidos.
+
+La pestaña Configuración incluye una vista preliminar A4 reactiva. Las
+iniciales, el cargo y el nombre del director cambian inmediatamente mientras se
+editan los campos; guardar la configuración registra los valores anteriores y
+nuevos en auditoría.
+
+La nueva pestaña Auditoría consulta `auditoria.eventos` y permite filtrar por
+usuario o evento, tipo y rango de fechas. Expone:
+
+- generación, edición y anulación de constancias;
+- cambios de configuración;
+- registro y corrección manual de egresos;
+- importaciones y conciliaciones;
+- usuario central, fecha, IP, sujeto y valores modificados.
+
+Los 41 movimientos históricos existentes en
+`egresos.constancia_historial` fueron incorporados a la vista unificada de
+auditoría sin duplicar ni modificar las constancias.

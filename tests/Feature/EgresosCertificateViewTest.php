@@ -36,7 +36,7 @@ final class EgresosCertificateViewTest extends TestCase
         $normalizedHtml = preg_replace('/\s+/u', ' ', $html);
 
         self::assertStringContainsString('CONSTANCIA DE HOSPITALIZACION', $html);
-        self::assertStringContainsString('N° 029-2026-HSJ-GIN', $html);
+        self::assertStringContainsString('N° 0029-2026-HSJ-GIN', $html);
         self::assertStringContainsString('DIRECCION REGIONAL DE SALUD', $html);
         self::assertStringContainsString('HACE CONSTAR:', $html);
         self::assertStringContainsString('hoja automatizada de epicrisis', $normalizedHtml);

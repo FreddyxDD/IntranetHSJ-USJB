@@ -32,7 +32,7 @@ final class ConstanciaDocumentPresenter
 
         return [
             'correlative' => sprintf(
-                'N° %03d-%d-HSJ-%s',
+                'N° %04d-%d-HSJ-%s',
                 $certificate->numero,
                 $certificate->anio,
                 $serviceCode
@@ -57,6 +57,10 @@ final class ConstanciaDocumentPresenter
                 ?: $service['lower']
             ),
             'lower_code' => 'J-'.$serviceCode,
+            'director_name' => $this->clean($certificate->nombre_director),
+            'director_title' => mb_strtoupper(
+                $this->clean($certificate->cargo_director) ?: 'DIRECCIÓN EJECUTIVA'
+            ),
         ];
     }
 

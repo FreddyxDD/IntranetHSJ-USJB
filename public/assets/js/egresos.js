@@ -4,7 +4,7 @@
     const config = window.EGRESOS_CONFIG;
     const state = {
         page: 1, query: '', dateFrom: '', dateTo: '',
-        selected: null, selectedCertificate: null, editingRecord: null,
+        selected: null, selectedCertificate: null, editingRecord: null, auditPage: 1,
     };
     const $ = (selector) => document.querySelector(selector);
     const element = (tag, classes, text) => {
@@ -15,6 +15,9 @@
     };
     const formatDate = (value) => value
         ? new Intl.DateTimeFormat('es-PE', { timeZone: 'UTC' }).format(new Date(`${String(value).slice(0, 10)}T00:00:00Z`))
+        : '—';
+    const formatDateTime = (value) => value
+        ? new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
         : '—';
     const request = async (url, options = {}) => {
         const headers = {
@@ -443,6 +446,7 @@
             Object.entries(response.data).forEach(([name, value]) => {
                 if (form.elements[name]) form.elements[name].value = value || '';
             });
+            updateConfigurationPreview();
             status.textContent = 'Configuración cargada.';
         } catch (error) {
             status.textContent = error.message;
@@ -460,10 +464,120 @@
                 method: 'PUT', body: JSON.stringify(Object.fromEntries(new FormData(form).entries())),
             });
             status.textContent = response.message;
+            updateConfigurationPreview();
+            if ($('#panel-audit') && !$('#panel-audit').classList.contains('hidden')) loadAudit();
         } catch (error) {
             status.textContent = error.message;
         } finally {
             button.disabled = false;
+        }
+    }
+
+    function updateConfigurationPreview() {
+        const form = $('#configuration-form');
+        if (!form) return;
+        const value = (name) => form.elements[name]?.value.trim() || '';
+        const previewValues = {
+            iniciales_jefe: value('iniciales_jefe') || value('iniciales_director') || 'MASG',
+            iniciales_ccp: value('iniciales_ccp') || 'KRJ',
+            cargo_director: value('cargo_director') || 'DIRECCIÓN EJECUTIVA',
+            nombre_director: value('nombre_director'),
+        };
+        Object.entries(previewValues).forEach(([name, content]) => {
+            const target = document.querySelector(`[data-preview="${name}"]`);
+            if (target) target.textContent = content.toUpperCase();
+        });
+    }
+
+    const auditLabels = {
+        'certificate.generar': 'Constancia generada',
+        'certificate.editar': 'Constancia modificada',
+        'certificate.anular': 'Constancia anulada',
+        'certificate_configuration.updated': 'Configuración actualizada',
+        'record.create': 'Egreso registrado',
+        'record.update': 'Egreso corregido',
+        'import.completed': 'Importación completada',
+        'patients.reconciled': 'Pacientes conciliados',
+    };
+
+    function auditChanges(item) {
+        const before = item.data_before || {};
+        const after = item.data_after || {};
+        const ignored = new Set(['updated_at', 'created_at', 'source_fingerprint']);
+        return [...new Set([...Object.keys(before), ...Object.keys(after)])]
+            .filter((key) => !ignored.has(key) && JSON.stringify(before[key] ?? null) !== JSON.stringify(after[key] ?? null))
+            .slice(0, 8)
+            .map((key) => {
+                const oldValue = before[key] ?? '—';
+                const newValue = after[key] ?? '—';
+                return `${key}: ${String(oldValue)} → ${String(newValue)}`;
+            });
+    }
+
+    function auditCard(item) {
+        const card = element('article', 'rounded-2xl border border-slate-200 bg-white p-4 shadow-sm');
+        const header = element('div', 'flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between');
+        const title = element('div');
+        title.append(
+            element('div', 'font-black text-blue-950', auditLabels[item.event_type] || item.event_type),
+            element('div', 'mt-1 text-xs text-slate-500', `Evento #${item.id} · Sujeto ${item.subject_id || '—'} · IP ${item.ip || '—'}`)
+        );
+        const actor = element('div', 'text-left text-xs sm:text-right');
+        actor.append(
+            element('div', 'font-bold text-slate-700', item.actor_display_name || item.actor_username || 'Proceso del sistema'),
+            element('div', 'mt-1 text-slate-500', formatDateTime(item.occurred_at))
+        );
+        header.append(title, actor);
+        card.append(header);
+        const changes = auditChanges(item);
+        if (changes.length) {
+            const details = element('details', 'mt-3 rounded-xl bg-slate-50 p-3');
+            details.append(element('summary', 'cursor-pointer text-sm font-bold text-blue-700', `Ver cambios registrados (${changes.length})`));
+            const list = element('ul', 'mt-2 space-y-1 break-all text-xs text-slate-600');
+            changes.forEach((change) => list.append(element('li', '', change)));
+            details.append(list);
+            card.append(details);
+        }
+        return card;
+    }
+
+    async function loadAudit(page = 1) {
+        const list = $('#audit-list');
+        const pagination = $('#audit-pagination');
+        if (!list) return;
+        list.replaceChildren(element('div', 'rounded-xl bg-white p-5 text-slate-500', 'Cargando auditoría…'));
+        try {
+            const url = new URL(config.auditUrl, window.location.origin);
+            url.searchParams.set('page', page);
+            const filters = {
+                q: $('#audit-query')?.value.trim(),
+                event_type: $('#audit-type')?.value,
+                date_from: $('#audit-from')?.value,
+                date_to: $('#audit-to')?.value,
+            };
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value) url.searchParams.set(key, value);
+            });
+            const response = await request(url);
+            state.auditPage = response.meta.current_page;
+            list.replaceChildren();
+            response.data.forEach((item) => list.append(auditCard(item)));
+            if (!response.data.length) list.append(element('div', 'rounded-xl bg-white p-8 text-center text-slate-500', 'No existen eventos con esos criterios.'));
+            pagination.replaceChildren(element('span', 'text-slate-500', `${response.meta.total} evento(s) · Página ${response.meta.current_page} de ${response.meta.last_page}`));
+            const controls = element('div', 'flex gap-2');
+            [
+                ['Anterior', response.meta.current_page - 1, response.meta.current_page <= 1],
+                ['Siguiente', response.meta.current_page + 1, response.meta.current_page >= response.meta.last_page],
+            ].forEach(([label, targetPage, disabled]) => {
+                const button = element('button', 'rounded-lg border border-slate-300 px-3 py-2 font-semibold disabled:opacity-40', label);
+                button.disabled = disabled;
+                button.addEventListener('click', () => loadAudit(targetPage));
+                controls.append(button);
+            });
+            pagination.append(controls);
+        } catch (error) {
+            list.replaceChildren(element('div', 'rounded-xl bg-rose-50 p-5 font-semibold text-rose-700', error.message));
+            pagination.replaceChildren();
         }
     }
 
@@ -483,6 +597,8 @@
     $('#history-form')?.addEventListener('submit', (event) => { event.preventDefault(); loadHistory(); });
     $('#edit-certificate-form')?.addEventListener('submit', saveCertificate);
     $('#configuration-form')?.addEventListener('submit', saveConfiguration);
+    $('#configuration-form')?.addEventListener('input', updateConfigurationPreview);
+    $('#audit-form')?.addEventListener('submit', (event) => { event.preventDefault(); loadAudit(1); });
     $('#create-certificate')?.addEventListener('click', createCertificate);
     document.querySelectorAll('.eg-tab').forEach((tab) => tab.addEventListener('click', () => {
         document.querySelectorAll('.eg-tab').forEach((item) => { item.className = 'eg-tab whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100'; });
@@ -491,6 +607,7 @@
         $(`#panel-${tab.dataset.panel}`)?.classList.remove('hidden');
         if (tab.dataset.panel === 'history') loadHistory();
         if (tab.dataset.panel === 'configuration') loadConfiguration();
+        if (tab.dataset.panel === 'audit') loadAudit();
         if (tab.dataset.panel === 'imports') loadImports();
         if (tab.dataset.panel === 'reports') loadReports();
     }));

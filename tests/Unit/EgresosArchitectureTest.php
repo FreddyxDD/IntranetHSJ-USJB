@@ -63,6 +63,7 @@ final class EgresosArchitectureTest extends TestCase
         $update = Route::getRoutes()->getByName('egresos.certificates.update');
         $cancel = Route::getRoutes()->getByName('egresos.certificates.cancel');
         $configuration = Route::getRoutes()->getByName('egresos.configuration.update');
+        $audit = Route::getRoutes()->getByName('egresos.audit.index');
         $recordCreate = Route::getRoutes()->getByName('egresos.records.store');
         $recordUpdate = Route::getRoutes()->getByName('egresos.records.update');
         $import = Route::getRoutes()->getByName('egresos.imports.store');
@@ -77,6 +78,7 @@ final class EgresosArchitectureTest extends TestCase
         self::assertContains('central.permission:egresos.certificates.update', $update->gatherMiddleware());
         self::assertContains('central.permission:egresos.certificates.cancel', $cancel->gatherMiddleware());
         self::assertContains('central.permission:egresos.configuration.manage', $configuration->gatherMiddleware());
+        self::assertContains('central.permission:egresos.history.view', $audit->gatherMiddleware());
         self::assertContains('central.permission:egresos.records.create', $recordCreate->gatherMiddleware());
         self::assertContains('central.permission:egresos.records.update', $recordUpdate->gatherMiddleware());
         self::assertContains('central.permission:egresos.imports.manage', $import->gatherMiddleware());

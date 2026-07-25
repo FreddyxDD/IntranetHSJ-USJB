@@ -254,7 +254,10 @@
 
             <div class="signature-area">
                 <div class="signature-line">
-                    <strong>DIRECCIÓN EJECUTIVA</strong>
+                    <strong>{{ $document['director_title'] }}</strong>
+                    @if ($document['director_name'])
+                        <span>{{ $document['director_name'] }}</span>
+                    @endif
                     <span>Hospital San José - Chincha</span>
                 </div>
                 <div class="initials">

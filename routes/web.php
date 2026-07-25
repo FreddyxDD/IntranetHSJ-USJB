@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Appointments\AppointmentApiController;
+use App\Http\Controllers\Egresos\AuditoriaController;
 use App\Http\Controllers\Egresos\ConfiguracionConstanciaController;
 use App\Http\Controllers\Egresos\ConstanciaController;
 use App\Http\Controllers\Egresos\EgresoController;
@@ -94,6 +95,9 @@ Route::prefix('egresos')->middleware('legacy.module:egresos')->group(function ()
     Route::put('/api/configuracion-constancias', [ConfiguracionConstanciaController::class, 'update'])
         ->middleware('central.permission:egresos.configuration.manage')
         ->name('egresos.configuration.update');
+    Route::get('/api/auditoria', [AuditoriaController::class, 'index'])
+        ->middleware('central.permission:egresos.history.view')
+        ->name('egresos.audit.index');
     Route::get('/constancias/{constancia}/imprimir', [ConstanciaController::class, 'print'])
         ->whereNumber('constancia')
         ->middleware('central.permission:egresos.view')

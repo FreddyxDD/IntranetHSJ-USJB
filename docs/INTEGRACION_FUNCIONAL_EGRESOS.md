@@ -150,7 +150,7 @@ La emisión se ejecuta dentro de una transacción SQL Server:
 ## Validaciones ejecutadas
 
 - 20 pruebas Laravel aprobadas y 1 prueba SQL Server omitida en SQLite;
-- 89 aserciones;
+- 91 aserciones;
 - sintaxis PHP validada;
 - rutas verificadas con `php artisan route:list --path=egresos`;
 - consulta real validada sobre 5,872 egresos;

@@ -23,7 +23,9 @@ los principios de Keep a Changelog.
 - Detección de duplicados por identidad, fechas y servicio; conflictos de
   DNI/HC y errores de calidad explicados antes de insertar.
 - Línea de tiempo del paciente con sus hospitalizaciones y reingresos.
-- 20 pruebas Laravel aprobadas, 1 omitida en SQLite y 89 aserciones.
+- Flujo visual de importación ordenado como carga, análisis del lote e
+  importaciones recientes.
+- 20 pruebas Laravel aprobadas, 1 omitida en SQLite y 91 aserciones.
 - Consulta comprobada sobre 5,872 egresos y emisión validada dentro de una
   transacción revertida, sin datos de prueba residuales.
 

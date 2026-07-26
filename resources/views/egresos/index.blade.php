@@ -112,25 +112,23 @@
 
         @if ($abilities['manageImports'])
             <section id="panel-imports" class="eg-panel mt-4 hidden">
-                <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,.8fr)]">
-                    <form id="import-form" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                        <h2 class="text-lg font-black text-blue-950">Importación masiva controlada</h2>
-                        <p class="mt-1 text-sm text-slate-500">Formatos admitidos: CSV, XLSX y DBF. Primero se analizará cada fila; ningún dato se insertará hasta que revise el resultado y confirme la carga.</p>
-                        <label class="mt-5 block rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/60 p-6 text-center">
-                            <span class="block text-sm font-bold text-blue-950">Seleccione el archivo de egresos</span>
-                            <input name="archivo" type="file" required accept=".csv,.xlsx,.dbf" class="mt-4 block w-full text-sm">
-                        </label>
-                        <div class="mt-5 flex items-center justify-end gap-3">
-                            <span id="import-status" class="mr-auto text-sm text-slate-600" aria-live="polite"></span>
-                            <button type="submit" class="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">Analizar archivo</button>
-                        </div>
-                    </form>
-                    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-                        <h2 class="text-lg font-black text-blue-950">Importaciones recientes</h2>
-                        <div id="imports-list" class="mt-4 space-y-3"></div>
+                <form id="import-form" class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                    <h2 class="text-lg font-black text-blue-950">Importación masiva controlada</h2>
+                    <p class="mt-1 text-sm text-slate-500">Formatos admitidos: CSV, XLSX y DBF. Primero se analizará cada fila; ningún dato se insertará hasta que revise el resultado y confirme la carga.</p>
+                    <label class="mt-5 block rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/60 p-6 text-center">
+                        <span class="block text-sm font-bold text-blue-950">Seleccione el archivo de egresos</span>
+                        <input name="archivo" type="file" required accept=".csv,.xlsx,.dbf" class="mt-4 block w-full text-sm">
+                    </label>
+                    <div class="mt-5 flex items-center justify-end gap-3">
+                        <span id="import-status" class="mr-auto text-sm text-slate-600" aria-live="polite"></span>
+                        <button type="submit" class="rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">Analizar archivo</button>
                     </div>
-                </div>
+                </form>
                 <div id="import-result" class="mt-4 hidden rounded-2xl border border-slate-200 bg-white p-4 text-sm shadow-sm sm:p-6"></div>
+                <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                    <h2 class="text-lg font-black text-blue-950">Importaciones recientes</h2>
+                    <div id="imports-list" class="mt-4 space-y-3"></div>
+                </div>
             </section>
         @endif
 

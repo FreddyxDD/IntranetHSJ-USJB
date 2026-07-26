@@ -38,6 +38,8 @@ final class EgresosViewTest extends TestCase
         self::assertStringContainsString('Importación masiva controlada', $html);
         self::assertStringContainsString('Analizar archivo', $html);
         self::assertStringContainsString('ningún dato se insertará', $html);
+        self::assertTrue(strpos($html, 'id="import-form"') < strpos($html, 'id="import-result"'));
+        self::assertTrue(strpos($html, 'id="import-result"') < strpos($html, 'Importaciones recientes'));
         self::assertStringContainsString('Exportar XLSX', $html);
         self::assertStringNotContainsString('192.168.3.246:8002/egresos/api', $html);
     }

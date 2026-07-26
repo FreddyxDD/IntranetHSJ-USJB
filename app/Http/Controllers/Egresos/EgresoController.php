@@ -11,6 +11,7 @@ use App\Models\Egresos\Egreso;
 use App\Services\Egresos\AnnualCertificateSequence;
 use App\Services\Egresos\EgresoTrace;
 use App\Services\Egresos\SighPatientSource;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -75,7 +76,7 @@ final class EgresoController extends Controller
         ]);
 
         $text = trim((string) ($validated['q'] ?? ''));
-        $query = Egreso::query()->orderByDesc('fecegr')->orderByDesc('id');
+        $query = Egreso::query()->orderByDesc('imported_at')->orderByDesc('id');
 
         $query
             ->when($validated['date_from'] ?? null, fn ($builder, $date) => $builder->whereDate('fecegr', '>=', $date))
@@ -129,12 +130,70 @@ final class EgresoController extends Controller
             ->pluck('descripcion', 'codigo_normalizado')
             ->all();
 
-        $data = $this->mapEgreso($egreso, $diagnoses);
-        $data['timeline'] = $this->patientTimeline($egreso);
+        return response()->json([
+            'ok' => true,
+            'data' => $this->mapEgreso($egreso, $diagnoses),
+        ]);
+    }
+
+    public function timeline(Request $request, Egreso $egreso): JsonResponse
+    {
+        $validated = $request->validate([
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:5', 'max:20'],
+        ]);
+        $perPage = (int) ($validated['per_page'] ?? 8);
+        $page = $this->patientEpisodesQuery($egreso)
+            ->orderByDesc('fecing')
+            ->orderByDesc('fecegr')
+            ->orderByDesc('id')
+            ->paginate($perPage);
+        $items = collect($page->items());
+        $diagnosisCodes = $items
+            ->flatMap(fn (Egreso $episode): array => [
+                $episode->coddiag1, $episode->coddiag2, $episode->coddiag3, $episode->coddiag4,
+            ])
+            ->filter()
+            ->map(fn ($code): string => strtoupper(str_replace('.', '', trim((string) $code))))
+            ->unique();
+        $diagnoses = Cie10::query()
+            ->whereIn('codigo_normalizado', $diagnosisCodes)
+            ->pluck('descripcion', 'codigo_normalizado')
+            ->all();
+        $offset = ($page->currentPage() - 1) * $page->perPage();
 
         return response()->json([
             'ok' => true,
-            'data' => $data,
+            'data' => [
+                'patient' => [
+                    'paciente' => $egreso->paciente,
+                    'numhc' => $egreso->numhc,
+                    'documento' => $egreso->documento,
+                    'total_episodes' => $page->total(),
+                ],
+                'episodes' => $items->map(function (Egreso $episode, int $index) use (
+                    $diagnoses,
+                    $egreso,
+                    $page,
+                    $offset
+                ): array {
+                    $data = $this->mapEgreso($episode, $diagnoses);
+                    $position = $page->total() - $offset - $index;
+                    $data['episode_number'] = max(1, $position);
+                    $data['is_readmission'] = $position > 1;
+                    $data['is_selected'] = $episode->id === $egreso->id;
+                    $data['is_latest'] = ($offset + $index) === 0;
+
+                    return $data;
+                })->values(),
+                'meta' => [
+                    'current_page' => $page->currentPage(),
+                    'last_page' => $page->lastPage(),
+                    'per_page' => $page->perPage(),
+                    'total' => $page->total(),
+                    'has_more' => $page->hasMorePages(),
+                ],
+            ],
         ]);
     }
 
@@ -410,44 +469,22 @@ final class EgresoController extends Controller
         return $data;
     }
 
-    private function patientTimeline(Egreso $egreso): array
+    private function patientEpisodesQuery(Egreso $egreso): Builder
     {
         $history = trim((string) $egreso->numhc);
+        if ($history !== '') {
+            return Egreso::query()->where('numhc', $history);
+        }
+
         $document = trim((string) $egreso->documento);
-        $episodes = Egreso::query()
-            ->when(
-                $history !== '',
-                fn ($query) => $query->where('numhc', $history),
-                fn ($query) => $query->where('doc_numero', $document)
-            )
-            ->orderBy('fecing')
-            ->orderBy('fecegr')
-            ->orderBy('id')
-            ->get();
-        $previousDischarge = null;
+        if ($document !== '') {
+            return Egreso::query()->where(function (Builder $query) use ($document): void {
+                $query->where('doc_numero', $document)
+                    ->orWhere('doc_iden', $document);
+            });
+        }
 
-        return $episodes->map(function (Egreso $episode, int $index) use (&$previousDischarge): array {
-            $gapDays = $previousDischarge && $episode->fecing
-                ? $previousDischarge->diffInDays($episode->fecing, false)
-                : null;
-            $result = [
-                'id' => $episode->id,
-                'position' => $index + 1,
-                'is_readmission' => $index > 0,
-                'gap_days' => $gapDays,
-                'fecing' => $episode->fecing?->format('Y-m-d'),
-                'fecegr' => $episode->fecegr?->format('Y-m-d'),
-                'ups' => $episode->ups,
-                'condicion' => $episode->condicion,
-                'coddiag1' => $episode->coddiag1,
-                'source_system' => $episode->source_system,
-            ];
-            if ($episode->fecegr) {
-                $previousDischarge = $episode->fecegr;
-            }
-
-            return $result;
-        })->all();
+        return Egreso::query()->whereKey($egreso->id);
     }
 
     public static function centralActor(): array

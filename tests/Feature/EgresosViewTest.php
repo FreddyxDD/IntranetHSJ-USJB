@@ -35,6 +35,9 @@ final class EgresosViewTest extends TestCase
         self::assertStringContainsString('manageConfiguration', $html);
         self::assertStringContainsString('dashboardUrl', $html);
         self::assertStringContainsString('Registrar excepción', $html);
+        self::assertStringContainsString('Últimos egresos cargados', $html);
+        self::assertStringContainsString('id="timeline-modal"', $html);
+        self::assertStringNotContainsString('id="detail-modal"', $html);
         self::assertStringContainsString('Importación masiva controlada', $html);
         self::assertStringContainsString('Analizar archivo', $html);
         self::assertStringContainsString('ningún dato se insertará', $html);

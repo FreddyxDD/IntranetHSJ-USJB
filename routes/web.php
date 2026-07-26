@@ -44,6 +44,10 @@ Route::prefix('egresos')->middleware('legacy.module:egresos')->group(function ()
         ->whereNumber('egreso')
         ->middleware('central.permission:egresos.records.view')
         ->name('egresos.records.show');
+    Route::get('/api/registros/{egreso}/timeline', [EgresoController::class, 'timeline'])
+        ->whereNumber('egreso')
+        ->middleware('central.permission:egresos.records.view')
+        ->name('egresos.records.timeline');
     Route::get('/api/pacientes-sigh', [EgresoController::class, 'patients'])
         ->middleware('central.permission:egresos.records.view')
         ->name('egresos.patients.search');

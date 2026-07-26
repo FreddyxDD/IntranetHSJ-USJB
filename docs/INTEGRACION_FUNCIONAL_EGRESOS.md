@@ -51,8 +51,10 @@ EGRESOS_PATIENT_SOURCE_CODE=sigh_202607_local
 - nuevo módulo visible en `/areas` según `egresos.view`;
 - entrada directa en `/egresos` con la sesión central vigente;
 - panel con totales, egresos del mes y constancias;
-- búsqueda paginada por historia clínica, documento, nombres o apellidos;
-- detalle del egreso y resolución de diagnósticos contra CIE-10;
+- consulta paginada por historia clínica, documento, nombres o apellidos,
+  ordenada por los últimos registros incorporados;
+- línea de tiempo por paciente con resolución de diagnósticos CIE-10 y
+  acciones asociadas a cada episodio;
 - consulta del historial de constancias;
 - emisión de constancias con correlativo institucional único por año;
 - edición controlada de constancias no anuladas;
@@ -112,6 +114,7 @@ consultar historial o generar constancias.
 | GET | `/egresos/api/dashboard` | Indicadores |
 | GET | `/egresos/api/registros` | Búsqueda paginada |
 | GET | `/egresos/api/registros/{id}` | Detalle |
+| GET | `/egresos/api/registros/{id}/timeline` | Episodios paginados del paciente |
 | GET | `/egresos/api/pacientes-sigh` | Buscar paciente por HC o documento |
 | POST | `/egresos/api/registros` | Registro excepcional |
 | PUT | `/egresos/api/registros/{id}` | Corrección auditada |
@@ -137,6 +140,24 @@ consultar historial o generar constancias.
 Estas rutas están declaradas antes del puente PHP legado y son atendidas
 únicamente por controladores Laravel.
 
+## Rendimiento de la consulta de egresos
+
+La pantalla no incorpora todos los historiales en su respuesta inicial. El
+listado solicita 20 egresos por página y los ordena por `imported_at` e `id`
+descendentes, de modo que primero se visualizan los registros de las cargas
+más recientes.
+
+Al seleccionar una fila se consulta la línea de tiempo de ese paciente en un
+endpoint separado. El servidor devuelve ocho episodios por bloque, comenzando
+por el más reciente, y la interfaz ofrece **Cargar episodios anteriores**
+cuando existe otra página. Así, un paciente con muchos reingresos no aumenta
+el tiempo ni el volumen de la carga inicial.
+
+La identidad del historial se resuelve primero por HC y, cuando no existe, por
+documento. Los índices `ix_egresos_recent_imports`,
+`ix_egresos_timeline_hc` e `ix_egresos_timeline_doc` respaldan estos patrones
+de consulta en SQL Server.
+
 ## Integridad de emisión
 
 La emisión se ejecuta dentro de una transacción SQL Server:
@@ -152,10 +173,12 @@ La emisión se ejecuta dentro de una transacción SQL Server:
 ## Validaciones ejecutadas
 
 - 22 pruebas Laravel aprobadas y 1 prueba SQL Server omitida en SQLite;
-- 111 aserciones;
+- 116 aserciones;
 - sintaxis PHP validada;
 - rutas verificadas con `php artisan route:list --path=egresos`;
 - consulta real validada sobre 5,872 egresos;
+- línea de tiempo comprobada con un paciente real de 10 episodios: ocho
+  devueltos en la primera página y `has_more=true`;
 - búsqueda real validada por nombre;
 - emisión completa verificada dentro de una transacción revertida;
 - edición, anulación y configuración verificadas dentro de una transacción

@@ -73,6 +73,7 @@ final class EgresosArchitectureTest extends TestCase
         $audit = Route::getRoutes()->getByName('egresos.audit.index');
         $recordCreate = Route::getRoutes()->getByName('egresos.records.store');
         $recordUpdate = Route::getRoutes()->getByName('egresos.records.update');
+        $recordTimeline = Route::getRoutes()->getByName('egresos.records.timeline');
         $import = Route::getRoutes()->getByName('egresos.imports.store');
         $importShow = Route::getRoutes()->getByName('egresos.imports.show');
         $importCommit = Route::getRoutes()->getByName('egresos.imports.commit');
@@ -93,6 +94,8 @@ final class EgresosArchitectureTest extends TestCase
         self::assertContains('central.permission:egresos.history.view', $audit->gatherMiddleware());
         self::assertContains('central.permission:egresos.records.create', $recordCreate->gatherMiddleware());
         self::assertContains('central.permission:egresos.records.update', $recordUpdate->gatherMiddleware());
+        self::assertNotNull($recordTimeline);
+        self::assertContains('central.permission:egresos.records.view', $recordTimeline->gatherMiddleware());
         self::assertContains('central.permission:egresos.imports.manage', $import->gatherMiddleware());
         self::assertContains('central.permission:egresos.imports.manage', $importShow->gatherMiddleware());
         self::assertContains('central.permission:egresos.imports.manage', $importCommit->gatherMiddleware());

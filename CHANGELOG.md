@@ -22,7 +22,13 @@ los principios de Keep a Changelog.
   confirmación exclusiva de episodios nuevos o reingresos.
 - Detección de duplicados por identidad, fechas y servicio; conflictos de
   DNI/HC y errores de calidad explicados antes de insertar.
-- Línea de tiempo del paciente con sus hospitalizaciones y reingresos.
+- Consulta inicial limitada a los 20 egresos incorporados más recientemente,
+  sin descargar el historial completo de los pacientes.
+- Línea de tiempo moderna solicitada bajo demanda y paginada en bloques de
+  ocho hospitalizaciones, con acciones por episodio para corregirlo o emitir
+  su constancia.
+- Índices compuestos para ordenar cargas recientes y consultar episodios por
+  HC o documento sin degradar progresivamente la pantalla.
 - Flujo visual de importación ordenado como carga, análisis del lote e
   importaciones recientes.
 - Reimpresión de constancias anuladas bloqueada en servidor; la consulta
@@ -38,9 +44,11 @@ los principios de Keep a Changelog.
   de constancias del mismo paciente.
 - Siguiente número anual visible sobre el historial, calculado desde el
   correlativo central sin reservarlo anticipadamente.
-- 22 pruebas Laravel aprobadas, 1 omitida en SQLite y 111 aserciones.
+- 22 pruebas Laravel aprobadas, 1 omitida en SQLite y 116 aserciones.
 - Consulta comprobada sobre 5,872 egresos y emisión validada dentro de una
   transacción revertida, sin datos de prueba residuales.
+- Línea de tiempo validada contra un paciente real con 10 episodios: ocho
+  registros en la primera página y disponibilidad del bloque siguiente.
 
 ### Planificado
 

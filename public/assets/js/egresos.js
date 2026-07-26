@@ -4,7 +4,7 @@
     const config = window.EGRESOS_CONFIG;
     const state = {
         page: 1, query: '', dateFrom: '', dateTo: '',
-        selected: null, selectedCertificate: null, editingRecord: null, auditPage: 1,
+        selectedCertificate: null, editingRecord: null, auditPage: 1,
         activeImport: null,
     };
     const $ = (selector) => document.querySelector(selector);
@@ -57,7 +57,10 @@
     }
 
     function recordRow(item) {
-        const row = element('tr', 'hover:bg-blue-50/50');
+        const row = element('tr', 'cursor-pointer transition hover:bg-blue-50/70 focus-within:bg-blue-50/70');
+        row.tabIndex = 0;
+        row.setAttribute('role', 'button');
+        row.setAttribute('aria-label', `Ver línea de tiempo de ${item.paciente || 'paciente'}`);
         const identity = element('td', 'whitespace-nowrap px-4 py-3');
         identity.append(
             element('div', 'font-bold text-blue-950', `HC ${item.numhc || '—'}`),
@@ -70,8 +73,11 @@
             element('div', 'line-clamp-2 text-xs text-slate-500', main?.descripcion || 'Sin diagnóstico')
         );
         const actions = element('td', 'whitespace-nowrap px-4 py-3 text-right');
-        const button = element('button', 'rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100', 'Ver detalle');
-        button.addEventListener('click', () => showDetail(item.id));
+        const button = element('button', 'rounded-lg bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100', 'Línea de tiempo');
+        button.addEventListener('click', (event) => {
+            event.stopPropagation();
+            showTimeline(item.id);
+        });
         actions.append(button);
         row.append(
             identity,
@@ -81,6 +87,13 @@
             diagnosis,
             actions
         );
+        row.addEventListener('click', () => showTimeline(item.id));
+        row.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                showTimeline(item.id);
+            }
+        });
         return row;
     }
 
@@ -89,7 +102,7 @@
         const status = $('#records-status');
         body.replaceChildren();
         status.className = 'mt-3 text-sm text-slate-500';
-        status.textContent = 'Consultando la base consolidada…';
+        status.textContent = 'Consultando los últimos episodios incorporados…';
         try {
             const url = new URL(config.recordsUrl, window.location.origin);
             url.searchParams.set('page', page);
@@ -131,54 +144,88 @@
         container.append(buttons);
     }
 
-    async function showDetail(id) {
-        const content = $('#detail-content');
-        content.textContent = 'Cargando detalle…';
-        openOverlay('#detail-modal');
+    async function showTimeline(id, page = 1, append = false) {
+        const content = $('#timeline-content');
+        if (!append) {
+            content.replaceChildren(element('div', 'rounded-xl bg-slate-50 p-6 text-center text-slate-500', 'Cargando línea de tiempo…'));
+            openOverlay('#timeline-modal');
+        }
         try {
-            const { data } = await request(`${config.recordsUrl}/${id}`);
-            state.selected = data;
-            const grid = element('div', 'grid gap-4 sm:grid-cols-2');
-            [
-                ['Paciente', data.paciente], ['Historia clínica', data.numhc], ['Documento', data.doc_iden],
-                ['Ingreso', formatDate(data.fecing)], ['Egreso', formatDate(data.fecegr)], ['Servicio / UPS', data.ups],
-                ['Condición', data.condicion], ['Financiamiento', data.financia],
-            ].forEach(([label, value]) => {
-                const card = element('div', 'rounded-xl bg-slate-50 p-3');
-                card.append(element('div', 'text-xs font-bold uppercase text-slate-500', label), element('div', 'mt-1 font-semibold', value || '—'));
-                grid.append(card);
-            });
-            const diagnosis = element('div', 'mt-5');
-            diagnosis.append(element('h3', 'font-bold text-blue-950', 'Diagnósticos CIE-10'));
-            const list = element('ul', 'mt-2 space-y-2');
-            (data.diagnosticos || []).forEach((item) => list.append(element('li', 'rounded-xl border border-slate-200 p-3 text-sm', `${item.codigo} — ${item.descripcion}`)));
-            if (!(data.diagnosticos || []).length) list.append(element('li', 'text-sm text-slate-500', 'No se registraron diagnósticos.'));
-            diagnosis.append(list);
-            const timeline = element('div', 'mt-6 border-t border-slate-200 pt-5');
-            timeline.append(
-                element('h3', 'font-bold text-blue-950', 'Línea de tiempo de hospitalizaciones'),
-                element('p', 'mt-1 text-xs text-slate-500', 'Cada elemento corresponde a un episodio. Una historia clínica repetida no es un duplicado si las fechas o el servicio son diferentes.')
-            );
-            const timelineList = element('ol', 'relative mt-4 ml-3 space-y-4 border-l-2 border-blue-100 pl-6');
-            (data.timeline || []).forEach((episode) => {
-                const item = element('li', 'relative rounded-xl border border-slate-200 bg-white p-3');
-                const dot = element('span', `absolute -left-[31px] top-4 grid size-4 place-items-center rounded-full ring-4 ring-white ${episode.is_readmission ? 'bg-cyan-500' : 'bg-blue-600'}`);
-                const title = episode.is_readmission
-                    ? `Reingreso ${episode.position}${episode.gap_days !== null ? ` · ${episode.gap_days} día(s) después` : ''}`
-                    : 'Primer ingreso registrado';
-                item.append(
-                    dot,
-                    element('div', `text-sm font-black ${episode.is_readmission ? 'text-cyan-800' : 'text-blue-900'}`, title),
-                    element('div', 'mt-1 text-xs text-slate-600', `${formatDate(episode.fecing)} → ${formatDate(episode.fecegr)} · UPS ${episode.ups || '—'} · CIE-10 ${episode.coddiag1 || '—'}`),
-                    element('div', 'mt-1 text-[11px] text-slate-400', `Episodio #${episode.id} · ${episode.source_system || 'sin fuente'}`)
+            const response = await request(`${config.recordsUrl}/${id}/timeline?page=${page}&per_page=8`);
+            const { patient, episodes, meta } = response.data;
+            let timelineList = $('#patient-timeline-list');
+            if (!append) {
+                const patientHeader = element('section', 'rounded-2xl bg-gradient-to-r from-blue-950 to-blue-700 p-5 text-white');
+                patientHeader.append(
+                    element('div', 'text-xs font-bold uppercase tracking-wider text-blue-200', `${meta.total} episodio(s) registrado(s)`),
+                    element('h3', 'mt-1 text-xl font-black', patient.paciente || 'Paciente sin nombre'),
+                    element('p', 'mt-2 text-sm text-blue-100', `HC ${patient.numhc || '—'} · Documento ${patient.documento || '—'}`)
                 );
-                timelineList.append(item);
+                const explanation = element('div', 'mt-4 rounded-xl border border-cyan-100 bg-cyan-50 p-4 text-sm text-cyan-900');
+                explanation.textContent = 'Los últimos episodios aparecen primero. El historial se carga en bloques de 8 únicamente cuando se solicita.';
+                timelineList = element('ol', 'relative mt-6 ml-3 space-y-5 border-l-2 border-blue-100 pl-7');
+                timelineList.id = 'patient-timeline-list';
+                content.replaceChildren(patientHeader, explanation, timelineList);
+            }
+
+            episodes.forEach((episode) => {
+                const card = element('li', `relative rounded-2xl border p-4 shadow-sm ${episode.is_selected ? 'border-blue-400 bg-blue-50/60 ring-2 ring-blue-100' : 'border-slate-200 bg-white'}`);
+                const dot = element('span', `absolute -left-[38px] top-5 grid size-5 place-items-center rounded-full ring-4 ring-white ${episode.is_latest ? 'bg-emerald-500' : 'bg-blue-600'}`);
+                const header = element('div', 'flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between');
+                const title = element('div');
+                title.append(
+                    element('div', `font-black ${episode.is_latest ? 'text-emerald-800' : 'text-blue-950'}`, episode.is_latest ? 'Ingreso más reciente' : `Episodio de hospitalización N.° ${episode.episode_number}`),
+                    element('div', 'mt-1 text-sm font-semibold text-slate-700', `${formatDate(episode.fecing)} → ${formatDate(episode.fecegr)}`),
+                    element('div', 'mt-1 text-xs text-slate-500', `UPS ${episode.ups || '—'} · Condición ${episode.condicion || '—'} · Financiamiento ${episode.financia || '—'}`)
+                );
+                const badges = element('div', 'flex flex-wrap gap-2');
+                if (episode.is_selected) badges.append(element('span', 'rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800', 'Episodio seleccionado'));
+                badges.append(element('span', 'rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600', episode.source_system || 'Sin fuente'));
+                header.append(title, badges);
+                card.append(dot, header);
+
+                const diagnoses = element('div', 'mt-4 grid gap-2 sm:grid-cols-2');
+                (episode.diagnosticos || []).forEach((diagnosis) => {
+                    diagnoses.append(element('div', 'rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-700', `${diagnosis.codigo} — ${diagnosis.descripcion}`));
+                });
+                if (!(episode.diagnosticos || []).length) diagnoses.append(element('div', 'text-xs text-slate-400', 'Sin diagnósticos registrados.'));
+                card.append(diagnoses);
+
+                const actions = element('div', 'mt-4 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3');
+                if (config.abilities.createCertificates) {
+                    const certificate = element('button', 'rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700', 'Generar constancia de este episodio');
+                    certificate.addEventListener('click', () => createCertificate(episode, certificate));
+                    actions.append(certificate);
+                }
+                if (config.abilities.updateRecords) {
+                    const edit = element('button', 'rounded-xl border border-amber-300 px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50', 'Corregir episodio');
+                    edit.addEventListener('click', () => openRecordForm(episode));
+                    actions.append(edit);
+                }
+                card.append(actions);
+                timelineList.append(card);
             });
-            if (!(data.timeline || []).length) timelineList.append(element('li', 'text-sm text-slate-500', 'No se encontraron otros episodios.'));
-            timeline.append(timelineList);
-            content.replaceChildren(grid, diagnosis, timeline);
+
+            $('#timeline-load-more')?.remove();
+            if (meta.has_more) {
+                const loadMore = element('button', 'mt-5 w-full rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-700 hover:bg-blue-100', `Cargar episodios anteriores (${meta.total - (meta.current_page * meta.per_page)} restantes)`);
+                loadMore.id = 'timeline-load-more';
+                loadMore.addEventListener('click', () => {
+                    loadMore.disabled = true;
+                    showTimeline(id, meta.current_page + 1, true);
+                });
+                content.append(loadMore);
+            }
+            if (!episodes.length && !append) {
+                timelineList.append(element('li', 'text-sm text-slate-500', 'No se encontraron episodios para este paciente.'));
+            }
         } catch (error) {
-            content.textContent = error.message;
+            if (!append) {
+                content.replaceChildren(element('div', 'rounded-xl bg-rose-50 p-5 font-semibold text-rose-700', error.message));
+            } else {
+                const errorBox = element('div', 'mt-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700', error.message);
+                content.append(errorBox);
+            }
         }
     }
 
@@ -196,7 +243,7 @@
                 field.value = name.startsWith('fec') ? value.slice(0, 10) : value;
             });
         }
-        closeOverlay('#detail-modal');
+        closeOverlay('#timeline-modal');
         openOverlay('#record-modal');
     }
 
@@ -250,15 +297,14 @@
         }
     }
 
-    async function createCertificate() {
-        if (!state.selected) return;
-        const button = $('#create-certificate');
+    async function createCertificate(episode, button) {
+        if (!episode) return;
         button.disabled = true;
         button.textContent = 'Generando…';
         try {
             const result = await request(config.certificateUrl, {
                 method: 'POST',
-                body: JSON.stringify({ egreso_id: state.selected.id }),
+                body: JSON.stringify({ egreso_id: episode.id }),
             });
             window.open(result.print_url, '_blank', 'noopener');
             await loadDashboard();
@@ -266,7 +312,7 @@
             window.alert(error.message);
         } finally {
             button.disabled = false;
-            button.textContent = 'Generar constancia';
+            button.textContent = 'Generar constancia de este episodio';
         }
     }
 
@@ -808,7 +854,6 @@
         loadRecords(1);
     });
     $('#new-record')?.addEventListener('click', () => openRecordForm());
-    $('#edit-record')?.addEventListener('click', () => state.selected && openRecordForm(state.selected));
     $('#record-form')?.addEventListener('submit', saveRecord);
     $('#lookup-patient')?.addEventListener('click', lookupPatient);
     $('#import-form')?.addEventListener('submit', importRecords);
@@ -818,7 +863,6 @@
     $('#configuration-form')?.addEventListener('submit', saveConfiguration);
     $('#configuration-form')?.addEventListener('input', updateConfigurationPreview);
     $('#audit-form')?.addEventListener('submit', (event) => { event.preventDefault(); loadAudit(1); });
-    $('#create-certificate')?.addEventListener('click', createCertificate);
     document.querySelectorAll('.eg-tab').forEach((tab) => tab.addEventListener('click', () => {
         document.querySelectorAll('.eg-tab').forEach((item) => { item.className = 'eg-tab whitespace-nowrap rounded-xl px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-100'; });
         tab.className = 'eg-tab whitespace-nowrap rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white';

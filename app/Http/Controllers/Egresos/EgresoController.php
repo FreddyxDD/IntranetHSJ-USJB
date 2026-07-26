@@ -41,6 +41,7 @@ final class EgresoController extends Controller
                 'viewHistory' => ueei_tiene_permiso('egresos.history.view'),
                 'viewReports' => ueei_tiene_permiso('egresos.reports.view'),
                 'manageConfiguration' => ueei_tiene_permiso('egresos.configuration.manage'),
+                'manageCatalogs' => ueei_tiene_permiso('egresos.catalogs.manage'),
                 'viewAudit' => ueei_tiene_permiso('egresos.history.view'),
             ],
         ]);

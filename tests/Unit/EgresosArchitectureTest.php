@@ -3,6 +3,8 @@
 namespace Tests\Unit;
 
 use App\Models\Egresos\Cie10;
+use App\Models\Egresos\Cie10Importacion;
+use App\Models\Egresos\Cie10ImportacionFila;
 use App\Models\Egresos\ConfiguracionConstancia;
 use App\Models\Egresos\ConfiguracionConstanciaHistorial;
 use App\Models\Egresos\Constancia;
@@ -38,6 +40,8 @@ final class EgresosArchitectureTest extends TestCase
         self::assertSame('egresos.constancia_episodios', (new ConstanciaEpisodio)->getTable());
         self::assertSame('egresos.constancia_historial', (new ConstanciaHistorial)->getTable());
         self::assertSame('catalogos.cie10', (new Cie10)->getTable());
+        self::assertSame('catalogos.cie10_importaciones', (new Cie10Importacion)->getTable());
+        self::assertSame('catalogos.cie10_importacion_filas', (new Cie10ImportacionFila)->getTable());
         self::assertSame('egresos.configuracion_constancias', (new ConfiguracionConstancia)->getTable());
         self::assertSame('egresos.configuracion_constancia_historial', (new ConfiguracionConstanciaHistorial)->getTable());
         self::assertSame('egresos.importaciones', (new Importacion)->getTable());
@@ -82,6 +86,12 @@ final class EgresosArchitectureTest extends TestCase
         $importCommit = Route::getRoutes()->getByName('egresos.imports.commit');
         $export = Route::getRoutes()->getByName('egresos.reports.xlsx');
         $patientSearch = Route::getRoutes()->getByName('egresos.patients.search');
+        $cie10Catalog = Route::getRoutes()->getByName('egresos.cie10.catalog');
+        $cie10Create = Route::getRoutes()->getByName('egresos.cie10.catalog.store');
+        $cie10Update = Route::getRoutes()->getByName('egresos.cie10.catalog.update');
+        $cie10Delete = Route::getRoutes()->getByName('egresos.cie10.catalog.destroy');
+        $cie10Import = Route::getRoutes()->getByName('egresos.cie10.imports.store');
+        $cie10ImportConfirm = Route::getRoutes()->getByName('egresos.cie10.imports.confirm');
 
         self::assertNotNull($index);
         self::assertContains('legacy.module:egresos', $index->gatherMiddleware());
@@ -106,6 +116,13 @@ final class EgresosArchitectureTest extends TestCase
         self::assertContains('central.permission:egresos.imports.manage', $importCommit->gatherMiddleware());
         self::assertContains('central.permission:egresos.reports.view', $export->gatherMiddleware());
         self::assertContains('central.permission:egresos.records.view', $patientSearch->gatherMiddleware());
+        foreach ([
+            $cie10Catalog, $cie10Create, $cie10Update, $cie10Delete,
+            $cie10Import, $cie10ImportConfirm,
+        ] as $route) {
+            self::assertNotNull($route);
+            self::assertContains('central.permission:egresos.catalogs.manage', $route->gatherMiddleware());
+        }
     }
 
     public function test_central_administrator_can_use_egresos_permissions(): void

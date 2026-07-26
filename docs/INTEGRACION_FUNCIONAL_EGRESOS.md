@@ -90,6 +90,14 @@ EGRESOS_PATIENT_SOURCE_CODE=sigh_202607_local
 - conciliación idempotente mediante `hsj:sync-egresos-patients`;
 - constancias y exportaciones usando el número de documento sin el prefijo de
   tipo.
+- CRUD responsive del catálogo CIE-10 con código inmutable, edición controlada
+  y desactivación lógica;
+- carga CIE-10 CSV/XLSX en dos etapas: análisis persistente y confirmación
+  transaccional;
+- detección de archivo repetido, códigos normalizados duplicados, formatos
+  inválidos y cambios concurrentes;
+- auditoría de altas, cambios, desactivaciones, análisis y confirmaciones del
+  catálogo.
 
 No se incorporaron el login ni el CRUD de usuarios del proyecto PHP entregado.
 
@@ -109,6 +117,7 @@ No se incorporaron el login ni el CRUD de usuarios del proyecto PHP entregado.
 | Importar y revisar lotes | `egresos.imports.manage` |
 | Exportar CSV/XLSX | `egresos.reports.view` |
 | Configurar constancias | `egresos.configuration.manage` |
+| Administrar y cargar CIE-10 | `egresos.catalogs.manage` |
 
 La impresión requiere acceso al módulo y, adicionalmente, permiso para
 consultar historial o generar constancias.
@@ -126,6 +135,12 @@ consultar historial o generar constancias.
 | POST | `/egresos/api/registros` | Registro excepcional |
 | PUT | `/egresos/api/registros/{id}` | Corrección auditada |
 | GET | `/egresos/api/cie10` | Catálogo CIE-10 |
+| GET | `/egresos/catalogos/cie10` | Pantalla CRUD y carga CIE-10 |
+| GET/POST | `/egresos/api/catalogos/cie10` | Consultar o crear códigos |
+| PUT/DELETE | `/egresos/api/catalogos/cie10/{id}` | Editar o desactivar un código |
+| GET/POST | `/egresos/api/catalogos/cie10-importaciones` | Lotes recientes o nuevo análisis |
+| GET | `/egresos/api/catalogos/cie10-importaciones/{id}` | Filas y mensajes del lote |
+| POST | `/egresos/api/catalogos/cie10-importaciones/{id}/confirmar` | Aplicación transaccional |
 | GET | `/egresos/api/estadisticas/mensuales` | Serie mensual |
 | GET | `/egresos/api/estadisticas/servicios` | Totales por UPS |
 | GET | `/egresos/api/importaciones` | Historial de lotes |

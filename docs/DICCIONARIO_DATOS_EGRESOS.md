@@ -589,7 +589,56 @@ Usado por `EgresoTrace`, `ConstanciaTrace`, `EgresoImportService`,
 | `occurred_at` | Momento funcional del evento. |
 | `created_at`, `updated_at` | Persistencia técnica Laravel. |
 
-## 15. Tablas `staging`
+## 15. `catalogos.cie10_importaciones`
+
+Cabecera persistente de cada archivo CIE-10 analizado desde la interfaz. No
+modifica el catálogo hasta que un usuario autorizado confirma el lote.
+
+| Campo | Función y relación |
+| --- | --- |
+| `id` | PK y número visible del lote. |
+| `archivo` | Nombre original del CSV o XLSX. |
+| `file_sha256` | Huella SHA-256 usada para detectar la repetición del mismo archivo. |
+| `estado` | `analizado`, `confirmado` o `fallido`. |
+| `actor_account_id` | Cuenta central que presentó el archivo. |
+| `actor_username` | Usuario/correo conservado como evidencia. |
+| `actor_display_name` | Nombre visible del responsable. |
+| `nuevos` | Códigos inexistentes y válidos detectados. |
+| `actualizaciones` | Códigos existentes cuyos atributos cambiarían. |
+| `sin_cambios` | Códigos idénticos al catálogo vigente. |
+| `errores` | Filas con formato, valores o duplicidad inválidos. |
+| `confirmed_at` | Fecha de aplicación efectiva; nula durante el análisis. |
+| `created_at`, `updated_at` | Trazabilidad técnica del lote. |
+
+Relaciones:
+
+- uno a muchos con `catalogos.cie10_importacion_filas`;
+- relación lógica con `auditoria.eventos.subject_id`;
+- relación lógica con la cuenta de `HSJ_Identity`.
+
+## 16. `catalogos.cie10_importacion_filas`
+
+Resultado reproducible de validar cada fila de un catálogo masivo.
+
+| Campo | Función y relación |
+| --- | --- |
+| `id` | PK técnica. |
+| `importacion_id` | FK con `catalogos.cie10_importaciones`; se elimina en cascada. |
+| `fila` | Número original de fila del archivo. |
+| `estado` | `nuevo`, `actualizar`, `sin_cambios`, `error`, `insertado` o `actualizado`. |
+| `cie10_id` | FK opcional al código existente o aplicado. |
+| `codigo` | Código con formato visible. |
+| `codigo_normalizado` | Código sin separadores, usado para detectar equivalencias y duplicados. |
+| `datos` | JSON con código, descripción, estado y cotejo de sexo propuestos. |
+| `datos_anteriores` | Instantánea JSON y versión previa para impedir sobrescrituras concurrentes. |
+| `mensajes` | Explicación JSON de errores u observaciones. |
+| `created_at`, `updated_at` | Trazabilidad técnica. |
+
+Un lote con errores no puede confirmarse. Durante la confirmación se vuelve a
+comprobar la versión de cada registro; si otro usuario lo modificó después del
+análisis, toda la transacción se rechaza.
+
+## 17. Tablas `staging`
 
 Estas tablas no son maestras ni operativas. Son áreas temporales y auditables
 para migrar datos sin crear automáticamente usuarios o vínculos incorrectos.
@@ -672,7 +721,7 @@ Usado por `ImportLegacyEgresos` e `ImportLegacyCirugias`.
 | `executed_by_account_id` | RL con la cuenta central que ejecutó el comando. |
 | `created_at`, `updated_at` | Trazabilidad técnica. |
 
-## 16. Matriz de uso por función
+## 18. Matriz de uso por función
 
 | Función | Tablas principales |
 | --- | --- |
@@ -685,10 +734,13 @@ Usado por `ImportLegacyEgresos` e `ImportLegacyCirugias`.
 | Generación de constancia | `egresos.egresos`, `catalogos.cie10`, `egresos.configuracion_constancias`, `egresos.correlativos`, `egresos.constancias`, `egresos.constancia_episodios`, `egresos.constancia_historial`, `auditoria.eventos` |
 | Edición/anulación/impresión | `egresos.constancias`, `egresos.constancia_historial`, `auditoria.eventos` |
 | Configuración institucional | `egresos.configuracion_constancias`, `egresos.configuracion_constancia_historial`, `auditoria.eventos` |
+| CRUD CIE-10 | `catalogos.cie10`, `auditoria.eventos` |
+| Análisis masivo CIE-10 | `catalogos.cie10_importaciones`, `catalogos.cie10_importacion_filas`, `catalogos.cie10` |
+| Confirmación masiva CIE-10 | `catalogos.cie10_importaciones`, `catalogos.cie10_importacion_filas`, `catalogos.cie10`, `auditoria.eventos` |
 | Reportes y exportaciones | `egresos.egresos`, `catalogos.cie10` |
 | Migración inicial | tablas `staging`, `catalogos.cie10` y tablas del esquema `egresos` |
 
-## 17. Reglas de integridad importantes
+## 19. Reglas de integridad importantes
 
 1. Una fila de `egresos.egresos` es un episodio, no un paciente.
 2. La HC agrupa episodios; el documento se usa como alternativa cuando no hay
@@ -712,11 +764,16 @@ Usado por `ImportLegacyEgresos` e `ImportLegacyCirugias`.
 12. Los IDs de `HSJ_Identity` se conservan junto con el nombre del actor; esto
    mantiene evidencia incluso si el perfil central cambia.
 13. Las tablas `staging` no conceden accesos ni crean cuentas por sí solas.
+14. Un código CIE-10 no se elimina físicamente: se marca `INACTIVO` para
+    conservar diagnósticos y documentos históricos.
+15. La carga masiva CIE-10 siempre requiere análisis y confirmación separados;
+    una huella de archivo repetida o cualquier fila con error bloquea su
+    aplicación.
 
-## 18. Código fuente de referencia
+## 20. Código fuente de referencia
 
 - Migraciones: `database/migrations/2026_07_25_190000` a
-  `2026_07_25_208000`.
+  `2026_07_25_210000`.
 - Modelos: `app/Models/Egresos`.
 - Consulta y timeline: `app/Http/Controllers/Egresos/EgresoController.php`.
 - Constancias: `app/Http/Controllers/Egresos/ConstanciaController.php`.
@@ -725,6 +782,9 @@ Usado por `ImportLegacyEgresos` e `ImportLegacyCirugias`.
 - Configuración:
   `app/Http/Controllers/Egresos/ConfiguracionConstanciaController.php`.
 - Importaciones: `app/Services/Egresos/EgresoImportService.php`.
+- Catálogo CIE-10: `app/Services/Egresos/Cie10CatalogService.php` y
+  `app/Http/Controllers/Egresos/Cie10CatalogController.php`.
 - Correlativo: `app/Services/Egresos/AnnualCertificateSequence.php`.
 - Auditoría: `app/Services/Egresos/EgresoTrace.php` y
-  `app/Services/Egresos/ConstanciaTrace.php`.
+  `app/Services/Egresos/ConstanciaTrace.php`; CIE-10 usa
+  `app/Services/Egresos/Cie10Trace.php`.

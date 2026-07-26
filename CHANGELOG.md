@@ -7,14 +7,23 @@ los principios de Keep a Changelog.
 
 ### Egresos - entrega funcional
 
+- CRUD responsive del catálogo CIE-10 protegido por
+  `egresos.catalogs.manage`, con código inmutable, control de concurrencia,
+  desactivación lógica y auditoría de valores anteriores/nuevos.
+- Carga masiva CIE-10 CSV/XLSX en dos etapas, con huella SHA-256, análisis
+  persistente por fila, detección de duplicados normalizados y confirmación
+  transaccional.
+- Validación real del archivo entregado: 12,672 filas sin cambios y dos errores
+  relacionados con la colisión normalizada `U06AG` / `U06.AG`; el catálogo
+  central permanece en 13,023 registros.
 - Análisis de solo lectura de financiamiento y condición de alta en SIGH:
   se definió `Atenciones.idFuenteFinanciamiento` como origen y `CodigoHIS`
   como código de conciliación legado; la condición queda pendiente del
   catálogo oficial para evitar correspondencias inventadas.
 - Comparación del `CIE10_2021.csv` contra `catalogos.cie10`: 12,673 códigos
-  coincidentes sin diferencias descriptivas, 350 códigos adicionales en la
-  base central y un código no estándar (`U06AG`) pendiente de validación.
-- Diccionario funcional y técnico de las 14 tablas que participan en Egresos,
+  textuales coincidentes sin diferencias descriptivas, 350 códigos adicionales
+  en la base central y una colisión normalizada `U06AG` / `U06.AG`.
+- Diccionario funcional y técnico de las 16 tablas que participan en Egresos,
   con propósito de cada campo, relaciones físicas y lógicas, procesos que lo
   escriben y pantallas o servicios que lo consumen.
 - Módulo Laravel nativo con panel, búsqueda paginada, detalle, CIE-10,

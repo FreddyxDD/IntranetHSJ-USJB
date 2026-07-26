@@ -123,21 +123,21 @@ importar datos.
 | Control | Resultado |
 | --- | ---: |
 | Filas de datos en el CSV | 12,674 |
-| Códigos únicos | 12,674 |
+| Códigos textuales únicos | 12,674 |
 | Códigos vacíos | 0 |
 | Descripciones vacías | 0 |
 | Duplicados | 0 |
 | Filas actuales en `catalogos.cie10` | 13,023 |
 | Códigos comunes | 12,673 |
-| Códigos del CSV ausentes en la base | 1 |
+| Códigos realmente nuevos después de normalizar | 0 |
 | Códigos de la base ausentes en el CSV | 350 |
 | Diferencias descriptivas entre códigos comunes | 0 |
 
-El único código del CSV que no está en la base es `U06AG`, descrito como
-“Zika Asintomático en Gestantes”. El código no cumple el patrón CIE-10 usado por
-los demás registros (`letra + dos dígitos`, con extensión opcional después de
-un punto), por lo que debe revisarse contra una fuente normativa antes de
-incorporarlo.
+El CSV contiene `U06AG` y también `U06.AG`, ambos descritos como “Zika
+Asintomático en Gestantes”. Aunque son textos distintos, los dos se normalizan
+como `U06AG`; `U06.AG` ya existe en la base. La validación masiva detecta esta
+colisión y además rechaza `U06AG` por no usar el separador del formato CIE-10.
+Por ello no existe un código realmente nuevo que deba incorporarse.
 
 El catálogo central existente:
 
@@ -153,7 +153,8 @@ central eliminaría información útil y reduciría su cobertura.
 
 1. Mantener `catalogos.cie10` como catálogo maestro de Egresos.
 2. No importar ni reemplazar CIE-10 con el CSV entregado.
-3. Registrar `U06AG` como observación pendiente de validación normativa.
+3. Corregir o retirar la fila `U06AG` del archivo antes de cualquier carga;
+   conservar `U06.AG`, ya presente en el catálogo central.
 4. Obtener financiamiento desde la atención SIGH y no desde la base MySQL
    heredada de Citas.
 5. Mantener los textos legados de financiamiento y condición como evidencia de

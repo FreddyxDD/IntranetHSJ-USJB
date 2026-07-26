@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Appointments\AppointmentApiController;
 use App\Http\Controllers\Egresos\AuditoriaController;
+use App\Http\Controllers\Egresos\Cie10CatalogController;
 use App\Http\Controllers\Egresos\ConfiguracionConstanciaController;
 use App\Http\Controllers\Egresos\ConstanciaController;
 use App\Http\Controllers\Egresos\EgresoController;
@@ -87,6 +88,37 @@ Route::prefix('egresos')->middleware('legacy.module:egresos')->group(function ()
     Route::get('/api/cie10', [EgresoController::class, 'cie10'])
         ->middleware('central.permission:egresos.records.view')
         ->name('egresos.cie10');
+    Route::get('/catalogos/cie10', [Cie10CatalogController::class, 'page'])
+        ->middleware('central.permission:egresos.catalogs.manage')
+        ->name('egresos.cie10.catalog');
+    Route::get('/api/catalogos/cie10', [Cie10CatalogController::class, 'index'])
+        ->middleware('central.permission:egresos.catalogs.manage')
+        ->name('egresos.cie10.catalog.index');
+    Route::post('/api/catalogos/cie10', [Cie10CatalogController::class, 'store'])
+        ->middleware('central.permission:egresos.catalogs.manage')
+        ->name('egresos.cie10.catalog.store');
+    Route::put('/api/catalogos/cie10/{cie10}', [Cie10CatalogController::class, 'update'])
+        ->whereNumber('cie10')
+        ->middleware('central.permission:egresos.catalogs.manage')
+        ->name('egresos.cie10.catalog.update');
+    Route::delete('/api/catalogos/cie10/{cie10}', [Cie10CatalogController::class, 'destroy'])
+        ->whereNumber('cie10')
+        ->middleware('central.permission:egresos.catalogs.manage')
+        ->name('egresos.cie10.catalog.destroy');
+    Route::get('/api/catalogos/cie10-importaciones', [Cie10CatalogController::class, 'imports'])
+        ->middleware('central.permission:egresos.catalogs.manage')
+        ->name('egresos.cie10.imports.index');
+    Route::post('/api/catalogos/cie10-importaciones', [Cie10CatalogController::class, 'previewImport'])
+        ->middleware('central.permission:egresos.catalogs.manage')
+        ->name('egresos.cie10.imports.store');
+    Route::get('/api/catalogos/cie10-importaciones/{importacion}', [Cie10CatalogController::class, 'showImport'])
+        ->whereNumber('importacion')
+        ->middleware('central.permission:egresos.catalogs.manage')
+        ->name('egresos.cie10.imports.show');
+    Route::post('/api/catalogos/cie10-importaciones/{importacion}/confirmar', [Cie10CatalogController::class, 'confirmImport'])
+        ->whereNumber('importacion')
+        ->middleware('central.permission:egresos.catalogs.manage')
+        ->name('egresos.cie10.imports.confirm');
     Route::get('/api/constancias', [EgresoController::class, 'certificates'])
         ->middleware('central.permission:egresos.history.view')
         ->name('egresos.certificates.index');

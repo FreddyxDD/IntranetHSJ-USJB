@@ -6,6 +6,7 @@ use App\Models\Egresos\Cie10;
 use App\Models\Egresos\ConfiguracionConstancia;
 use App\Models\Egresos\ConfiguracionConstanciaHistorial;
 use App\Models\Egresos\Constancia;
+use App\Models\Egresos\ConstanciaEpisodio;
 use App\Models\Egresos\ConstanciaHistorial;
 use App\Models\Egresos\Egreso;
 use App\Models\Egresos\Importacion;
@@ -34,6 +35,7 @@ final class EgresosArchitectureTest extends TestCase
     {
         self::assertSame('egresos.egresos', (new Egreso)->getTable());
         self::assertSame('egresos.constancias', (new Constancia)->getTable());
+        self::assertSame('egresos.constancia_episodios', (new ConstanciaEpisodio)->getTable());
         self::assertSame('egresos.constancia_historial', (new ConstanciaHistorial)->getTable());
         self::assertSame('catalogos.cie10', (new Cie10)->getTable());
         self::assertSame('egresos.configuracion_constancias', (new ConfiguracionConstancia)->getTable());
@@ -64,6 +66,7 @@ final class EgresosArchitectureTest extends TestCase
     {
         $index = Route::getRoutes()->getByName('egresos.index');
         $create = Route::getRoutes()->getByName('egresos.certificates.store');
+        $preview = Route::getRoutes()->getByName('egresos.certificates.preview');
         $update = Route::getRoutes()->getByName('egresos.certificates.update');
         $cancel = Route::getRoutes()->getByName('egresos.certificates.cancel');
         $view = Route::getRoutes()->getByName('egresos.certificates.view');
@@ -84,6 +87,8 @@ final class EgresosArchitectureTest extends TestCase
         self::assertContains('legacy.module:egresos', $index->gatherMiddleware());
         self::assertContains('central.permission:egresos.view', $index->gatherMiddleware());
         self::assertNotNull($create);
+        self::assertNotNull($preview);
+        self::assertContains('central.permission:egresos.certificates.create', $preview->gatherMiddleware());
         self::assertContains('central.permission:egresos.certificates.create', $create->gatherMiddleware());
         self::assertContains('central.permission:egresos.certificates.update', $update->gatherMiddleware());
         self::assertContains('central.permission:egresos.certificates.cancel', $cancel->gatherMiddleware());

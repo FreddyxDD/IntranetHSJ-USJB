@@ -90,6 +90,9 @@ Route::prefix('egresos')->middleware('legacy.module:egresos')->group(function ()
     Route::get('/api/constancias', [EgresoController::class, 'certificates'])
         ->middleware('central.permission:egresos.history.view')
         ->name('egresos.certificates.index');
+    Route::post('/api/constancias/previsualizar', [ConstanciaController::class, 'preview'])
+        ->middleware('central.permission:egresos.certificates.create')
+        ->name('egresos.certificates.preview');
     Route::post('/api/constancias', [ConstanciaController::class, 'store'])
         ->middleware('central.permission:egresos.certificates.create')
         ->name('egresos.certificates.store');

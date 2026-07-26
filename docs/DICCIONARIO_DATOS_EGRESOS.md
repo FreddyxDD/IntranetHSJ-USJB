@@ -51,7 +51,9 @@ Campos comunes:
 erDiagram
     IMPORTACIONES ||--o{ IMPORTACION_FILAS : analiza
     IMPORTACIONES o|--o{ EGRESOS : incorpora
-    EGRESOS ||--o{ CONSTANCIAS : sustenta
+    EGRESOS o|--o{ CONSTANCIAS : referencia_compatible
+    EGRESOS ||--o{ CONSTANCIA_EPISODIOS : integra
+    CONSTANCIAS ||--o{ CONSTANCIA_EPISODIOS : contiene
     CONSTANCIAS ||--o{ CONSTANCIA_HISTORIAL : registra
     CONFIGURACION_CONSTANCIAS ||--o{ CONFIGURACION_HISTORIAL : versiona
     CIE10 o|--o{ EGRESOS : describe_diagnosticos
@@ -294,8 +296,10 @@ altere el documento ya emitido.
 
 Relaciones:
 
-- `egreso_id` → `egresos.egresos.id`, con `NULL` si el egreso relacionado se
-  elimina;
+- `egreso_id` → `egresos.egresos.id`; conserva como referencia compatible el
+  primer episodio de la selección;
+- la relación legal completa se encuentra en
+  `egresos.constancia_episodios`;
 - `sequence_owner_key` + `anio` se relacionan lógicamente con
   `egresos.correlativos`;
 - `issuer_*`, `cancelled_by_*` y `last_printed_by_*` son RL con
@@ -312,10 +316,11 @@ vista previa/impresión, indicadores y exportaciones relacionadas.
 | `id` | PK de la constancia. |
 | `source_system` | Origen de la constancia. |
 | `source_id` | ID legado, si fue migrada. |
-| `egreso_id` | FK al episodio específico que sustenta el documento. |
+| `egreso_id` | FK compatible al primer episodio seleccionado. La lista legal completa se obtiene de `constancia_episodios`. |
 | `numero` | Correlativo dentro del año. |
 | `anio` | Año legal del correlativo; al cambiar el año la numeración empieza nuevamente. |
 | `sequence_owner_key` | Propietario técnico del correlativo. Actualmente siempre `application:egresos`. |
+| `preview_token_hash` | Huella única del comprobante de previsualización confirmado; impide reutilizarlo para emitir otra constancia. |
 | `issuer_account_id` | RL con la cuenta central que emitió la constancia. |
 | `issuer_person_id` | RL con la persona central del emisor; reservado para conciliación completa. |
 | `issuer_legacy_user_id` | ID del usuario del aplicativo anterior, conservado en constancias migradas. |
@@ -392,7 +397,52 @@ vista previa/impresión, indicadores y exportaciones relacionadas.
 | `imported_at` | Fecha de migración a `Intranet_HSJ`. |
 | `created_at`, `updated_at` | Creación y última edición en Laravel. |
 
-## 9. `egresos.constancia_historial`
+## 9. `egresos.constancia_episodios`
+
+Detalle legal de los episodios incluidos en una constancia. Permite seleccionar
+entre uno y diez ingresos del mismo paciente y congela los datos de cada uno
+para que cambios posteriores en `egresos.egresos` no modifiquen el documento.
+
+Relaciones físicas:
+
+- `constancia_id` → `egresos.constancias.id` con borrado en cascada;
+- `egreso_id` → `egresos.egresos.id` y queda nulo si se elimina el episodio,
+  sin perder la instantánea legal.
+
+Usado por `ConstanciaController`, `ConstanciaEpisodeSelection`,
+`ConstanciaDocumentPresenter` y la vista imprimible. Las constancias históricas
+de un solo egreso fueron incorporadas automáticamente con `posicion = 1`.
+
+| Campo | Función y relación |
+| --- | --- |
+| `id` | PK del episodio congelado. |
+| `constancia_id` | FK a la constancia que contiene el episodio. |
+| `egreso_id` | FK opcional al episodio operativo original. |
+| `posicion` | Orden cronológico dentro del documento; único por constancia. |
+| `source_system` | Sistema que originó el episodio. |
+| `numhc` | HC congelada para comprobar identidad y trazabilidad. |
+| `doc_tipo_id` | Tipo documental vigente al generar. |
+| `doc_iden` | Número de documento vigente al generar. |
+| `paciente` | Nombre completo congelado. |
+| `nombres` | Nombres separados congelados. |
+| `apellidos` | Apellidos separados congelados. |
+| `fecing` | Fecha de ingreso del episodio certificado. |
+| `fecegr` | Fecha de egreso del episodio certificado. |
+| `ups` | Código o nombre UPS del episodio. |
+| `servicio` | Nombre imprimible del servicio. |
+| `condicion` | Condición al alta de este episodio. |
+| `financia` | Financiamiento correspondiente a este episodio. |
+| `coddiag1` | Diagnóstico principal congelado. |
+| `descdiag1` | Descripción CIE-10 congelada del diagnóstico principal. |
+| `coddiag2` | Segundo diagnóstico congelado. |
+| `descdiag2` | Descripción congelada del segundo diagnóstico. |
+| `coddiag3` | Tercer diagnóstico congelado. |
+| `descdiag3` | Descripción congelada del tercer diagnóstico. |
+| `coddiag4` | Cuarto diagnóstico congelado. |
+| `descdiag4` | Descripción congelada del cuarto diagnóstico. |
+| `created_at`, `updated_at` | Fecha de incorporación y actualización técnica. |
+
+## 10. `egresos.constancia_historial`
 
 Bitácora legal especializada de una constancia. No representa el estado
 actual; conserva cada transición: generación, edición, anulación,
@@ -425,7 +475,7 @@ validadores de integridad.
 | `imported_at` | Fecha de incorporación de la evidencia. |
 | `created_at`, `updated_at` | Trazabilidad técnica Laravel. |
 
-## 10. `egresos.correlativos`
+## 11. `egresos.correlativos`
 
 Controla de forma transaccional el siguiente número de constancia por año.
 Evita que dos usuarios obtengan el mismo número.
@@ -450,7 +500,7 @@ La combinación `sequence_owner_key` + `anio` es única. El 1 de enero de un
 nuevo año se crea un contador independiente que comienza en cero y la primera
 emisión recibe el número 1.
 
-## 11. `egresos.configuracion_constancias`
+## 12. `egresos.configuracion_constancias`
 
 Fila única (`id = 1`) con la configuración institucional activa. La pantalla
 de Configuración siempre abre un formulario limpio; esta tabla sirve como
@@ -475,7 +525,7 @@ Usado por `ConfiguracionConstanciaController` y `ConstanciaController`.
 | `source_updated_at` | Modificación en el origen legado, si aplica. |
 | `created_at`, `updated_at` | Creación y última actualización en Laravel. |
 
-## 12. `egresos.configuracion_constancia_historial`
+## 13. `egresos.configuracion_constancia_historial`
 
 Registro inmutable de cada versión guardada desde Configuración. Permite saber
 qué valores estuvieron activos, cuándo y quién los registró.
@@ -506,7 +556,7 @@ Usado por `ConfiguracionConstanciaController` y el listado
 | `user_agent` | Navegador o cliente usado. |
 | `created_at`, `updated_at` | Fecha de registro y actualización técnica. |
 
-## 13. `auditoria.eventos`
+## 14. `auditoria.eventos`
 
 Auditoría transversal del Intranet. A diferencia de
 `constancia_historial`, puede registrar acciones sobre egresos,
@@ -539,12 +589,12 @@ Usado por `EgresoTrace`, `ConstanciaTrace`, `EgresoImportService`,
 | `occurred_at` | Momento funcional del evento. |
 | `created_at`, `updated_at` | Persistencia técnica Laravel. |
 
-## 14. Tablas `staging`
+## 15. Tablas `staging`
 
 Estas tablas no son maestras ni operativas. Son áreas temporales y auditables
 para migrar datos sin crear automáticamente usuarios o vínculos incorrectos.
 
-### 14.1 `staging.identity_user_map`
+### 15.1 `staging.identity_user_map`
 
 Concilia usuarios de aplicativos antiguos con cuentas y personas centrales.
 
@@ -567,7 +617,7 @@ Usado por `ReconcileLegacyIdentities`, `ImportLegacyEgresos` e
 | `reviewed_at` | Fecha de revisión. |
 | `created_at`, `updated_at` | Trazabilidad técnica. |
 
-### 14.2 `staging.personnel_map`
+### 15.2 `staging.personnel_map`
 
 Concilia personal legado con personas, legajos y asignaciones de
 `HSJ_Identity`.
@@ -593,7 +643,7 @@ para la futura integración de Legajos.
 | `reviewed_at` | Momento de revisión. |
 | `created_at`, `updated_at` | Trazabilidad técnica. |
 
-### 14.3 `staging.import_runs`
+### 15.3 `staging.import_runs`
 
 Bitácora técnica de ejecuciones de los importadores de migración. No sustituye
 a `egresos.importaciones`, que corresponde a la carga operativa visible del
@@ -622,7 +672,7 @@ Usado por `ImportLegacyEgresos` e `ImportLegacyCirugias`.
 | `executed_by_account_id` | RL con la cuenta central que ejecutó el comando. |
 | `created_at`, `updated_at` | Trazabilidad técnica. |
 
-## 15. Matriz de uso por función
+## 16. Matriz de uso por función
 
 | Función | Tablas principales |
 | --- | --- |
@@ -631,37 +681,47 @@ Usado por `ImportLegacyEgresos` e `ImportLegacyCirugias`.
 | Registro/corrección manual | `egresos.egresos`, `catalogos.cie10`, `auditoria.eventos` |
 | Análisis de archivo | `egresos.importaciones`, `egresos.importacion_filas`, `catalogos.cie10`, lectura SIGH |
 | Confirmación de carga | `egresos.importacion_filas`, `egresos.egresos`, `egresos.importaciones`, `auditoria.eventos` |
-| Generación de constancia | `egresos.egresos`, `catalogos.cie10`, `egresos.configuracion_constancias`, `egresos.correlativos`, `egresos.constancias`, `egresos.constancia_historial`, `auditoria.eventos` |
+| Previsualización de constancia | `egresos.egresos`, `catalogos.cie10`, `egresos.configuracion_constancias`, lectura de `egresos.correlativos` sin reservar |
+| Generación de constancia | `egresos.egresos`, `catalogos.cie10`, `egresos.configuracion_constancias`, `egresos.correlativos`, `egresos.constancias`, `egresos.constancia_episodios`, `egresos.constancia_historial`, `auditoria.eventos` |
 | Edición/anulación/impresión | `egresos.constancias`, `egresos.constancia_historial`, `auditoria.eventos` |
 | Configuración institucional | `egresos.configuracion_constancias`, `egresos.configuracion_constancia_historial`, `auditoria.eventos` |
 | Reportes y exportaciones | `egresos.egresos`, `catalogos.cie10` |
 | Migración inicial | tablas `staging`, `catalogos.cie10` y tablas del esquema `egresos` |
 
-## 16. Reglas de integridad importantes
+## 17. Reglas de integridad importantes
 
 1. Una fila de `egresos.egresos` es un episodio, no un paciente.
 2. La HC agrupa episodios; el documento se usa como alternativa cuando no hay
    HC.
 3. Un reingreso no es duplicado si cambian las fechas o el servicio.
-4. La constancia siempre apunta a un episodio específico mediante
-   `egreso_id`.
-5. La constancia copia los datos necesarios para preservar el documento
-   histórico.
-6. El correlativo es único por aplicación y año.
-7. Una constancia anulada permanece consultable, pero no puede reimprimirse.
-8. Toda emisión, edición, anulación e impresión genera historial especializado
+4. Una constancia admite entre uno y diez episodios, todos pertenecientes al
+   mismo paciente.
+5. La vista preliminar no reserva correlativo ni inserta una constancia; emite
+   un comprobante cifrado de confirmación válido por 15 minutos y de un solo
+   uso.
+6. La constancia conserva `egreso_id` por compatibilidad y registra la
+   selección completa en `constancia_episodios`.
+7. La constancia y sus episodios copian los datos necesarios para preservar el
+   documento histórico.
+8. El correlativo es único por aplicación y año y solo se reserva al confirmar.
+9. Una constancia anulada permanece consultable, pero no puede reimprimirse.
+10. Toda emisión, edición, anulación e impresión genera historial especializado
    y auditoría transversal.
-9. Los IDs de `HSJ_Identity` se conservan junto con el nombre del actor; esto
+11. Una constancia múltiple no se edita parcialmente; se anula y se genera
+    nuevamente con la selección correcta.
+12. Los IDs de `HSJ_Identity` se conservan junto con el nombre del actor; esto
    mantiene evidencia incluso si el perfil central cambia.
-10. Las tablas `staging` no conceden accesos ni crean cuentas por sí solas.
+13. Las tablas `staging` no conceden accesos ni crean cuentas por sí solas.
 
-## 17. Código fuente de referencia
+## 18. Código fuente de referencia
 
 - Migraciones: `database/migrations/2026_07_25_190000` a
-  `2026_07_25_206000`.
+  `2026_07_25_208000`.
 - Modelos: `app/Models/Egresos`.
 - Consulta y timeline: `app/Http/Controllers/Egresos/EgresoController.php`.
 - Constancias: `app/Http/Controllers/Egresos/ConstanciaController.php`.
+- Selección y congelamiento de episodios:
+  `app/Services/Egresos/ConstanciaEpisodeSelection.php`.
 - Configuración:
   `app/Http/Controllers/Egresos/ConfiguracionConstanciaController.php`.
 - Importaciones: `app/Services/Egresos/EgresoImportService.php`.

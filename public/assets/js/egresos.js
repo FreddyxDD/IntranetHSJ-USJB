@@ -5,7 +5,7 @@
     const state = {
         page: 1, query: '', dateFrom: '', dateTo: '',
         selectedCertificate: null, editingRecord: null, auditPage: 1,
-        activeImport: null,
+        activeImport: null, selectedEpisodes: new Map(), previewEpisodeIds: [], previewToken: null,
     };
     const $ = (selector) => document.querySelector(selector);
     const element = (tag, classes, text) => {
@@ -147,6 +147,10 @@
     async function showTimeline(id, page = 1, append = false) {
         const content = $('#timeline-content');
         if (!append) {
+            state.selectedEpisodes.clear();
+            state.previewEpisodeIds = [];
+            state.previewToken = null;
+            updateEpisodeSelection();
             content.replaceChildren(element('div', 'rounded-xl bg-slate-50 p-6 text-center text-slate-500', 'Cargando línea de tiempo…'));
             openOverlay('#timeline-modal');
         }
@@ -193,9 +197,27 @@
 
                 const actions = element('div', 'mt-4 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3');
                 if (config.abilities.createCertificates) {
-                    const certificate = element('button', 'rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700', 'Generar constancia de este episodio');
-                    certificate.addEventListener('click', () => createCertificate(episode, certificate));
-                    actions.append(certificate);
+                    const selection = element('label', 'mr-auto inline-flex cursor-pointer items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100');
+                    const checkbox = element('input', 'size-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = state.selectedEpisodes.has(episode.id);
+                    checkbox.addEventListener('change', () => {
+                        if (checkbox.checked && state.selectedEpisodes.size >= 10) {
+                            checkbox.checked = false;
+                            window.alert('Puede seleccionar hasta 10 episodios por constancia.');
+                            return;
+                        }
+                        if (checkbox.checked) {
+                            state.selectedEpisodes.set(episode.id, episode);
+                            card.classList.add('border-emerald-400');
+                        } else {
+                            state.selectedEpisodes.delete(episode.id);
+                            card.classList.remove('border-emerald-400');
+                        }
+                        updateEpisodeSelection();
+                    });
+                    selection.append(checkbox, document.createTextNode('Incluir en la constancia'));
+                    actions.append(selection);
                 }
                 if (config.abilities.updateRecords) {
                     const edit = element('button', 'rounded-xl border border-amber-300 px-4 py-2 text-xs font-bold text-amber-700 hover:bg-amber-50', 'Corregir episodio');
@@ -227,6 +249,14 @@
                 content.append(errorBox);
             }
         }
+    }
+
+    function updateEpisodeSelection() {
+        const count = state.selectedEpisodes.size;
+        const status = $('#selected-episodes-count');
+        const button = $('#preview-selected-episodes');
+        if (status) status.textContent = `${count} episodio${count === 1 ? '' : 's'} seleccionado${count === 1 ? '' : 's'}`;
+        if (button) button.disabled = count === 0;
     }
 
     function openRecordForm(item = null) {
@@ -297,22 +327,108 @@
         }
     }
 
-    async function createCertificate(episode, button) {
-        if (!episode) return;
+    async function previewSelectedEpisodes() {
+        const button = $('#preview-selected-episodes');
+        const episodeIds = [...state.selectedEpisodes.keys()];
+        if (!episodeIds.length) return;
         button.disabled = true;
-        button.textContent = 'Generando…';
+        button.textContent = 'Preparando vista…';
         try {
-            const result = await request(config.certificateUrl, {
+            const response = await request(config.certificatePreviewUrl, {
                 method: 'POST',
-                body: JSON.stringify({ egreso_id: episode.id }),
+                body: JSON.stringify({ egreso_ids: episodeIds }),
             });
-            window.open(result.print_url, '_blank', 'noopener');
-            await loadDashboard();
+            state.previewEpisodeIds = episodeIds;
+            state.previewToken = response.data.preview_token;
+            renderCertificatePreview(response.data);
+            $('#certificate-confirm-status').textContent = response.message;
+            openOverlay('#certificate-preview-modal');
         } catch (error) {
             window.alert(error.message);
         } finally {
             button.disabled = false;
-            button.textContent = 'Generar constancia de este episodio';
+            button.textContent = 'Ver vista preliminar';
+        }
+    }
+
+    function renderCertificatePreview(preview) {
+        const content = $('#certificate-preview-content');
+        const documentCard = element('article', 'mx-auto max-w-3xl rounded-sm bg-white px-6 py-8 shadow-lg sm:px-12');
+        const heading = element('div', 'flex flex-col gap-4 border-b border-slate-300 pb-5 sm:flex-row sm:items-start sm:justify-between');
+        const institution = element('div');
+        institution.append(
+            element('div', 'text-sm font-black text-slate-900', 'DIRECCIÓN REGIONAL DE SALUD'),
+            element('div', 'mt-1 text-xs text-slate-600', 'Hospital San José de Chincha · Unidad de Estadística e Información')
+        );
+        const correlative = element('div', 'rounded-lg border-2 border-slate-800 px-4 py-2 text-center');
+        correlative.append(
+            element('div', 'text-[10px] font-bold uppercase text-amber-700', 'Número tentativo'),
+            element('div', 'mt-1 font-black text-slate-950', preview.correlative)
+        );
+        heading.append(institution, correlative);
+
+        const title = element('h3', 'mt-7 text-center text-xl font-black text-slate-950', 'CONSTANCIA DE HOSPITALIZACIÓN');
+        const patient = element('div', 'mt-7 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-700');
+        patient.append(
+            element('div', 'font-black text-slate-950', preview.patient || 'Paciente sin nombre'),
+            element('div', '', `HC ${preview.history || '—'} · Documento ${preview.document || '—'}`),
+            element('div', 'mt-1 font-semibold text-blue-800', `${preview.episode_count} episodio(s) serán incluidos en el documento`)
+        );
+        const episodeList = element('div', 'mt-5 space-y-4');
+        preview.episodes.forEach((episode, index) => {
+            const episodeCard = element('section', 'rounded-xl border-l-4 border-blue-600 bg-blue-50/50 p-4');
+            episodeCard.append(
+                element('div', 'font-black text-blue-950', `Episodio ${index + 1}: ${episode.servicio || episode.ups || 'Servicio no registrado'}`),
+                element('div', 'mt-1 text-sm text-slate-700', `${formatDate(episode.fecing)} → ${formatDate(episode.fecegr)} · Condición ${episode.condicion || '—'}`)
+            );
+            const diagnoses = element('ul', 'mt-3 space-y-1 text-xs text-slate-600');
+            (episode.diagnosticos || []).forEach((diagnosis) => diagnoses.append(
+                element('li', '', `${diagnosis.codigo} — ${diagnosis.descripcion || 'Sin descripción'}`)
+            ));
+            if (!(episode.diagnosticos || []).length) diagnoses.append(element('li', 'text-slate-400', 'Sin diagnósticos registrados.'));
+            episodeCard.append(diagnoses);
+            episodeList.append(episodeCard);
+        });
+        const warning = element('div', 'mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900');
+        warning.textContent = 'Esta es una vista preliminar. La constancia y su correlativo legal solo se crearán después de la confirmación expresa.';
+        documentCard.append(heading, title, patient, episodeList, warning);
+        content.replaceChildren(documentCard);
+    }
+
+    async function confirmCertificateGeneration() {
+        const button = $('#confirm-certificate-generation');
+        const count = state.previewEpisodeIds.length;
+        if (!count) return;
+        if (!window.confirm(`¿Confirma generar una constancia legal con ${count} episodio${count === 1 ? '' : 's'} seleccionado${count === 1 ? '' : 's'}?`)) return;
+
+        const status = $('#certificate-confirm-status');
+        const printWindow = window.open('', '_blank');
+        button.disabled = true;
+        button.textContent = 'Generando constancia…';
+        status.textContent = 'Reservando correlativo y registrando auditoría…';
+        try {
+            const result = await request(config.certificateUrl, {
+                method: 'POST',
+                body: JSON.stringify({
+                    egreso_ids: state.previewEpisodeIds,
+                    preview_token: state.previewToken,
+                }),
+            });
+            if (printWindow) printWindow.location = result.print_url;
+            closeOverlay('#certificate-preview-modal');
+            closeOverlay('#timeline-modal');
+            state.selectedEpisodes.clear();
+            state.previewEpisodeIds = [];
+            state.previewToken = null;
+            updateEpisodeSelection();
+            await loadDashboard();
+            window.alert(result.message);
+        } catch (error) {
+            printWindow?.close();
+            status.textContent = error.message;
+        } finally {
+            button.disabled = false;
+            button.textContent = 'Confirmar y generar constancia';
         }
     }
 
@@ -568,7 +684,7 @@
                 info.append(
                     element('div', 'font-bold text-blue-950', `Constancia N.° ${String(item.numero).padStart(4, '0')}-${item.anio}`),
                     element('div', 'mt-1 text-sm text-slate-700', `${item.paciente || 'Paciente'} · HC ${item.numhc || '—'} · Documento ${item.doc_iden || '—'}`),
-                    element('div', 'mt-1 text-xs text-slate-500', `Generada: ${formatDateTime(item.issued_at)} · Egreso: ${formatDate(item.fecegr)} · Servicio: ${item.servicio || item.ups || '—'}`),
+                    element('div', 'mt-1 text-xs text-slate-500', `Generada: ${formatDateTime(item.issued_at)} · Episodios: ${item.episodios_count || 1} · Egreso final: ${formatDate(item.fecegr)} · Servicio: ${item.servicio || item.ups || '—'}`),
                     element('div', `mt-1 text-xs font-semibold ${stateClass}`, `Estado: ${item.estado} · Emitida por: ${item.issuer_display_name || item.issuer_username || 'Importación histórica'}`)
                 );
                 const grouped = item.patient_group?.certificates || [];
@@ -581,7 +697,7 @@
                         const row = element('div', `grid gap-1 rounded-lg px-3 py-2 text-xs sm:grid-cols-[auto_1fr_auto] sm:items-center ${current ? 'bg-blue-100 font-bold text-blue-950' : 'bg-white text-slate-600'}`);
                         row.append(
                             element('span', '', `N.° ${String(related.numero).padStart(4, '0')}-${related.anio}`),
-                            element('span', '', `${formatDateTime(related.issued_at)} · ${related.servicio || 'Sin servicio'} · Egreso ${formatDate(related.fecegr)}`),
+                            element('span', '', `${formatDateTime(related.issued_at)} · ${related.episodios_count || 1} episodio(s) · ${related.servicio || 'Sin servicio'} · Egreso ${formatDate(related.fecegr)}`),
                             element('span', related.estado === 'anulada' ? 'font-bold text-rose-700' : 'font-bold text-emerald-700', current ? `Actual · ${related.estado}` : related.estado)
                         );
                         relatedList.append(row);
@@ -604,10 +720,13 @@
                     link.title = 'Disponible solo para consulta histórica; la reimpresión está bloqueada.';
                 }
                 actions.append(link);
-                if (config.abilities.updateCertificates && item.estado !== 'anulada') {
+                if (config.abilities.updateCertificates && item.estado !== 'anulada' && (item.episodios_count || 1) === 1) {
                     const edit = element('button', 'rounded-xl border border-amber-200 px-4 py-2 text-sm font-bold text-amber-700', 'Editar');
                     edit.addEventListener('click', () => openCertificateEdit(item));
                     actions.append(edit);
+                }
+                if ((item.episodios_count || 1) > 1 && item.estado !== 'anulada') {
+                    actions.append(element('span', 'max-w-56 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800', 'Para corregir una constancia múltiple, anúlela y genere una nueva selección.'));
                 }
                 if (config.abilities.cancelCertificates && item.estado !== 'anulada') {
                     const cancel = element('button', 'rounded-xl border border-rose-200 px-4 py-2 text-sm font-bold text-rose-700', 'Anular');
@@ -854,6 +973,8 @@
         loadRecords(1);
     });
     $('#new-record')?.addEventListener('click', () => openRecordForm());
+    $('#preview-selected-episodes')?.addEventListener('click', previewSelectedEpisodes);
+    $('#confirm-certificate-generation')?.addEventListener('click', confirmCertificateGeneration);
     $('#record-form')?.addEventListener('submit', saveRecord);
     $('#lookup-patient')?.addEventListener('click', lookupPatient);
     $('#import-form')?.addEventListener('submit', importRecords);

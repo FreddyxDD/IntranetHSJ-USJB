@@ -358,6 +358,7 @@ final class EgresoController extends Controller
         $text = trim((string) ($validated['q'] ?? ''));
         $query = Constancia::query()
             ->with('historial')
+            ->withCount('episodios')
             ->orderByDesc('anio')
             ->orderByDesc('numero')
             ->orderByDesc('id');
@@ -379,6 +380,7 @@ final class EgresoController extends Controller
         $relatedCertificates = ($histories->isEmpty() && $documents->isEmpty())
             ? collect()
             : Constancia::query()
+                ->withCount('episodios')
                 ->where(function ($builder) use ($histories, $documents): void {
                     if ($histories->isNotEmpty()) {
                         $builder->whereIn('numhc', $histories);
@@ -415,6 +417,7 @@ final class EgresoController extends Controller
                     'issued_at' => $item->created_at ?? $item->source_created_at ?? $item->imported_at,
                     'fecegr' => $item->fecegr?->format('Y-m-d'),
                     'servicio' => $item->servicio ?: $item->ups,
+                    'episodios_count' => $item->episodios_count,
                 ])->values(),
             ]);
 

@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Egresos\Constancia;
+use App\Models\Egresos\ConstanciaEpisodio;
 use App\Services\Egresos\ConstanciaDocumentPresenter;
+use Illuminate\Database\Eloquent\Collection;
 use Tests\TestCase;
 
 final class EgresosCertificateViewTest extends TestCase
@@ -68,6 +70,58 @@ final class EgresosCertificateViewTest extends TestCase
         self::assertFalse($certificate->canBePrinted());
         $certificate->estado = 'generada';
         self::assertTrue($certificate->canBePrinted());
+    }
+
+    public function test_certificate_can_render_multiple_selected_episodes(): void
+    {
+        $certificate = new Constancia([
+            'numero' => 32,
+            'anio' => 2026,
+            'paciente' => 'PACIENTE CON REINGRESOS',
+            'doc_tipo_id' => 1,
+            'doc_iden' => '70887766',
+            'numhc' => '200757',
+            'estado' => 'generada',
+        ]);
+        $certificate->setRelation('episodios', new Collection([
+            new ConstanciaEpisodio([
+                'egreso_id' => 10,
+                'posicion' => 1,
+                'fecing' => '2025-01-10',
+                'fecegr' => '2025-01-15',
+                'ups' => 'MEDICINA',
+                'servicio' => 'MEDICINA',
+                'condicion' => 'MEJORADO',
+                'coddiag1' => 'J189',
+                'descdiag1' => 'Neumonía no especificada',
+            ]),
+            new ConstanciaEpisodio([
+                'egreso_id' => 20,
+                'posicion' => 2,
+                'fecing' => '2026-03-01',
+                'fecegr' => '2026-03-04',
+                'ups' => 'CIRUGIA',
+                'servicio' => 'CIRUGIA',
+                'condicion' => 'MEJORADO',
+                'coddiag1' => 'K358',
+                'descdiag1' => 'Otras apendicitis agudas',
+            ]),
+        ]));
+
+        $document = app(ConstanciaDocumentPresenter::class)->present($certificate);
+        $html = view('egresos.certificate', [
+            'constancia' => $certificate,
+            'document' => $document,
+        ])->render();
+
+        self::assertSame(2, $document['episode_count']);
+        self::assertStringContainsString('sheet-multiple', $html);
+        self::assertStringContainsString('N° 0032-2026-HSJ-GEN', $html);
+        self::assertStringContainsString('2 episodios de', $html);
+        self::assertStringContainsString('Episodio 1: MEDICINA', $html);
+        self::assertStringContainsString('Episodio 2: CIRUGIA', $html);
+        self::assertStringContainsString('J18.9:', $html);
+        self::assertStringContainsString('K35.8:', $html);
     }
 
     public function test_active_certificate_requires_server_authorization_before_printing(): void

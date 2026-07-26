@@ -37,6 +37,8 @@ final class EgresosViewTest extends TestCase
         self::assertStringContainsString('Registrar excepción', $html);
         self::assertStringContainsString('Últimos egresos cargados', $html);
         self::assertStringContainsString('id="timeline-modal"', $html);
+        self::assertStringContainsString('id="certificate-preview-modal"', $html);
+        self::assertStringContainsString('Confirmar y generar constancia', $html);
         self::assertStringNotContainsString('id="detail-modal"', $html);
         self::assertStringContainsString('Importación masiva controlada', $html);
         self::assertStringContainsString('Analizar archivo', $html);

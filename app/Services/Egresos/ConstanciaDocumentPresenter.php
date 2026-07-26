@@ -3,6 +3,8 @@
 namespace App\Services\Egresos;
 
 use App\Models\Egresos\Constancia;
+use App\Models\Egresos\ConstanciaEpisodio;
+use Illuminate\Database\Eloquent\Model;
 
 final class ConstanciaDocumentPresenter
 {
@@ -26,9 +28,24 @@ final class ConstanciaDocumentPresenter
 
     public function present(Constancia $certificate): array
     {
-        $service = $this->service($certificate);
+        if ($certificate->exists && ! $certificate->relationLoaded('episodios')) {
+            $certificate->load('episodios');
+        }
+        $episodeModels = $certificate->relationLoaded('episodios')
+            ? $certificate->episodios
+            : collect();
+        if ($episodeModels->isEmpty()) {
+            $episodeModels = collect([$certificate]);
+        }
+        $episodes = $episodeModels
+            ->map(fn (Model $episode): array => $this->episode($episode))
+            ->values();
+        $serviceCodes = $episodes->pluck('service_code')->unique();
         $serviceCode = $this->clean($certificate->sigla_servicio)
-            ?: $service['code'];
+            ?: ($serviceCodes->count() === 1 ? $serviceCodes->first() : 'GEN');
+        $service = $episodes->count() === 1
+            ? $episodes->first()['service']
+            : 'VARIOS SERVICIOS';
 
         return [
             'correlative' => sprintf(
@@ -40,12 +57,14 @@ final class ConstanciaDocumentPresenter
             'patient' => mb_strtoupper($this->clean($certificate->paciente) ?: 'PACIENTE NO REGISTRADO'),
             'document_type' => self::DOCUMENT_TYPES[(int) $certificate->doc_tipo_id] ?? 'DNI',
             'document' => $certificate->documento ?: 'NO CONSIGNADO',
-            'admission_date' => $certificate->fecing?->format('d/m/Y') ?: '',
-            'discharge_date' => $certificate->fecegr?->format('d/m/Y') ?: '',
+            'admission_date' => $episodes->first()['admission_date'],
+            'discharge_date' => $episodes->first()['discharge_date'],
             'history' => $this->clean($certificate->numhc) ?: '-',
-            'service' => $service['name'],
+            'service' => $service,
             'service_code' => $serviceCode,
-            'diagnoses' => $this->diagnoses($certificate),
+            'diagnoses' => $episodes->first()['diagnoses'],
+            'episodes' => $episodes->all(),
+            'episode_count' => $episodes->count(),
             'issue_date' => now()->locale('es')->translatedFormat('d \\d\\e F \\d\\e Y'),
             'director_initials' => mb_strtoupper(
                 $this->clean($certificate->iniciales_jefe)
@@ -54,7 +73,7 @@ final class ConstanciaDocumentPresenter
             ),
             'ccp_initials' => mb_strtoupper(
                 $this->clean($certificate->iniciales_ccp)
-                ?: $service['lower']
+                ?: ($episodes->count() === 1 ? $episodes->first()['lower_code'] : 'GEN')
             ),
             'lower_code' => 'J-'.$serviceCode,
             'director_name' => $this->clean($certificate->nombre_director),
@@ -64,10 +83,28 @@ final class ConstanciaDocumentPresenter
         ];
     }
 
-    private function service(Constancia $certificate): array
+    private function episode(Model $episode): array
     {
-        $ups = $this->clean($certificate->ups);
-        $stored = mb_strtoupper($this->clean($certificate->servicio));
+        $service = $this->service($episode);
+
+        return [
+            'id' => $episode->egreso_id,
+            'position' => $episode instanceof ConstanciaEpisodio ? $episode->posicion : 1,
+            'admission_date' => $episode->fecing?->format('d/m/Y') ?: '',
+            'discharge_date' => $episode->fecegr?->format('d/m/Y') ?: '',
+            'service' => $service['name'],
+            'service_code' => $service['code'],
+            'lower_code' => $service['lower'],
+            'condition' => $this->clean($episode->condicion) ?: 'NO CONSIGNADA',
+            'financing' => $this->clean($episode->financia),
+            'diagnoses' => $this->diagnoses($episode),
+        ];
+    }
+
+    private function service(Model $episode): array
+    {
+        $ups = $this->clean($episode->ups);
+        $stored = mb_strtoupper($this->clean($episode->servicio));
         $mapped = self::SERVICES[$ups] ?? null;
 
         if ($mapped) {
@@ -96,11 +133,11 @@ final class ConstanciaDocumentPresenter
         };
     }
 
-    private function diagnoses(Constancia $certificate): array
+    private function diagnoses(Model $episode): array
     {
         return collect(range(1, 4))
-            ->map(function (int $position) use ($certificate): ?array {
-                $code = $this->clean($certificate->getAttribute("coddiag{$position}"));
+            ->map(function (int $position) use ($episode): ?array {
+                $code = $this->clean($episode->getAttribute("coddiag{$position}"));
                 if ($code === '') {
                     return null;
                 }
@@ -108,7 +145,7 @@ final class ConstanciaDocumentPresenter
                 return [
                     'code' => $this->formatCie10($code),
                     'description' => $this->clean(
-                        $certificate->getAttribute("descdiag{$position}")
+                        $episode->getAttribute("descdiag{$position}")
                     ) ?: 'SIN DESCRIPCION',
                 ];
             })

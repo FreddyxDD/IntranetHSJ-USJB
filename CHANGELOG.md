@@ -7,13 +7,22 @@ los principios de Keep a Changelog.
 
 ### Egresos - entrega funcional
 
-- Diccionario funcional y técnico de las 13 tablas que participan en Egresos,
+- Diccionario funcional y técnico de las 14 tablas que participan en Egresos,
   con propósito de cada campo, relaciones físicas y lógicas, procesos que lo
   escriben y pantallas o servicios que lo consumen.
 - Módulo Laravel nativo con panel, búsqueda paginada, detalle, CIE-10,
   historial y vista imprimible de constancias.
 - Emisión de constancias con correlativo SQL Server por cuenta y año,
   historial obligatorio y evento central de auditoría.
+- Selección de hasta diez episodios del mismo paciente, vista preliminar
+  obligatoria y confirmación expresa antes de generar una constancia.
+- Comprobante cifrado de previsualización, ligado al usuario y a la selección,
+  para impedir emisiones directas, alteradas o confirmadas después de 15
+  minutos.
+- Confirmaciones de un solo uso mediante huella única, evitando duplicados por
+  doble clic o repetición de solicitudes.
+- Relación `egresos.constancia_episodios` con instantánea legal de cada ingreso
+  y migración automática de las constancias históricas.
 - Edición y anulación transaccionales con permisos separados, motivo
   obligatorio y registro de valores anteriores y nuevos.
 - Configuración institucional de responsables, cargos e iniciales protegida
@@ -47,7 +56,7 @@ los principios de Keep a Changelog.
   de constancias del mismo paciente.
 - Siguiente número anual visible sobre el historial, calculado desde el
   correlativo central sin reservarlo anticipadamente.
-- 22 pruebas Laravel aprobadas, 1 omitida en SQLite y 116 aserciones.
+- 23 pruebas Laravel aprobadas, 1 omitida en SQLite y 129 aserciones.
 - Consulta comprobada sobre 5,872 egresos y emisión validada dentro de una
   transacción revertida, sin datos de prueba residuales.
 - Línea de tiempo validada contra un paciente real con 10 episodios: ocho

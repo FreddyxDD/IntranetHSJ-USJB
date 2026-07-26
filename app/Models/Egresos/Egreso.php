@@ -27,6 +27,11 @@ final class Egreso extends Model
         return $this->hasMany(Constancia::class, 'egreso_id');
     }
 
+    public function constanciaEpisodios(): HasMany
+    {
+        return $this->hasMany(ConstanciaEpisodio::class, 'egreso_id');
+    }
+
     public function getPacienteAttribute(): string
     {
         return trim((string) $this->nomb.' '.(string) $this->apell);

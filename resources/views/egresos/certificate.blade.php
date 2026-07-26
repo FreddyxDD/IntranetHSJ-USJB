@@ -55,6 +55,19 @@
             position: relative;
             width: 210mm;
         }
+        .sheet.sheet-multiple {
+            height: auto;
+            min-height: 297mm;
+            overflow: visible;
+        }
+        .sheet-multiple .content {
+            left: auto;
+            min-height: 297mm;
+            padding: 88mm 25mm 15mm;
+            position: relative;
+            top: auto;
+            width: auto;
+        }
         .minsa-logo {
             height: 16mm;
             left: 35mm;
@@ -144,6 +157,30 @@
             font-weight: 700;
             left: 0;
             position: absolute;
+        }
+        .episode-list {
+            margin-top: 5mm;
+        }
+        .episode {
+            border-left: .8mm solid #1d4ed8;
+            break-inside: avoid;
+            margin-bottom: 4mm;
+            page-break-inside: avoid;
+            padding: 2mm 0 2mm 4mm;
+        }
+        .episode-title {
+            font-size: 10.5pt;
+            font-weight: 700;
+            line-height: 5.5mm;
+        }
+        .episode-detail {
+            font-size: 10pt;
+            line-height: 5.5mm;
+        }
+        .episode .diagnosis {
+            font-size: 9.5pt;
+            line-height: 5mm;
+            margin-left: 4mm;
         }
         .closing {
             margin-top: 10mm !important;
@@ -240,7 +277,7 @@
         Esta constancia se encuentra anulada o fue abierta únicamente en modo consulta.
     </div>
 
-    <article class="sheet">
+    <article class="sheet @if ($document['episode_count'] > 1) sheet-multiple @endif">
         <img class="watermark" src="/assets/images/fondo.png" alt="" aria-hidden="true">
         <img class="minsa-logo" src="/assets/images/logo.jpeg" alt="Ministerio de Salud">
 
@@ -267,30 +304,64 @@
 
             <p class="statement-title">HACE CONSTAR:</p>
 
-            <p class="statement">
-                Que, la paciente <strong>{{ $document['patient'] }}</strong>, identificada con
-                {{ $document['document_type'] }} N° <strong>{{ $document['document'] }}</strong>,
-                registra ingreso al servicio de hospitalización de
-                <strong>{{ $document['service'] }}</strong> desde el
-                <strong>{{ $document['admission_date'] }}</strong> hasta
-                <strong>{{ $document['discharge_date'] }}</strong>. Alta por Indicación Médica,
-                con condición de Alta Mejorado y pronóstico Bueno; según se registra en la hoja
-                automatizada de epicrisis de la Historia Clínica N°
-                <strong>{{ $document['history'] }}</strong>.
-            </p>
+            @if ($document['episode_count'] === 1)
+                <p class="statement">
+                    Que, la paciente <strong>{{ $document['patient'] }}</strong>, identificada con
+                    {{ $document['document_type'] }} N° <strong>{{ $document['document'] }}</strong>,
+                    registra ingreso al servicio de hospitalización de
+                    <strong>{{ $document['service'] }}</strong> desde el
+                    <strong>{{ $document['admission_date'] }}</strong> hasta
+                    <strong>{{ $document['discharge_date'] }}</strong>. Alta por Indicación Médica,
+                    con condición de Alta Mejorado y pronóstico Bueno; según se registra en la hoja
+                    automatizada de epicrisis de la Historia Clínica N°
+                    <strong>{{ $document['history'] }}</strong>.
+                </p>
 
-            <div class="diagnoses">
-                <div class="diagnoses-title">Diagnóstico</div>
-                @forelse ($document['diagnoses'] as $diagnosis)
-                    <div class="diagnosis">
-                        <span class="diagnosis-number">{{ $loop->iteration }}.-</span>
-                        <strong>{{ $diagnosis['code'] }}:</strong>
-                        {{ $diagnosis['description'] }}
-                    </div>
-                @empty
-                    <div class="diagnosis">CIE-10: NO REGISTRADO</div>
-                @endforelse
-            </div>
+                <div class="diagnoses">
+                    <div class="diagnoses-title">Diagnóstico</div>
+                    @forelse ($document['diagnoses'] as $diagnosis)
+                        <div class="diagnosis">
+                            <span class="diagnosis-number">{{ $loop->iteration }}.-</span>
+                            <strong>{{ $diagnosis['code'] }}:</strong>
+                            {{ $diagnosis['description'] }}
+                        </div>
+                    @empty
+                        <div class="diagnosis">CIE-10: NO REGISTRADO</div>
+                    @endforelse
+                </div>
+            @else
+                <p class="statement">
+                    Que, la paciente <strong>{{ $document['patient'] }}</strong>, identificada con
+                    {{ $document['document_type'] }} N° <strong>{{ $document['document'] }}</strong>,
+                    registra los siguientes <strong>{{ $document['episode_count'] }} episodios de
+                    hospitalización</strong>, según las hojas automatizadas de epicrisis de la
+                    Historia Clínica N° <strong>{{ $document['history'] }}</strong>:
+                </p>
+
+                <div class="episode-list">
+                    @foreach ($document['episodes'] as $episode)
+                        <div class="episode">
+                            <div class="episode-title">
+                                Episodio {{ $loop->iteration }}: {{ $episode['service'] }}
+                            </div>
+                            <div class="episode-detail">
+                                Desde <strong>{{ $episode['admission_date'] }}</strong> hasta
+                                <strong>{{ $episode['discharge_date'] }}</strong>.
+                                Condición de alta: <strong>{{ $episode['condition'] }}</strong>.
+                            </div>
+                            @forelse ($episode['diagnoses'] as $diagnosis)
+                                <div class="diagnosis">
+                                    <span class="diagnosis-number">{{ $loop->iteration }}.-</span>
+                                    <strong>{{ $diagnosis['code'] }}:</strong>
+                                    {{ $diagnosis['description'] }}
+                                </div>
+                            @empty
+                                <div class="diagnosis">CIE-10: NO REGISTRADO</div>
+                            @endforelse
+                        </div>
+                    @endforeach
+                </div>
+            @endif
 
             <p class="closing">Se extiende la presente Constancia para los fines que estime conveniente, según lo solicitado por el recurrente.</p>
 

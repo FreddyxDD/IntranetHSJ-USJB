@@ -47,4 +47,10 @@ final class Constancia extends Model
     {
         return $this->hasMany(ConstanciaHistorial::class, 'constancia_id');
     }
+
+    public function episodios(): HasMany
+    {
+        return $this->hasMany(ConstanciaEpisodio::class, 'constancia_id')
+            ->orderBy('posicion');
+    }
 }

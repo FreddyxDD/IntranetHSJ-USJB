@@ -60,6 +60,10 @@ EGRESOS_PATIENT_SOURCE_CODE=sigh_202607_local
   acciones asociadas a cada episodio;
 - consulta del historial de constancias;
 - emisión de constancias con correlativo institucional único por año;
+- selección de uno a diez episodios del mismo paciente para una sola
+  constancia;
+- vista preliminar obligatoria y confirmación expresa antes de reservar el
+  correlativo legal;
 - edición controlada de constancias no anuladas;
 - anulación con motivo obligatorio;
 - historial obligatorio y evento de auditoría al emitir;
@@ -131,6 +135,7 @@ consultar historial o generar constancias.
 | GET | `/egresos/reportes/egresos.csv` | Exportación CSV |
 | GET | `/egresos/reportes/egresos.xlsx` | Exportación XLSX |
 | GET | `/egresos/api/constancias` | Historial |
+| POST | `/egresos/api/constancias/previsualizar` | Vista preliminar sin reservar correlativo |
 | POST | `/egresos/api/constancias` | Emisión transaccional |
 | PUT | `/egresos/api/constancias/{id}` | Edición transaccional |
 | DELETE | `/egresos/api/constancias/{id}` | Anulación transaccional |
@@ -163,25 +168,47 @@ de consulta en SQL Server.
 
 ## Integridad de emisión
 
-La emisión se ejecuta dentro de una transacción SQL Server:
+La previsualización valida que todos los episodios pertenezcan al mismo
+paciente y construye el documento tentativo, pero no inserta datos ni consume
+el correlativo. También entrega un comprobante cifrado, vinculado al usuario y
+a la selección, con vigencia de 15 minutos. La emisión rechaza solicitudes sin
+este comprobante, vencidas o cuyos episodios hayan cambiado.
+La huella del comprobante confirmado es única, por lo que una repetición de la
+misma solicitud no puede generar una segunda constancia.
+
+Después de la confirmación expresa, la emisión se ejecuta dentro de una
+transacción SQL Server:
 
 1. bloquea el correlativo institucional del año;
 2. incrementa el número;
-3. copia la información histórica del egreso y sus descripciones CIE-10;
-4. registra la constancia;
-5. registra `egresos.constancia_historial`;
-6. registra `auditoria.eventos`;
-7. confirma todo el conjunto o revierte todo ante un error.
+3. vuelve a validar los episodios seleccionados;
+4. copia la información histórica y sus descripciones CIE-10;
+5. registra la constancia y cada fila de `egresos.constancia_episodios`;
+6. registra `egresos.constancia_historial`;
+7. registra `auditoria.eventos`;
+8. confirma todo el conjunto o revierte todo ante un error.
+
+Las constancias de un solo episodio conservan la corrección auditada existente.
+Una constancia con varios episodios no admite una modificación parcial: si la
+selección fue incorrecta debe anularse, indicando el motivo, y generarse una
+nueva. Esto evita alterar solo una parte de un documento legal compuesto.
 
 ## Validaciones ejecutadas
 
-- 22 pruebas Laravel aprobadas y 1 prueba SQL Server omitida en SQLite;
-- 116 aserciones;
+- 23 pruebas Laravel aprobadas y 1 prueba SQL Server omitida en SQLite;
+- 129 aserciones;
 - sintaxis PHP validada;
 - rutas verificadas con `php artisan route:list --path=egresos`;
 - consulta real validada sobre 5,872 egresos;
 - línea de tiempo comprobada con un paciente real de 10 episodios: ocho
   devueltos en la primera página y `has_more=true`;
+- previsualización y emisión múltiple verificadas con dos episodios reales,
+  incluyendo detalle, historial y auditoría dentro de una transacción
+  revertida;
+- emisión directa sin previsualización y reutilización del mismo comprobante
+  rechazadas por el servidor;
+- diccionario contrastado con las 14 tablas y 329 columnas reales del dominio,
+  sin campos omitidos;
 - búsqueda real validada por nombre;
 - emisión completa verificada dentro de una transacción revertida;
 - edición, anulación y configuración verificadas dentro de una transacción

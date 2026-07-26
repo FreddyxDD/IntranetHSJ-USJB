@@ -319,8 +319,32 @@
                     <button data-hs-overlay="#timeline-modal" class="rounded-lg p-2 hover:bg-slate-100" aria-label="Cerrar">✕</button>
                 </div>
                 <div id="timeline-content" class="max-h-[75vh] overflow-y-auto p-5"></div>
-                <div class="flex justify-end border-t border-slate-200 px-5 py-4">
+                <div class="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
+                    @if ($abilities['createCertificates'])
+                        <span id="selected-episodes-count" class="mr-auto text-sm font-semibold text-slate-600">0 episodios seleccionados</span>
+                        <button id="preview-selected-episodes" type="button" disabled class="rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40">Ver vista preliminar</button>
+                    @endif
                     <button data-hs-overlay="#timeline-modal" class="rounded-xl border border-slate-300 px-4 py-2 font-semibold">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="certificate-preview-modal" class="hs-overlay fixed inset-0 z-[100] hidden size-full overflow-y-auto bg-slate-950/60" role="dialog" tabindex="-1" aria-labelledby="certificate-preview-title">
+        <div class="m-3 flex min-h-[calc(100%-1.5rem)] items-center justify-center py-5">
+            <div class="w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+                    <div>
+                        <h2 id="certificate-preview-title" class="font-black text-blue-950">Vista preliminar de la constancia</h2>
+                        <p class="mt-1 text-xs text-slate-500">Revise los episodios antes de confirmar. Todavía no se ha reservado el número legal.</p>
+                    </div>
+                    <button data-hs-overlay="#certificate-preview-modal" class="rounded-lg p-2 hover:bg-slate-100" aria-label="Cerrar">✕</button>
+                </div>
+                <div id="certificate-preview-content" class="max-h-[55vh] overflow-y-auto bg-slate-100 p-5 sm:max-h-[72vh]"></div>
+                <div class="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 px-5 py-4">
+                    <span id="certificate-confirm-status" class="mr-auto w-full text-sm font-semibold text-slate-600 sm:w-auto"></span>
+                    <button data-hs-overlay="#certificate-preview-modal" class="w-full rounded-xl border border-slate-300 px-4 py-2 font-semibold sm:w-auto">Volver a seleccionar</button>
+                    <button id="confirm-certificate-generation" type="button" class="w-full rounded-xl bg-blue-600 px-5 py-2 font-bold text-white hover:bg-blue-700 sm:w-auto">Confirmar y generar constancia</button>
                 </div>
             </div>
         </div>
@@ -411,6 +435,7 @@
             'reportXlsxUrl' => route('egresos.reports.xlsx', [], false),
             'historyUrl' => route('egresos.certificates.index', [], false),
             'certificateUrl' => route('egresos.certificates.store', [], false),
+            'certificatePreviewUrl' => route('egresos.certificates.preview', [], false),
             'configurationUrl' => route('egresos.configuration.show', [], false),
             'auditUrl' => route('egresos.audit.index', [], false),
             'abilities' => $abilities,

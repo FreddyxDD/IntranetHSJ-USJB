@@ -7,6 +7,9 @@ los principios de Keep a Changelog.
 
 ### Egresos - entrega funcional
 
+- Diccionario funcional y técnico de las 13 tablas que participan en Egresos,
+  con propósito de cada campo, relaciones físicas y lógicas, procesos que lo
+  escriben y pantallas o servicios que lo consumen.
 - Módulo Laravel nativo con panel, búsqueda paginada, detalle, CIE-10,
   historial y vista imprimible de constancias.
 - Emisión de constancias con correlativo SQL Server por cuenta y año,

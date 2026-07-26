@@ -2,6 +2,9 @@
 
 Fecha de implementación: 25 de julio de 2026.
 
+El detalle funcional de tablas, campos, relaciones y consumidores se mantiene
+en [DICCIONARIO_DATOS_EGRESOS.md](DICCIONARIO_DATOS_EGRESOS.md).
+
 ## Objetivo
 
 Incorporar las funciones prioritarias del aplicativo entregado de Egresos al

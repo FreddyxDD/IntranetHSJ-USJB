@@ -47,6 +47,20 @@ final class AnnualCertificateSequence
         return $number;
     }
 
+    public function peek(int $year): int
+    {
+        $counter = (int) (DB::table('egresos.correlativos')
+            ->where('sequence_owner_key', self::OWNER_KEY)
+            ->where('anio', $year)
+            ->value('ultimo_numero') ?? 0);
+        $issued = (int) (DB::table('egresos.constancias')
+            ->where('sequence_owner_key', self::OWNER_KEY)
+            ->where('anio', $year)
+            ->max('numero') ?? 0);
+
+        return max($counter, $issued) + 1;
+    }
+
     private function lock(int $year): void
     {
         if (DB::connection()->getDriverName() !== 'sqlsrv') {

@@ -24,8 +24,11 @@ final class AnnualCertificateSequenceTest extends TestCase
 
             $sequence = app(AnnualCertificateSequence::class);
 
+            self::assertSame(1, $sequence->peek(2098));
             self::assertSame(1, $sequence->next(2098));
+            self::assertSame(2, $sequence->peek(2098));
             self::assertSame(2, $sequence->next(2098));
+            self::assertSame(3, $sequence->peek(2098));
             self::assertSame(1, $sequence->next(2099));
         } finally {
             DB::rollBack();

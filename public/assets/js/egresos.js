@@ -502,13 +502,18 @@
 
     async function loadHistory() {
         const list = $('#history-list');
+        const nextNumber = $('#history-next-number');
         if (!list) return;
         list.replaceChildren(element('div', 'rounded-xl bg-white p-5 text-slate-500', 'Cargando historial…'));
+        if (nextNumber) nextNumber.textContent = 'Consultando…';
         try {
             const url = new URL(config.historyUrl, window.location.origin);
             const query = $('#history-query')?.value.trim();
             if (query) url.searchParams.set('q', query);
             const response = await request(url);
+            if (nextNumber) {
+                nextNumber.textContent = `N.° ${String(response.summary?.next_number || 1).padStart(4, '0')}-${response.summary?.year || new Date().getFullYear()}`;
+            }
             list.replaceChildren();
             response.data.data.forEach((item) => {
                 const card = element('article', 'flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between');
@@ -516,9 +521,28 @@
                 const stateClass = item.estado === 'anulada' ? 'text-rose-700' : 'text-emerald-700';
                 info.append(
                     element('div', 'font-bold text-blue-950', `Constancia N.° ${String(item.numero).padStart(4, '0')}-${item.anio}`),
-                    element('div', 'mt-1 text-sm text-slate-600', `${item.paciente || 'Paciente'} · HC ${item.numhc || '—'}`),
-                    element('div', `mt-1 text-xs font-semibold ${stateClass}`, `Estado: ${item.estado} · ${item.issuer_display_name || item.issuer_username || 'Importación histórica'}`)
+                    element('div', 'mt-1 text-sm text-slate-700', `${item.paciente || 'Paciente'} · HC ${item.numhc || '—'} · Documento ${item.doc_iden || '—'}`),
+                    element('div', 'mt-1 text-xs text-slate-500', `Generada: ${formatDateTime(item.issued_at)} · Egreso: ${formatDate(item.fecegr)} · Servicio: ${item.servicio || item.ups || '—'}`),
+                    element('div', `mt-1 text-xs font-semibold ${stateClass}`, `Estado: ${item.estado} · Emitida por: ${item.issuer_display_name || item.issuer_username || 'Importación histórica'}`)
                 );
+                const grouped = item.patient_group?.certificates || [];
+                if (grouped.length > 1) {
+                    const details = element('details', 'mt-3 rounded-xl border border-blue-100 bg-blue-50/60 p-3');
+                    details.append(element('summary', 'cursor-pointer text-sm font-bold text-blue-800', `Ver agrupamiento del paciente (${item.patient_group.total} constancias)`));
+                    const relatedList = element('div', 'mt-3 space-y-2');
+                    grouped.forEach((related) => {
+                        const current = Number(related.id) === Number(item.id);
+                        const row = element('div', `grid gap-1 rounded-lg px-3 py-2 text-xs sm:grid-cols-[auto_1fr_auto] sm:items-center ${current ? 'bg-blue-100 font-bold text-blue-950' : 'bg-white text-slate-600'}`);
+                        row.append(
+                            element('span', '', `N.° ${String(related.numero).padStart(4, '0')}-${related.anio}`),
+                            element('span', '', `${formatDateTime(related.issued_at)} · ${related.servicio || 'Sin servicio'} · Egreso ${formatDate(related.fecegr)}`),
+                            element('span', related.estado === 'anulada' ? 'font-bold text-rose-700' : 'font-bold text-emerald-700', current ? `Actual · ${related.estado}` : related.estado)
+                        );
+                        relatedList.append(row);
+                    });
+                    details.append(relatedList);
+                    info.append(details);
+                }
                 const actions = element('div', 'flex flex-wrap justify-end gap-2');
                 const cancelled = item.estado === 'anulada';
                 const link = element(
@@ -550,6 +574,7 @@
             if (!response.data.data.length) list.append(element('div', 'rounded-xl bg-white p-8 text-center text-slate-500', 'No se encontraron constancias.'));
         } catch (error) {
             list.replaceChildren(element('div', 'rounded-xl bg-rose-50 p-5 font-semibold text-rose-700', error.message));
+            if (nextNumber) nextNumber.textContent = 'No disponible';
         }
     }
 

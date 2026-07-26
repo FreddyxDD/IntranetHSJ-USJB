@@ -152,7 +152,7 @@ La emisión se ejecuta dentro de una transacción SQL Server:
 ## Validaciones ejecutadas
 
 - 22 pruebas Laravel aprobadas y 1 prueba SQL Server omitida en SQLite;
-- 109 aserciones;
+- 111 aserciones;
 - sintaxis PHP validada;
 - rutas verificadas con `php artisan route:list --path=egresos`;
 - consulta real validada sobre 5,872 egresos;
@@ -327,6 +327,23 @@ Cada guardado:
 La pantalla presenta los campos en el lado izquierdo y la vista preliminar en
 el derecho. Cada campo tiene una ayuda contextual que explica su efecto en el
 documento, y el historial de configuraciones queda disponible al final.
+
+## Historial agrupado sin alterar el correlativo
+
+El historial conserva como orden principal `anio DESC, numero DESC, id DESC`.
+Por lo tanto, agrupar visualmente no cambia la secuencia legal ni desplaza las
+constancias de su posición cronológica.
+
+Cada constancia muestra número, fecha de generación, paciente, HC, documento,
+fecha de egreso, servicio, estado y responsable de emisión. Cuando el paciente
+tiene más de una constancia aparece un bloque desplegable con sus documentos
+relacionados, manteniendo resaltada la constancia actual.
+
+La identidad para el agrupamiento usa primero la historia clínica y, cuando no
+existe, el documento normalizado. El endpoint también informa el siguiente
+número del año vigente mediante `AnnualCertificateSequence::peek()`. Esta
+consulta no reserva el correlativo; la asignación definitiva continúa
+realizándose exclusivamente dentro de la transacción de emisión.
 
 ### Validación con el archivo mensual entregado
 

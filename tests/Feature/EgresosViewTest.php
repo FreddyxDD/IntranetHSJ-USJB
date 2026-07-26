@@ -44,6 +44,8 @@ final class EgresosViewTest extends TestCase
         self::assertStringContainsString('hs-tooltip-content', $html);
         self::assertTrue(strpos($html, 'name="nombre_director"') < strpos($html, 'id="certificate-preview"'));
         self::assertStringContainsString('Configuraciones registradas', $html);
+        self::assertStringContainsString('Siguiente constancia a generar', $html);
+        self::assertStringContainsString('El agrupamiento por paciente no modifica el correlativo legal', $html);
         self::assertStringContainsString('Exportar XLSX', $html);
         self::assertStringNotContainsString('192.168.3.246:8002/egresos/api', $html);
     }

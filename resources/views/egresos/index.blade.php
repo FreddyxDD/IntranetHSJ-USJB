@@ -156,6 +156,17 @@
 
         @if ($abilities['viewHistory'])
             <section id="panel-history" class="eg-panel mt-4 hidden">
+                <div class="mb-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                    <div>
+                        <h2 class="text-lg font-black text-blue-950">Historial legal de constancias</h2>
+                        <p class="mt-1 text-sm text-slate-500">Ordenado de forma descendente por año y número. El agrupamiento por paciente no modifica el correlativo legal.</p>
+                    </div>
+                    <div class="rounded-2xl border border-blue-200 bg-blue-50 px-5 py-3 text-left sm:min-w-64 sm:text-right">
+                        <div class="text-xs font-bold uppercase tracking-wide text-blue-600">Siguiente constancia a generar</div>
+                        <div id="history-next-number" class="mt-1 text-2xl font-black text-blue-950">Consultando…</div>
+                        <div class="text-xs text-blue-700">Correlativo central del año vigente</div>
+                    </div>
+                </div>
                 <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                     <form id="history-form" class="flex flex-col gap-3 sm:flex-row">
                         <input id="history-query" type="search" maxlength="150" placeholder="Buscar constancia por HC, documento o paciente" class="min-h-12 flex-1 rounded-xl border border-slate-300 px-4 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100">

@@ -33,7 +33,12 @@ los principios de Keep a Changelog.
 - Configuración institucional versionada: formulario limpio, ayudas
   contextuales, campos a la izquierda, vista preliminar a la derecha e
   historial de registros activados.
-- 22 pruebas Laravel aprobadas, 1 omitida en SQLite y 109 aserciones.
+- Historial legal enriquecido sin alterar el orden por correlativo: fecha de
+  generación, identidad, egreso, servicio, emisor y agrupamiento desplegable
+  de constancias del mismo paciente.
+- Siguiente número anual visible sobre el historial, calculado desde el
+  correlativo central sin reservarlo anticipadamente.
+- 22 pruebas Laravel aprobadas, 1 omitida en SQLite y 111 aserciones.
 - Consulta comprobada sobre 5,872 egresos y emisión validada dentro de una
   transacción revertida, sin datos de prueba residuales.
 

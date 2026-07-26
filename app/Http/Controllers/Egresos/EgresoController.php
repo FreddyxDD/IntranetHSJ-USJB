@@ -8,6 +8,7 @@ use App\Models\AccessAccount;
 use App\Models\Egresos\Cie10;
 use App\Models\Egresos\Constancia;
 use App\Models\Egresos\Egreso;
+use App\Services\Egresos\AnnualCertificateSequence;
 use App\Services\Egresos\EgresoTrace;
 use App\Services\Egresos\SighPatientSource;
 use Illuminate\Http\JsonResponse;
@@ -287,8 +288,10 @@ final class EgresoController extends Controller
         return response()->json(['ok' => true, 'data' => $rows]);
     }
 
-    public function certificates(Request $request): JsonResponse
-    {
+    public function certificates(
+        Request $request,
+        AnnualCertificateSequence $sequence
+    ): JsonResponse {
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:150'],
             'page' => ['nullable', 'integer', 'min:1'],
@@ -310,7 +313,78 @@ final class EgresoController extends Controller
             });
         }
 
-        return response()->json(['ok' => true, 'data' => $query->paginate(20)]);
+        $paginator = $query->paginate(20);
+        $pageCertificates = $paginator->getCollection();
+        $histories = $pageCertificates->pluck('numhc')->filter()->unique()->values();
+        $documents = $pageCertificates->pluck('doc_iden')->filter()->unique()->values();
+        $relatedCertificates = ($histories->isEmpty() && $documents->isEmpty())
+            ? collect()
+            : Constancia::query()
+                ->where(function ($builder) use ($histories, $documents): void {
+                    if ($histories->isNotEmpty()) {
+                        $builder->whereIn('numhc', $histories);
+                    }
+                    if ($documents->isNotEmpty()) {
+                        $method = $histories->isNotEmpty() ? 'orWhereIn' : 'whereIn';
+                        $builder->{$method}('doc_iden', $documents);
+                    }
+                })
+                ->orderByDesc('anio')
+                ->orderByDesc('numero')
+                ->orderByDesc('id')
+                ->get();
+        $related = $relatedCertificates
+            ->concat($pageCertificates->filter(
+                fn (Constancia $certificate): bool => trim((string) $certificate->numhc) === ''
+                    && trim((string) $certificate->documento) === ''
+            ))
+            ->unique('id')
+            ->groupBy(fn (Constancia $certificate): string => $this->certificatePatientKey($certificate));
+
+        $paginator->setCollection($pageCertificates->map(function (Constancia $certificate) use ($related): Constancia {
+            $patientCertificates = $related->get($this->certificatePatientKey($certificate), collect());
+            $certificate->setAttribute('issued_at', $certificate->created_at
+                ?? $certificate->source_created_at
+                ?? $certificate->imported_at);
+            $certificate->setAttribute('patient_group', [
+                'total' => $patientCertificates->count(),
+                'certificates' => $patientCertificates->take(20)->map(fn (Constancia $item): array => [
+                    'id' => $item->id,
+                    'numero' => $item->numero,
+                    'anio' => $item->anio,
+                    'estado' => $item->estado,
+                    'issued_at' => $item->created_at ?? $item->source_created_at ?? $item->imported_at,
+                    'fecegr' => $item->fecegr?->format('Y-m-d'),
+                    'servicio' => $item->servicio ?: $item->ups,
+                ])->values(),
+            ]);
+
+            return $certificate;
+        }));
+
+        return response()->json([
+            'ok' => true,
+            'data' => $paginator,
+            'summary' => [
+                'next_number' => $sequence->peek(now()->year),
+                'year' => now()->year,
+                'owner_key' => AnnualCertificateSequence::OWNER_KEY,
+            ],
+        ]);
+    }
+
+    private function certificatePatientKey(Constancia $certificate): string
+    {
+        $history = trim((string) $certificate->numhc);
+        if ($history !== '') {
+            return 'hc:'.mb_strtolower($history);
+        }
+
+        $document = trim((string) $certificate->documento);
+
+        return $document !== ''
+            ? 'doc:'.mb_strtolower($document)
+            : 'certificate:'.$certificate->id;
     }
 
     private function mapEgreso(Egreso $egreso, array $diagnoses): array

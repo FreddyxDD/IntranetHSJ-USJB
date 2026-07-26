@@ -53,7 +53,7 @@ final class UeeiAuthController
         }
 
         try {
-            $manualRegistration = ($validation['mode'] ?? 'existing') === 'manual';
+            $manualRegistration = str_starts_with((string) ($validation['mode'] ?? 'existing'), 'manual_');
             $result = $manualRegistration
                 ? app(SelfRegistrationService::class)->createPendingAccount($input)
                 : app(SelfRegistrationService::class)->createAccount($dni);
@@ -135,20 +135,22 @@ final class UeeiAuthController
             $_SESSION['self_registration_validation'] = [
                 'dni' => $identity['dni'],
                 'person_id' => $identity['person_id'] ?? null,
-                'mode' => $identity['found'] ? 'existing' : 'manual',
+                'mode' => $identity['registration_mode'],
                 'expires_at' => time() + 600,
             ];
 
             json_response([
                 'success' => true,
                 'ok' => true,
-                'message' => $identity['found']
-                    ? 'DNI validado con la identidad institucional.'
-                    : 'El DNI no existe en HSJ_Identity. Completa tus datos para enviar una solicitud de registro.',
+                'message' => match ($identity['registration_mode']) {
+                    'existing' => 'DNI validado con la identidad institucional.',
+                    'manual_existing' => 'El DNI tiene una identidad histórica inactiva y no posee cuenta. Completa tus datos para solicitar su reactivación.',
+                    default => 'El DNI no existe en HSJ_Identity. Completa tus datos para enviar una solicitud de registro.',
+                },
                 'data' => [
                     'dni' => $identity['dni'],
                     'found' => $identity['found'],
-                    'registration_mode' => $identity['found'] ? 'existing' : 'manual',
+                    'registration_mode' => $identity['registration_mode'],
                     'masked_name' => $identity['masked_name'] ?? null,
                     'expires_in_minutes' => 10,
                 ],

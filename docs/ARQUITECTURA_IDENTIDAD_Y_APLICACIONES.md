@@ -81,6 +81,20 @@ aprobar**. La aprobación activa conjuntamente `people`, `users` y
 ingreso posterior, el usuario todavía debe confirmar que leyó las instrucciones
 de su cuenta antes de navegar.
 
+### Identidad histórica inactiva sin cuenta
+
+Una persona importada puede existir en `people` con estado `inactive` porque su
+legajo de origen fue deshabilitado, aunque nunca haya tenido usuario ni cuenta.
+Este caso no se bloquea ni genera una persona duplicada. El formulario solicita
+nuevamente los datos básicos y crea una solicitud de reactivación reutilizando
+el mismo `people.id`.
+
+Al enviar la solicitud se actualizan los datos declarados, la persona cambia a
+`pending` y se crean `users` y `access_accounts` también pendientes. Si ya
+existe una cuenta o solicitud para esa persona, el registro continúa bloqueado
+para evitar duplicidades. La activación final sigue dependiendo del
+administrador.
+
 ## Flujo de acceso
 
 ```mermaid

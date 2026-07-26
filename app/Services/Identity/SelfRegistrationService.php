@@ -16,7 +16,7 @@ final class SelfRegistrationService
     public const REGISTRATION_SOURCE = 'self_service_identity';
 
     /**
-     * @return array{found:bool, dni:string, person_id?:int, personnel_record_id?:?int, display_name?:string, masked_name?:string, birth_date?:string}
+     * @return array{found:bool, registration_mode:string, dni:string, person_id?:int, personnel_record_id?:?int, display_name?:string, masked_name?:string, birth_date?:string}
      */
     public function lookupDni(string $dni): array
     {
@@ -29,18 +29,28 @@ final class SelfRegistrationService
             ->first();
 
         if (! $person) {
-            return ['found' => false, 'dni' => $dni];
-        }
-
-        if ($person->status !== 'active') {
-            throw new DomainException('El DNI ya existe en la identidad institucional, pero todavía no está activo. Comunícate con el administrador.');
-        }
-
-        if (empty($person->birth_date)) {
-            throw new DomainException('El registro institucional no tiene fecha de nacimiento. Solicita su actualización antes de crear la cuenta.');
+            return ['found' => false, 'registration_mode' => 'manual_new', 'dni' => $dni];
         }
 
         $this->ensureAccountDoesNotExist($dni, (int) $person->id);
+
+        if (empty($person->birth_date)) {
+            if ($person->status === 'active') {
+                throw new DomainException('El registro institucional no tiene fecha de nacimiento. Solicita su actualización antes de crear la cuenta.');
+            }
+        }
+
+        if ($person->status !== 'active') {
+            return [
+                'found' => true,
+                'registration_mode' => 'manual_existing',
+                'dni' => $dni,
+                'person_id' => (int) $person->id,
+                'display_name' => $this->displayName($person),
+                'masked_name' => $this->maskName($this->displayName($person)),
+            ];
+        }
+
         $personnelRecordId = $identity->table('personnel_records')
             ->where('document_type_id', $documentTypeId)
             ->where('document_number', $dni)
@@ -52,6 +62,7 @@ final class SelfRegistrationService
 
         return [
             'found' => true,
+            'registration_mode' => 'existing',
             'dni' => $dni,
             'person_id' => (int) $person->id,
             'personnel_record_id' => $personnelRecordId ? (int) $personnelRecordId : null,
@@ -68,7 +79,7 @@ final class SelfRegistrationService
     {
         $identity = $this->lookupDni($dni);
 
-        if (! $identity['found']) {
+        if ($identity['registration_mode'] !== 'existing') {
             throw new DomainException('El DNI no está habilitado en la identidad institucional. Verifica el número o solicita la actualización de tus datos.');
         }
 
@@ -148,7 +159,7 @@ final class SelfRegistrationService
 
         return DB::connection('identity')->transaction(function () use ($data): array {
             $lookup = $this->lookupDni($data['dni']);
-            if ($lookup['found']) {
+            if ($lookup['registration_mode'] === 'existing') {
                 throw new DomainException('El DNI fue incorporado a la identidad institucional durante el registro. Vuelve a validarlo.');
             }
 
@@ -160,7 +171,7 @@ final class SelfRegistrationService
             }
 
             $role = $this->queryRole();
-            $personId = (int) DB::connection('identity')->table('people')->insertGetId([
+            $personValues = [
                 'document_type_id' => $this->dniDocumentTypeId(),
                 'document_number' => $data['dni'],
                 'paternal_last_name' => $data['paternal_last_name'],
@@ -174,7 +185,17 @@ final class SelfRegistrationService
                 'last_synced_at' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ];
+            $personId = isset($lookup['person_id'])
+                ? (int) $lookup['person_id']
+                : (int) DB::connection('identity')->table('people')->insertGetId($personValues);
+
+            if (isset($lookup['person_id'])) {
+                unset($personValues['created_at']);
+                DB::connection('identity')->table('people')
+                    ->where('id', $personId)
+                    ->update($personValues);
+            }
             $displayName = trim($data['names'].' '.$data['paternal_last_name'].' '.$data['maternal_last_name']);
             $password = self::initialPassword($data['birth_date'], $data['dni']);
             $hash = Hash::make($password);

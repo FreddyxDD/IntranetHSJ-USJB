@@ -133,6 +133,54 @@ final class IdentitySelfRegistrationTest extends TestCase
         self::assertNull($approved->accessAccount->registration_instructions_acknowledged_at);
     }
 
+    public function test_inactive_identity_without_account_is_reused_for_a_reactivation_request(): void
+    {
+        $identity = DB::connection('identity');
+        $identity->table('personnel_document_types')->insert(['id' => 1, 'code' => 'DNI']);
+        $identity->table('access_applications')->insert([
+            'id' => 2,
+            'code' => 'intranet_hsj',
+            'is_active' => true,
+        ]);
+        $identity->table('access_roles')->insert([
+            'id' => 14,
+            'application_id' => 2,
+            'code' => 'consulta',
+        ]);
+        $identity->table('people')->insert([
+            'id' => 956,
+            'document_type_id' => 1,
+            'document_number' => '43243226',
+            'names' => 'MONICA ELIANA',
+            'paternal_last_name' => 'CARBAJAL',
+            'maternal_last_name' => 'ZAIRA',
+            'birth_date' => '1985-08-27',
+            'status' => 'inactive',
+            'data_origin' => 'personnel_source',
+        ]);
+
+        $lookup = app(SelfRegistrationService::class)->lookupDni('43243226');
+
+        self::assertSame('manual_existing', $lookup['registration_mode']);
+        self::assertSame(956, $lookup['person_id']);
+
+        $result = app(SelfRegistrationService::class)->createPendingAccount([
+            'dni' => '43243226',
+            'names' => 'Mónica Eliana',
+            'paternal_last_name' => 'Carbajal',
+            'maternal_last_name' => 'Zaira',
+            'birth_date' => '1985-08-27',
+            'email' => 'monica.carbajal@example.com',
+            'phone' => '956123456',
+        ]);
+
+        self::assertSame(1, $identity->table('people')->where('document_number', '43243226')->count());
+        self::assertSame(956, (int) $result['user']->person_id);
+        self::assertSame('pending', $identity->table('people')->where('id', 956)->value('status'));
+        self::assertSame('monica.carbajal@example.com', $identity->table('people')->where('id', 956)->value('email'));
+        self::assertSame('pending', $result['user']->fresh('accessAccount')->accessAccount->status);
+    }
+
     public function test_login_page_explains_validation_and_initial_access(): void
     {
         $html = file_get_contents(base_path('views/ueei/index.php'));

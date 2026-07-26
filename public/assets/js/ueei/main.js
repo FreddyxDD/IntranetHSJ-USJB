@@ -236,7 +236,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ dni }),
             });
             registrationValidated = true;
-            manualRegistration = data.data?.registration_mode === "manual";
+            manualRegistration = String(data.data?.registration_mode || "").startsWith("manual_");
             manualIdentityForm.hidden = !manualRegistration;
             manualFields.forEach((field) => {
                 field.required = manualRegistration;
@@ -244,7 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (manualRegistration) {
                 identityResult.hidden = true;
-                showMessage("DNI disponible. Completa todos tus datos para enviar la solicitud al administrador.", "success");
+                showMessage(data.message || "Completa todos tus datos para enviar la solicitud al administrador.", "success");
                 manualFields[0].focus();
             } else {
                 validatedPersonName.textContent = data.data?.masked_name || "Personal institucional";

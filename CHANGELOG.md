@@ -7,6 +7,11 @@ los principios de Keep a Changelog.
 
 ### Identidad - registro institucional por DNI
 
+- Se corrigió el tratamiento de identidades históricas `inactive` sin cuenta:
+  ahora pueden completar datos y solicitar reactivación reutilizando el
+  registro de `people`, sin duplicarlo.
+- Las identidades inactivas que ya tengan usuario, cuenta o solicitud continúan
+  bloqueadas para evitar duplicidades.
 - Se agregó el registro alternativo para DNI aún inexistentes en `people`,
   solicitando nombres, ambos apellidos, fecha de nacimiento, correo y teléfono.
 - Las nuevas personas y cuentas quedan en estado `pending`, sin sesión ni

@@ -14,7 +14,7 @@
     <link rel="icon" href="<?= e(url_path('/assets/images/logohsj.png')) ?>" type="image/png" />
     <link rel="shortcut icon" href="<?= e(url_path('/assets/images/logohsj.png')) ?>" type="image/png" />
     <link rel="stylesheet" href="/assets/css/UEeI.css?v=3">
-</head>s
+</head>
 
 <body>
     <header class="topbar">
@@ -109,29 +109,29 @@
                 <div class="card__header">
                     <h2 id="formTitle">Iniciar sesión</h2>
                     <p id="formSubtitle">
-                        Ingresa con tu correo y contraseña
+                        Ingresa con tu DNI, correo o usuario
                     </p>
                 </div>
 
                 <form class="form" id="authForm" autocomplete="on" novalidate>
-                    <label class="field" for="correo">
+                    <label class="field" id="loginIdentifierField" for="correo">
                         <span class="field__label">
-                            Correo electrónico
+                            DNI, correo o usuario
                         </span>
 
                         <input
                             class="field__input"
-                            type="email"
+                            type="text"
                             id="correo"
                             name="correo"
-                            placeholder="usuario@hospital.gob.pe"
-                            autocomplete="email"
+                            placeholder="Ingresa tu DNI o correo"
+                            autocomplete="username"
                             required
                             aria-describedby="messageBox"
                         />
                     </label>
 
-                    <label class="field" for="password">
+                    <label class="field" id="loginPasswordField" for="password">
                         <span class="field__label">
                             Contraseña
                         </span>
@@ -159,36 +159,45 @@
                         </div>
                     </label>
 
-                    <label
-                        class="field"
-                        id="confirmField"
-                        for="confirmarPassword"
-                        hidden
-                    >
-                        <span class="field__label">
-                            Confirmar contraseña
-                        </span>
+                    <div class="registration-panel" id="registrationPanel" hidden>
+                        <div class="registration-notice">
+                            <strong>Registro con identidad institucional</strong>
+                            <span>Solo podrás crear la cuenta si tu DNI se encuentra activo en HSJ_Identity.</span>
+                        </div>
 
-                        <div class="password">
+                        <label class="field" for="registrationDni">
+                            <span class="field__label">Número de DNI</span>
                             <input
                                 class="field__input"
-                                id="confirmarPassword"
-                                type="password"
-                                name="confirmarPassword"
-                                placeholder="********"
-                                autocomplete="new-password"
+                                id="registrationDni"
+                                name="registrationDni"
+                                type="text"
+                                inputmode="numeric"
+                                maxlength="8"
+                                autocomplete="off"
+                                placeholder="8 dígitos"
                             />
+                        </label>
 
-                            <button
-                                class="password__toggle"
-                                type="button"
-                                id="toggleConfirmPass"
-                                aria-label="Mostrar u ocultar confirmación"
-                            >
-                                Mostrar
-                            </button>
+                        <button class="btn btn--secondary" type="button" id="validateDniBtn">
+                            Validar DNI
+                        </button>
+
+                        <div class="identity-result" id="identityResult" hidden aria-live="polite">
+                            <span class="identity-result__icon" aria-hidden="true">✓</span>
+                            <div>
+                                <strong>Identidad validada</strong>
+                                <span id="validatedPersonName"></span>
+                            </div>
                         </div>
-                    </label>
+
+                        <div class="credential-rule">
+                            <strong>Tu acceso se generará automáticamente</strong>
+                            <span><b>Usuario:</b> tu número de DNI.</span>
+                            <span><b>Contraseña inicial:</b> fecha de nacimiento (DDMMAAAA) + últimos 4 dígitos del DNI.</span>
+                            <span><b>Perfil inicial:</b> consulta. Los accesos adicionales se solicitan al administrador.</span>
+                        </div>
+                    </div>
 
                     <label class="check" id="rememberWrap">
                         <input type="checkbox" id="remember" />
@@ -217,6 +226,43 @@
             </div>
         </section>
     </main>
+
+    <dialog class="activation-dialog" id="activationDialog" aria-labelledby="activationTitle">
+        <div class="activation-dialog__content">
+            <div class="activation-dialog__badge">Cuenta activada</div>
+            <h2 id="activationTitle">Guarda tus datos de acceso</h2>
+            <p>Tu sesión ya fue iniciada. Antes de navegar, revisa y confirma estas instrucciones.</p>
+
+            <dl class="activation-credentials">
+                <div>
+                    <dt>Usuario para iniciar sesión</dt>
+                    <dd id="activationUsername"></dd>
+                </div>
+                <div>
+                    <dt>Contraseña inicial</dt>
+                    <dd id="activationPassword"></dd>
+                </div>
+                <div>
+                    <dt>Nivel de acceso</dt>
+                    <dd>Consulta</dd>
+                </div>
+            </dl>
+
+            <div class="activation-dialog__warning">
+                Si necesitas ingresar a otros módulos o realizar modificaciones, deberás solicitar el acceso al administrador de la plataforma.
+            </div>
+
+            <label class="activation-confirmation">
+                <input type="checkbox" id="activationAcknowledgement" />
+                <span>Confirmo que leí y guardé mis datos de acceso.</span>
+            </label>
+
+            <button class="btn" type="button" id="confirmActivationBtn" disabled>
+                Entendido, ingresar al portal
+            </button>
+            <div class="message" id="activationMessage" role="alert" aria-live="polite"></div>
+        </div>
+    </dialog>
 
     <script>
         window.APP_BASE = "<?= e(app_base()) ?>";

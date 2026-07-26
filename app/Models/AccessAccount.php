@@ -16,7 +16,11 @@ final class AccessAccount extends Model
 
     protected function casts(): array
     {
-        return ['must_change_password' => 'boolean', 'last_login_at' => 'datetime'];
+        return [
+            'must_change_password' => 'boolean',
+            'last_login_at' => 'datetime',
+            'registration_instructions_acknowledged_at' => 'datetime',
+        ];
     }
 
     public function user(): BelongsTo

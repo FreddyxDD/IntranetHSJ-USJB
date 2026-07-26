@@ -25,6 +25,39 @@ La autorización se compone de cuatro elementos centrales:
 Los aplicativos consultan los permisos efectivos de la sesión. Nunca deben
 inferir privilegios a partir del nombre, correo, cargo o una tabla local.
 
+## Autoservicio de registro institucional
+
+El Intranet permite crear una cuenta únicamente después de validar un DNI de
+ocho dígitos contra una persona activa de `HSJ_Identity.people` cuyo tipo de
+documento sea `DNI`. El flujo no crea personas ni legajos: consume la identidad
+previamente registrada y, cuando existe, enlaza también el
+`personnel_record` activo más reciente.
+
+La creación se ejecuta en una única transacción sobre `HSJ_Identity`:
+
+1. vuelve a validar la persona y comprueba que no tenga una cuenta;
+2. crea el registro compatible en `users`;
+3. crea `access_accounts` usando el DNI como `username`;
+4. asigna exclusivamente el rol `consulta` de `intranet_hsj`;
+5. inicia la sesión y deja pendiente la aceptación de las instrucciones;
+6. registra la aceptación en
+   `access_accounts.registration_instructions_acknowledged_at`.
+
+La contraseña inicial se calcula como `DDMMAAAA` de la fecha de nacimiento más
+los últimos cuatro dígitos del DNI. Por ejemplo, para una fecha `05/03/1990` y
+el DNI `12345678`, la contraseña inicial es `050319905678`. El usuario y la
+contraseña se muestran en la pantalla de activación. La navegación y las APIs
+permanecen bloqueadas hasta que la persona confirme que leyó y guardó esta
+información.
+
+El rol inicial permite ingresar al panel y consultar información institucional.
+Los permisos adicionales no se autoasignan: deben solicitarse y ser aprobados
+por un administrador desde la gestión central de perfiles.
+
+La validación y la creación tienen límites por dirección IP, la validación
+vence en diez minutos y el nombre retornado antes del alta se muestra
+enmascarado.
+
 ## Flujo de acceso
 
 ```mermaid

@@ -1,11 +1,16 @@
 <?php
+
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Services\Identity\SelfRegistrationService;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 
-require_once BASE_PATH . '/app/helpers/response.php';
-require_once BASE_PATH . '/app/helpers/modulos.php';
+require_once BASE_PATH.'/app/helpers/response.php';
+require_once BASE_PATH.'/app/helpers/modulos.php';
 
 final class UeeiAuthController
 {
@@ -30,28 +35,162 @@ final class UeeiAuthController
 
     public static function register(): void
     {
+        self::guardSelfRegistrationRate('create', 3);
+        $input = get_json_input();
+        $dni = preg_replace('/\D+/', '', (string) ($input['dni'] ?? '')) ?? '';
+        $validation = $_SESSION['self_registration_validation'] ?? null;
+
+        if (
+            ! is_array($validation)
+            || ! hash_equals((string) ($validation['dni'] ?? ''), $dni)
+            || (int) ($validation['expires_at'] ?? 0) < time()
+        ) {
+            json_response([
+                'success' => false,
+                'ok' => false,
+                'message' => 'Primero valida el DNI. La validación tiene una vigencia de 10 minutos.',
+            ], 422);
+        }
+
+        try {
+            $result = app(SelfRegistrationService::class)->createAccount($dni);
+            unset($_SESSION['self_registration_validation']);
+            session_regenerate_id(true);
+            $user = self::userQuery()->findOrFail($result['user']->id);
+            self::establecerSesion($user);
+
+            logger()->info('Cuenta institucional creada por autoservicio.', [
+                'user_id' => $user->id,
+                'person_id' => $user->person_id,
+                'registration_source' => SelfRegistrationService::REGISTRATION_SOURCE,
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+            ]);
+
+            self::respondAuthenticated($user, 'Tu cuenta fue creada y activada correctamente.', [
+                'requires_account_confirmation' => true,
+                'account_instructions' => [
+                    'username' => $result['username'],
+                    'initial_password' => $result['initial_password'],
+                    'password_rule' => 'Fecha de nacimiento en formato DDMMAAAA + últimos 4 dígitos del DNI',
+                    'access_level' => 'Consulta',
+                    'access_request_message' => 'Si necesitas más accesos, debes solicitarlos al administrador de la plataforma.',
+                ],
+            ]);
+        } catch (DomainException $exception) {
+            json_response(['success' => false, 'ok' => false, 'message' => $exception->getMessage()], 422);
+        } catch (QueryException $exception) {
+            logger()->warning('Conflicto al crear una cuenta institucional.', [
+                'dni_hash' => hash('sha256', $dni),
+                'error' => $exception->getMessage(),
+            ]);
+            json_response([
+                'success' => false,
+                'ok' => false,
+                'message' => 'No se pudo crear la cuenta. El DNI o sus datos de acceso ya se encuentran registrados.',
+            ], 409);
+        } catch (Throwable $exception) {
+            report($exception);
+            json_response([
+                'success' => false,
+                'ok' => false,
+                'message' => 'No se pudo completar el registro institucional. Inténtalo nuevamente o comunícate con el administrador.',
+            ], 500);
+        }
+    }
+
+    public static function validateRegistrationDni(): void
+    {
+        self::guardSelfRegistrationRate('validate', 5);
+        $dni = (string) (get_json_input()['dni'] ?? '');
+
+        try {
+            $identity = app(SelfRegistrationService::class)->validateDni($dni);
+            $_SESSION['self_registration_validation'] = [
+                'dni' => $identity['dni'],
+                'person_id' => $identity['person_id'],
+                'expires_at' => time() + 600,
+            ];
+
+            json_response([
+                'success' => true,
+                'ok' => true,
+                'message' => 'DNI validado con la identidad institucional.',
+                'data' => [
+                    'dni' => $identity['dni'],
+                    'masked_name' => $identity['masked_name'],
+                    'expires_in_minutes' => 10,
+                ],
+            ]);
+        } catch (DomainException $exception) {
+            unset($_SESSION['self_registration_validation']);
+            json_response(['success' => false, 'ok' => false, 'message' => $exception->getMessage()], 422);
+        } catch (Throwable $exception) {
+            report($exception);
+            json_response([
+                'success' => false,
+                'ok' => false,
+                'message' => 'No se pudo validar el DNI con la identidad institucional. Inténtalo nuevamente.',
+            ], 503);
+        }
+    }
+
+    public static function confirmAccountInstructions(): void
+    {
+        $user = self::userQuery()->find((int) ($_SESSION['ueei_id'] ?? 0));
+
+        if (! $user || ! self::requiresAccountConfirmation($user)) {
+            json_response(['success' => false, 'ok' => false, 'message' => 'No existe una activación pendiente.'], 409);
+        }
+
+        if ((bool) (get_json_input()['acknowledged'] ?? false) !== true) {
+            json_response(['success' => false, 'ok' => false, 'message' => 'Debes confirmar que leíste las instrucciones.'], 422);
+        }
+
+        DB::connection('identity')->transaction(function () use ($user): void {
+            $user->accessAccount->forceFill([
+                'registration_instructions_acknowledged_at' => now(),
+                'last_login_at' => now(),
+            ])->save();
+        });
+        $_SESSION['account_confirmation_pending'] = false;
+
+        logger()->info('Usuario confirmó las instrucciones de activación.', [
+            'user_id' => $user->id,
+            'person_id' => $user->person_id,
+            'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+        ]);
+
         json_response([
-            'success' => false,
-            'ok' => false,
-            'message' => 'El registro público está deshabilitado. Solicita tu cuenta al administrador del intranet.',
-        ], 403);
+            'success' => true,
+            'ok' => true,
+            'message' => 'Confirmación registrada. Ya puedes navegar con el perfil de consulta.',
+            'redirect' => url_path('/pages/principal.html'),
+        ]);
     }
 
     public static function login(): void
     {
         $input = get_json_input();
-        $email = normalize_email($input['correo'] ?? '');
+        $identifier = strtolower(trim((string) ($input['correo'] ?? '')));
         $password = (string) ($input['password'] ?? '');
 
-        if ($email === '' || $password === '') {
+        if ($identifier === '' || $password === '') {
             json_response(['success' => false, 'ok' => false, 'message' => 'Completa todos los campos.'], 400);
         }
 
-        if (! valid_email($email) || strlen($password) > 200) {
+        if ((! valid_email($identifier) && ! preg_match('/^\d{8}$/', $identifier)) || strlen($password) > 200) {
             self::genericAuthError();
         }
 
-        $user = self::userQuery()->where('email', $email)->first();
+        $user = self::userQuery()
+            ->where(function ($query) use ($identifier): void {
+                $query->where('email', $identifier);
+                if (preg_match('/^\d{8}$/', $identifier)) {
+                    $query->orWhere('registration_document_number', $identifier)
+                        ->orWhereHas('accessAccount', fn ($account) => $account->where('username', $identifier));
+                }
+            })
+            ->first();
 
         if (! $user || ! $user->activo || ! Hash::check($password, (string) $user->password)) {
             self::genericAuthError();
@@ -68,7 +207,19 @@ final class UeeiAuthController
             $user->accessAccount->forceFill(['last_login_at' => now()])->save();
         }
 
-        self::respondAuthenticated($user, 'Inicio de sesión correcto.');
+        $extras = [];
+        if (self::requiresAccountConfirmation($user)) {
+            $extras['requires_account_confirmation'] = true;
+            $extras['account_instructions'] = array_merge(
+                app(SelfRegistrationService::class)->accountInstructions($user),
+                [
+                    'access_level' => 'Consulta',
+                    'access_request_message' => 'Si necesitas más accesos, debes solicitarlos al administrador de la plataforma.',
+                ]
+            );
+        }
+
+        self::respondAuthenticated($user, 'Inicio de sesión correcto.', $extras);
     }
 
     public static function logout(): void
@@ -107,6 +258,7 @@ final class UeeiAuthController
             ->unique()
             ->values()
             ->all() ?? [];
+        $_SESSION['account_confirmation_pending'] = self::requiresAccountConfirmation($user);
     }
 
     public static function refrescarSesion(User $user): void
@@ -114,7 +266,7 @@ final class UeeiAuthController
         self::establecerSesion($user);
     }
 
-    private static function respondAuthenticated(User $user, ?string $message = null): never
+    private static function respondAuthenticated(User $user, ?string $message = null, array $extras = []): never
     {
         $payload = [
             'success' => true,
@@ -128,6 +280,22 @@ final class UeeiAuthController
             'permisos' => $_SESSION['identity_permissions'],
             'modulos' => modulos_autorizados(),
         ];
+
+        $payload = array_merge($payload, $extras);
+
+        if (! array_key_exists('requires_account_confirmation', $payload)) {
+            $payload['requires_account_confirmation'] = self::requiresAccountConfirmation($user);
+        }
+
+        if ($payload['requires_account_confirmation'] && ! array_key_exists('account_instructions', $payload)) {
+            $payload['account_instructions'] = array_merge(
+                app(SelfRegistrationService::class)->accountInstructions($user),
+                [
+                    'access_level' => 'Consulta',
+                    'access_request_message' => 'Si necesitas más accesos, debes solicitarlos al administrador de la plataforma.',
+                ]
+            );
+        }
 
         if ($message !== null) {
             $payload['message'] = $message;
@@ -151,5 +319,28 @@ final class UeeiAuthController
     private static function genericAuthError(): never
     {
         json_response(['success' => false, 'ok' => false, 'message' => 'Credenciales inválidas.'], 401);
+    }
+
+    private static function requiresAccountConfirmation(User $user): bool
+    {
+        return $user->registration_source === SelfRegistrationService::REGISTRATION_SOURCE
+            && $user->accessAccount
+            && $user->accessAccount->registration_instructions_acknowledged_at === null;
+    }
+
+    private static function guardSelfRegistrationRate(string $action, int $maxAttempts): void
+    {
+        $key = 'identity-self-registration:'.$action.':'.($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+
+        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
+            json_response([
+                'success' => false,
+                'ok' => false,
+                'message' => 'Se realizaron demasiados intentos. Espera un minuto antes de volver a intentar.',
+                'retry_after_seconds' => RateLimiter::availableIn($key),
+            ], 429);
+        }
+
+        RateLimiter::hit($key, 60);
     }
 }

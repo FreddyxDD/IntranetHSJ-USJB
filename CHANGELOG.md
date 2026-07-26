@@ -5,6 +5,21 @@ los principios de Keep a Changelog.
 
 ## [Sin publicar]
 
+### Identidad - registro institucional por DNI
+
+- Registro en dos pasos validando primero el DNI activo contra
+  `HSJ_Identity`.
+- Cuenta central vinculada con `people` y el legajo activo disponible, DNI
+  como identificador y asignación exclusiva del perfil `consulta`.
+- Contraseña inicial calculada con `DDMMAAAA` más los últimos cuatro dígitos
+  del DNI.
+- Autologin con pantalla obligatoria que presenta las credenciales, el alcance
+  de consulta y la indicación para solicitar permisos adicionales.
+- Navegación y APIs bloqueadas hasta registrar la aceptación de instrucciones
+  en la cuenta central.
+- Inicio de sesión compatible con DNI, correo o nombre de usuario.
+- Límites de intentos por IP y validación temporal de diez minutos.
+
 ### Egresos - entrega funcional
 
 - Auditoría operativa rediseñada con resúmenes en lenguaje funcional,

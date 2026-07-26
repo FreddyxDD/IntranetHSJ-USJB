@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 use App\Models\User;
@@ -144,6 +145,10 @@ function require_permiso_api(string $codigo): void
         json_response(['ok' => false, 'message' => 'Sesión no iniciada.'], 401);
     }
 
+    if (! empty($_SESSION['account_confirmation_pending'])) {
+        json_response(['ok' => false, 'message' => 'Debes confirmar las instrucciones de activación antes de continuar.'], 428);
+    }
+
     if (! ueei_tiene_permiso($codigo)) {
         json_response([
             'ok' => false,
@@ -171,6 +176,10 @@ function require_modulo_api(string $codigo): void
 {
     if (empty($_SESSION['ueei_id'])) {
         json_response(['ok' => false, 'message' => 'Sesión no iniciada.'], 401);
+    }
+
+    if (! empty($_SESSION['account_confirmation_pending'])) {
+        json_response(['ok' => false, 'message' => 'Debes confirmar las instrucciones de activación antes de continuar.'], 428);
     }
 
     if (! modulo_autorizado($codigo)) {

@@ -41,6 +41,11 @@ function require_ueei_login(): void
         header('Location: ' . url_path('/'));
         exit;
     }
+
+    if (!empty($_SESSION['account_confirmation_pending'])) {
+        header('Location: ' . url_path('/'));
+        exit;
+    }
 }
 
 function require_ueei_admin(): void
@@ -168,6 +173,12 @@ match (true) {
 
     $method === 'POST' && $uri === '/crear-cuenta-ueei'
         => UeeiAuthController::register(),
+
+    $method === 'POST' && $uri === '/validar-dni-ueei'
+        => UeeiAuthController::validateRegistrationDni(),
+
+    $method === 'POST' && $uri === '/confirmar-cuenta-ueei'
+        => UeeiAuthController::confirmAccountInstructions(),
 
     $method === 'POST' && $uri === '/login-ueei'
         => UeeiAuthController::login(),

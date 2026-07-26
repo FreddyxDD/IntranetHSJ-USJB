@@ -53,5 +53,12 @@ final class EgresosViewTest extends TestCase
         self::assertStringContainsString('El agrupamiento por paciente no modifica el correlativo legal', $html);
         self::assertStringContainsString('Exportar XLSX', $html);
         self::assertStringNotContainsString('192.168.3.246:8002/egresos/api', $html);
+
+        $javascript = file_get_contents(public_path('assets/js/egresos.js'));
+        self::assertStringContainsString('Se emitió la constancia N.º', $javascript);
+        self::assertStringContainsString('Responsable:', $javascript);
+        self::assertStringContainsString('Datos principales registrados', $javascript);
+        self::assertStringContainsString('Información técnica', $javascript);
+        self::assertStringNotContainsString('Ver cambios registrados', $javascript);
     }
 }

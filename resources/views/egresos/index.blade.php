@@ -287,7 +287,7 @@
                 <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
                     <div>
                         <h2 class="text-lg font-black text-blue-950">Auditoría del módulo de Egresos</h2>
-                        <p class="mt-1 text-sm text-slate-500">Generaciones, modificaciones, anulaciones, configuraciones, importaciones y mantenimientos registrados con usuario, fecha, IP y valores modificados.</p>
+                        <p class="mt-1 text-sm text-slate-500">Cada tarjeta explica qué ocurrió, quién lo realizó y cuáles fueron los datos principales. Los identificadores internos quedan disponibles únicamente en “Información técnica”.</p>
                     </div>
                     <form id="audit-form" class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_220px_auto_auto_auto]">
                         <input id="audit-query" type="search" maxlength="150" placeholder="Usuario, evento o identificador" class="min-h-11 rounded-xl border border-slate-300 px-3">
@@ -298,10 +298,16 @@
                             <option value="certificate.anular">Constancias anuladas</option>
                             <option value="certificate.imprimir">Impresiones habilitadas</option>
                             <option value="certificate_configuration.registered">Configuraciones registradas</option>
+                            <option value="certificate_configuration.updated">Configuraciones actualizadas</option>
                             <option value="record.create">Egresos registrados</option>
                             <option value="record.update">Egresos corregidos</option>
                             <option value="import.previewed">Archivos analizados</option>
                             <option value="import.completed">Importaciones</option>
+                            <option value="cie10.created">CIE-10 registrados</option>
+                            <option value="cie10.updated">CIE-10 modificados</option>
+                            <option value="cie10.deactivated">CIE-10 desactivados</option>
+                            <option value="cie10.import_analyzed">Catálogos CIE-10 analizados</option>
+                            <option value="cie10.import_confirmed">Catálogos CIE-10 aplicados</option>
                         </select>
                         <input id="audit-from" type="date" aria-label="Auditoría desde" class="min-h-11 rounded-xl border border-slate-300 px-3">
                         <input id="audit-to" type="date" aria-label="Auditoría hasta" class="min-h-11 rounded-xl border border-slate-300 px-3">

@@ -98,6 +98,9 @@ EGRESOS_PATIENT_SOURCE_CODE=sigh_202607_local
   inválidos y cambios concurrentes;
 - auditoría de altas, cambios, desactivaciones, análisis y confirmaciones del
   catálogo.
+- presentación funcional de auditoría: explica la operación realizada,
+  identifica responsable, fecha y origen, traduce campos técnicos a etiquetas
+  clínicas y desplaza IDs/códigos internos a un detalle secundario.
 
 No se incorporaron el login ni el CRUD de usuarios del proyecto PHP entregado.
 

@@ -882,46 +882,212 @@
         'import.previewed': 'Archivo analizado',
         'import.completed': 'Importación completada',
         'patients.reconciled': 'Pacientes conciliados',
+        'cie10.created': 'Código CIE-10 registrado',
+        'cie10.updated': 'Código CIE-10 actualizado',
+        'cie10.deactivated': 'Código CIE-10 desactivado',
+        'cie10.import_analyzed': 'Catálogo CIE-10 analizado',
+        'cie10.import_confirmed': 'Catálogo CIE-10 actualizado',
     };
+
+    const auditFieldLabels = {
+        egreso_id: 'Episodio principal',
+        numero: 'Número de constancia',
+        anio: 'Año',
+        numhc: 'Historia clínica',
+        doc_iden: 'Documento',
+        doc_numero: 'Documento',
+        paciente: 'Paciente',
+        nomb: 'Nombres',
+        apell: 'Apellidos',
+        servicio: 'Servicio',
+        ups: 'UPS / Servicio',
+        fecing: 'Fecha de ingreso',
+        fecegr: 'Fecha de egreso',
+        condicion: 'Condición de egreso',
+        financia: 'Financiamiento',
+        coddiag1: 'Diagnóstico principal',
+        coddiag2: 'Diagnóstico 2',
+        coddiag3: 'Diagnóstico 3',
+        coddiag4: 'Diagnóstico 4',
+        estado: 'Estado',
+        motivo_anulacion: 'Motivo de anulación',
+        observacion: 'Observación',
+        descripcion: 'Descripción',
+        codigo: 'Código CIE-10',
+        cotejo_sexo: 'Cotejo de sexo',
+        archivo: 'Archivo',
+        nuevos: 'Códigos nuevos',
+        actualizaciones: 'Códigos actualizados',
+        sin_cambios: 'Filas sin cambios',
+        errores: 'Filas con errores',
+        insertados: 'Episodios insertados',
+        omitidos: 'Filas omitidas',
+        iniciales_jefe: 'Iniciales de jefatura',
+        iniciales_director: 'Iniciales de dirección',
+        iniciales_ccp: 'Iniciales de elaboración',
+        cargo_director: 'Cargo de dirección',
+        nombre_director: 'Nombre de dirección',
+        activo: 'Configuración activa',
+        print_count: 'Número de impresiones',
+        printed_at: 'Fecha de impresión',
+    };
+
+    const ignoredAuditFields = new Set([
+        'id', 'created_at', 'updated_at', 'deleted_at', 'source_system',
+        'source_id', 'source_fingerprint', 'episode_fingerprint', 'imported_at',
+        'source_created_at', 'source_updated_at', 'sequence_owner_key',
+        'issuer_account_id', 'issuer_username', 'issuer_display_name',
+        'actor_account_id', 'actor_username', 'actor_display_name',
+        'patient_source_id', 'importacion_id',
+    ]);
+
+    const auditFieldsByEvent = {
+        'certificate.generar': ['egreso_id', 'numero', 'numhc', 'paciente', 'servicio', 'fecing', 'fecegr', 'estado'],
+        'certificate.editar': ['numero', 'numhc', 'paciente', 'servicio', 'fecing', 'fecegr', 'coddiag1', 'coddiag2', 'coddiag3', 'coddiag4', 'observacion', 'estado'],
+        'certificate.anular': ['numero', 'numhc', 'paciente', 'motivo_anulacion', 'observacion', 'estado'],
+        'certificate.imprimir': ['numero', 'numhc', 'paciente', 'print_count', 'printed_at', 'estado'],
+        'record.create': ['numhc', 'doc_numero', 'nomb', 'apell', 'fecing', 'fecegr', 'ups', 'condicion', 'financia', 'coddiag1', 'coddiag2', 'coddiag3', 'coddiag4'],
+        'record.update': ['numhc', 'doc_numero', 'nomb', 'apell', 'fecing', 'fecegr', 'ups', 'condicion', 'financia', 'coddiag1', 'coddiag2', 'coddiag3', 'coddiag4'],
+        'import.previewed': ['archivo', 'nuevos', 'actualizaciones', 'sin_cambios', 'errores'],
+        'import.completed': ['archivo', 'insertados', 'omitidos', 'errores'],
+        'certificate_configuration.registered': ['iniciales_jefe', 'iniciales_director', 'iniciales_ccp', 'cargo_director', 'nombre_director', 'observacion', 'activo'],
+        'certificate_configuration.updated': ['iniciales_jefe', 'iniciales_director', 'iniciales_ccp', 'cargo_director', 'nombre_director', 'observacion', 'activo'],
+        'cie10.created': ['codigo', 'descripcion', 'estado', 'cotejo_sexo'],
+        'cie10.updated': ['codigo', 'descripcion', 'estado', 'cotejo_sexo'],
+        'cie10.deactivated': ['codigo', 'descripcion', 'estado', 'cotejo_sexo'],
+        'cie10.import_analyzed': ['archivo', 'nuevos', 'actualizaciones', 'sin_cambios', 'errores'],
+        'cie10.import_confirmed': ['archivo', 'nuevos', 'actualizaciones', 'sin_cambios', 'errores'],
+    };
+
+    function auditCertificateNumber(data) {
+        if (!data?.numero || !data?.anio) return null;
+        return `${String(data.numero).padStart(4, '0')}-${data.anio}`;
+    }
+
+    function auditSummary(item) {
+        const after = item.data_after || {};
+        const before = item.data_before || {};
+        const data = Object.keys(after).length ? after : before;
+        const certificate = auditCertificateNumber(data);
+        const history = data.numhc ? ` de la HC ${data.numhc}` : '';
+        const summaries = {
+            'certificate.generar': certificate
+                ? `Se emitió la constancia N.º ${certificate}${history}.`
+                : `Se emitió una constancia de hospitalización${history}.`,
+            'certificate.editar': certificate
+                ? `Se corrigió la constancia N.º ${certificate}${history}.`
+                : 'Se corrigieron datos de una constancia.',
+            'certificate.anular': certificate
+                ? `Se anuló la constancia N.º ${certificate}${history}.`
+                : 'Se anuló una constancia.',
+            'certificate.imprimir': certificate
+                ? `Se autorizó la impresión de la constancia N.º ${certificate}.`
+                : 'Se autorizó la impresión de una constancia vigente.',
+            'record.create': `Se registró un episodio de egreso${history}.`,
+            'record.update': `Se corrigió un episodio de egreso${history}.`,
+            'import.previewed': `Se analizó el archivo ${data.archivo || 'seleccionado'} sin insertar información.`,
+            'import.completed': `Se confirmó una importación con ${data.insertados || 0} episodio(s) nuevo(s).`,
+            'patients.reconciled': `Se conciliaron ${data.actualizados || data.updated || 0} paciente(s) con la fuente maestra.`,
+            'certificate_configuration.registered': 'Se registró y activó una nueva configuración institucional para las constancias.',
+            'certificate_configuration.updated': 'Se actualizó la configuración institucional de las constancias.',
+            'cie10.created': `Se incorporó el código ${data.codigo || ''} al catálogo central.`,
+            'cie10.updated': `Se modificaron los datos del código ${data.codigo || before.codigo || ''}.`,
+            'cie10.deactivated': `Se desactivó el código ${data.codigo || before.codigo || ''} sin eliminar su historial.`,
+            'cie10.import_analyzed': `Se analizó el catálogo ${data.archivo || ''} sin aplicar cambios.`,
+            'cie10.import_confirmed': `Se aplicó el lote CIE-10 #${data.id || item.subject_id || ''}.`,
+        };
+        return summaries[item.event_type] || 'Se registró una operación dentro del módulo de Egresos.';
+    }
+
+    function formatAuditValue(value, key, data) {
+        if (value === null || value === undefined || value === '') return 'Sin dato';
+        if (key === 'numero' && data?.anio) return `N.º ${String(value).padStart(4, '0')}-${data.anio}`;
+        if (key === 'egreso_id') return `Egreso #${value}`;
+        if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+        if (Array.isArray(value)) return value.length ? value.join(', ') : 'Sin datos';
+        if (typeof value === 'object') return JSON.stringify(value);
+        if (/^(fec|fecha|.*_at$)/.test(key) && String(value).match(/^\d{4}-\d{2}-\d{2}/)) {
+            return formatDateTime(value);
+        }
+        return String(value);
+    }
 
     function auditChanges(item) {
         const before = item.data_before || {};
         const after = item.data_after || {};
-        const ignored = new Set(['updated_at', 'created_at', 'source_fingerprint']);
+        const creation = Object.keys(before).length === 0;
+        const relevantFields = auditFieldsByEvent[item.event_type] || null;
         return [...new Set([...Object.keys(before), ...Object.keys(after)])]
-            .filter((key) => !ignored.has(key) && JSON.stringify(before[key] ?? null) !== JSON.stringify(after[key] ?? null))
-            .slice(0, 8)
-            .map((key) => {
-                const oldValue = before[key] ?? '—';
-                const newValue = after[key] ?? '—';
-                return `${key}: ${String(oldValue)} → ${String(newValue)}`;
-            });
+            .filter((key) => key !== 'anio' && !ignoredAuditFields.has(key)
+                && (!relevantFields || relevantFields.includes(key))
+                && JSON.stringify(before[key] ?? null) !== JSON.stringify(after[key] ?? null))
+            .map((key) => ({
+                key,
+                label: auditFieldLabels[key] || key.replaceAll('_', ' '),
+                oldValue: creation ? null : formatAuditValue(before[key], key, before),
+                newValue: formatAuditValue(after[key], key, after),
+                creation,
+            }));
+    }
+
+    function auditChangeElement(change) {
+        const row = element('div', 'rounded-xl border border-slate-200 bg-white p-3');
+        row.append(element('div', 'text-xs font-bold uppercase tracking-wide text-slate-500', change.label));
+        if (change.creation) {
+            row.append(element('div', 'mt-1 break-words text-sm font-semibold text-slate-800', change.newValue));
+            return row;
+        }
+        const values = element('div', 'mt-2 grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center');
+        values.append(
+            element('div', 'rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-800', change.oldValue),
+            element('div', 'hidden text-center font-black text-slate-400 sm:block', '→'),
+            element('div', 'rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800', change.newValue)
+        );
+        row.append(values);
+        return row;
     }
 
     function auditCard(item) {
-        const card = element('article', 'rounded-2xl border border-slate-200 bg-white p-4 shadow-sm');
-        const header = element('div', 'flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between');
+        const card = element('article', 'overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm');
+        const header = element('div', 'border-b border-slate-100 bg-gradient-to-r from-blue-50 to-white p-4 sm:p-5');
         const title = element('div');
         title.append(
-            element('div', 'font-black text-blue-950', auditLabels[item.event_type] || item.event_type),
-            element('div', 'mt-1 text-xs text-slate-500', `Evento #${item.id} · Sujeto ${item.subject_id || '—'} · IP ${item.ip || '—'}`)
+            element('div', 'text-base font-black text-blue-950 sm:text-lg', auditLabels[item.event_type] || 'Actividad registrada'),
+            element('p', 'mt-1 text-sm leading-6 text-slate-600', auditSummary(item))
         );
-        const actor = element('div', 'text-left text-xs sm:text-right');
-        actor.append(
-            element('div', 'font-bold text-slate-700', item.actor_display_name || item.actor_username || 'Proceso del sistema'),
-            element('div', 'mt-1 text-slate-500', formatDateTime(item.occurred_at))
+        const meta = element('div', 'mt-4 flex flex-wrap gap-2 text-xs');
+        meta.append(
+            element('span', 'rounded-full bg-white px-3 py-1.5 font-bold text-slate-700 ring-1 ring-slate-200', `Responsable: ${item.actor_display_name || item.actor_username || 'Proceso del sistema'}`),
+            element('span', 'rounded-full bg-white px-3 py-1.5 text-slate-600 ring-1 ring-slate-200', `Fecha: ${formatDateTime(item.occurred_at)}`),
+            element('span', 'rounded-full bg-white px-3 py-1.5 text-slate-600 ring-1 ring-slate-200', `Origen: ${item.ip || 'No disponible'}`)
         );
-        header.append(title, actor);
+        header.append(title, meta);
         card.append(header);
+
         const changes = auditChanges(item);
         if (changes.length) {
-            const details = element('details', 'mt-3 rounded-xl bg-slate-50 p-3');
-            details.append(element('summary', 'cursor-pointer text-sm font-bold text-blue-700', `Ver cambios registrados (${changes.length})`));
-            const list = element('ul', 'mt-2 space-y-1 break-all text-xs text-slate-600');
-            changes.forEach((change) => list.append(element('li', '', change)));
-            details.append(list);
-            card.append(details);
+            const content = element('div', 'p-4 sm:p-5');
+            content.append(element(
+                'div',
+                'mb-3 text-sm font-black text-slate-700',
+                changes[0].creation ? 'Datos principales registrados' : 'Cambios realizados'
+            ));
+            const list = element('div', 'grid gap-3 lg:grid-cols-2');
+            changes.forEach((change) => list.append(auditChangeElement(change)));
+            content.append(list);
+            card.append(content);
         }
+
+        const technical = element('details', 'border-t border-slate-100 bg-slate-50 px-4 py-3 sm:px-5');
+        technical.append(
+            element('summary', 'cursor-pointer text-xs font-bold text-slate-500 hover:text-slate-700', 'Información técnica'),
+            element(
+                'div',
+                'mt-2 break-all text-xs leading-5 text-slate-500',
+                `Evento #${item.id} · Código ${item.event_type} · Referencia ${item.subject_id || 'Sin referencia'}`
+            )
+        );
+        card.append(technical);
         return card;
     }
 

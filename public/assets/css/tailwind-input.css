@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @source "../../../views/**/*.php";
 @source "../../../resources/views/**/*.blade.php";
+@source "../js/**/*.js";
 @source "../../../node_modules/preline/dist/*.js";
 @import "../../../node_modules/preline/variants.css";

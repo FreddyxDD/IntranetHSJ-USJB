@@ -737,6 +737,7 @@ Usado por `ImportLegacyEgresos` e `ImportLegacyCirugias`.
 | CRUD CIE-10 | `catalogos.cie10`, `auditoria.eventos` |
 | Análisis masivo CIE-10 | `catalogos.cie10_importaciones`, `catalogos.cie10_importacion_filas`, `catalogos.cie10` |
 | Confirmación masiva CIE-10 | `catalogos.cie10_importaciones`, `catalogos.cie10_importacion_filas`, `catalogos.cie10`, `auditoria.eventos` |
+| Consulta funcional de auditoría | `auditoria.eventos`; presenta resúmenes y etiquetas operativas, conservando IDs y códigos en información técnica |
 | Reportes y exportaciones | `egresos.egresos`, `catalogos.cie10` |
 | Migración inicial | tablas `staging`, `catalogos.cie10` y tablas del esquema `egresos` |
 

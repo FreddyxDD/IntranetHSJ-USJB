@@ -7,6 +7,10 @@ los principios de Keep a Changelog.
 
 ### Egresos - entrega funcional
 
+- Auditoría operativa rediseñada con resúmenes en lenguaje funcional,
+  correlativos de constancia formateados, responsable/fecha/origen visibles,
+  etiquetas comprensibles y comparación visual de valores; IDs y códigos
+  internos quedan en un detalle técnico secundario.
 - CRUD responsive del catálogo CIE-10 protegido por
   `egresos.catalogs.manage`, con código inmutable, control de concurrencia,
   desactivación lógica y auditoría de valores anteriores/nuevos.

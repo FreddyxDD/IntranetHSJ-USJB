@@ -173,4 +173,3 @@ En una migración posterior y revisable:
 - implementar una conciliación idempotente que nunca sobrescriba los valores
   originales importados;
 - auditar cada sincronización, cambio de correspondencia y corrección manual.
-

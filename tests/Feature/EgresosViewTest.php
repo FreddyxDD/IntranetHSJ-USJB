@@ -40,6 +40,10 @@ final class EgresosViewTest extends TestCase
         self::assertStringContainsString('ningún dato se insertará', $html);
         self::assertTrue(strpos($html, 'id="import-form"') < strpos($html, 'id="import-result"'));
         self::assertTrue(strpos($html, 'id="import-result"') < strpos($html, 'Importaciones recientes'));
+        self::assertStringContainsString('Registrar configuración institucional', $html);
+        self::assertStringContainsString('hs-tooltip-content', $html);
+        self::assertTrue(strpos($html, 'name="nombre_director"') < strpos($html, 'id="certificate-preview"'));
+        self::assertStringContainsString('Configuraciones registradas', $html);
         self::assertStringContainsString('Exportar XLSX', $html);
         self::assertStringNotContainsString('192.168.3.246:8002/egresos/api', $html);
     }

@@ -25,7 +25,15 @@ los principios de Keep a Changelog.
 - Línea de tiempo del paciente con sus hospitalizaciones y reingresos.
 - Flujo visual de importación ordenado como carga, análisis del lote e
   importaciones recientes.
-- 20 pruebas Laravel aprobadas, 1 omitida en SQLite y 91 aserciones.
+- Reimpresión de constancias anuladas bloqueada en servidor; la consulta
+  histórica conserva el documento con sello de anulación y sin controles de
+  impresión.
+- Registro auditado de cada habilitación de impresión, con contador, fecha y
+  usuario responsable.
+- Configuración institucional versionada: formulario limpio, ayudas
+  contextuales, campos a la izquierda, vista preliminar a la derecha e
+  historial de registros activados.
+- 22 pruebas Laravel aprobadas, 1 omitida en SQLite y 109 aserciones.
 - Consulta comprobada sobre 5,872 egresos y emisión validada dentro de una
   transacción revertida, sin datos de prueba residuales.
 

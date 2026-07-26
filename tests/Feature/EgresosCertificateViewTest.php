@@ -44,4 +44,50 @@ final class EgresosCertificateViewTest extends TestCase
         self::assertStringContainsString('/assets/images/fondo.png', $html);
         self::assertStringNotContainsString('CONSTANCIA DE EGRESO HOSPITALARIO', $html);
     }
+
+    public function test_cancelled_certificate_is_viewable_but_not_printable(): void
+    {
+        $certificate = new Constancia([
+            'numero' => 30,
+            'anio' => 2026,
+            'paciente' => 'PACIENTE DE PRUEBA',
+            'estado' => 'anulada',
+            'motivo_anulacion' => 'Documento reemplazado por corrección.',
+        ]);
+        $document = app(ConstanciaDocumentPresenter::class)->present($certificate);
+        $html = view('egresos.certificate', [
+            'constancia' => $certificate,
+            'document' => $document,
+            'allowPrint' => false,
+        ])->render();
+
+        self::assertStringContainsString('CONSTANCIA ANULADA', $html);
+        self::assertStringContainsString('disponible únicamente para consulta histórica', $html);
+        self::assertStringContainsString('IMPRESIÓN NO AUTORIZADA', $html);
+        self::assertStringNotContainsString('onclick="window.print()"', $html);
+        self::assertFalse($certificate->canBePrinted());
+        $certificate->estado = 'generada';
+        self::assertTrue($certificate->canBePrinted());
+    }
+
+    public function test_active_certificate_requires_server_authorization_before_printing(): void
+    {
+        $certificate = new Constancia([
+            'numero' => 31,
+            'anio' => 2026,
+            'paciente' => 'PACIENTE AUTORIZADO',
+            'estado' => 'generada',
+        ]);
+        $html = view('egresos.certificate', [
+            'constancia' => $certificate,
+            'document' => app(ConstanciaDocumentPresenter::class)->present($certificate),
+            'allowPrint' => true,
+            'printAuthorizationUrl' => '/egresos/api/constancias/31/autorizar-impresion',
+        ])->render();
+
+        self::assertStringContainsString('Autorizar e imprimir', $html);
+        self::assertStringContainsString('/egresos/api/constancias/31/autorizar-impresion', $html);
+        self::assertStringContainsString("document.body.classList.add('print-authorized')", $html);
+        self::assertStringNotContainsString('onclick="window.print()"', $html);
+    }
 }

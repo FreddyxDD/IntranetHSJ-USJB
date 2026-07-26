@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Egresos\Cie10;
 use App\Models\Egresos\ConfiguracionConstancia;
+use App\Models\Egresos\ConfiguracionConstanciaHistorial;
 use App\Models\Egresos\Constancia;
 use App\Models\Egresos\ConstanciaHistorial;
 use App\Models\Egresos\Egreso;
@@ -36,6 +37,7 @@ final class EgresosArchitectureTest extends TestCase
         self::assertSame('egresos.constancia_historial', (new ConstanciaHistorial)->getTable());
         self::assertSame('catalogos.cie10', (new Cie10)->getTable());
         self::assertSame('egresos.configuracion_constancias', (new ConfiguracionConstancia)->getTable());
+        self::assertSame('egresos.configuracion_constancia_historial', (new ConfiguracionConstanciaHistorial)->getTable());
         self::assertSame('egresos.importaciones', (new Importacion)->getTable());
         self::assertSame('egresos.importacion_filas', (new ImportacionFila)->getTable());
     }
@@ -64,6 +66,9 @@ final class EgresosArchitectureTest extends TestCase
         $create = Route::getRoutes()->getByName('egresos.certificates.store');
         $update = Route::getRoutes()->getByName('egresos.certificates.update');
         $cancel = Route::getRoutes()->getByName('egresos.certificates.cancel');
+        $view = Route::getRoutes()->getByName('egresos.certificates.view');
+        $print = Route::getRoutes()->getByName('egresos.certificates.print');
+        $authorizePrint = Route::getRoutes()->getByName('egresos.certificates.authorize-print');
         $configuration = Route::getRoutes()->getByName('egresos.configuration.update');
         $audit = Route::getRoutes()->getByName('egresos.audit.index');
         $recordCreate = Route::getRoutes()->getByName('egresos.records.store');
@@ -81,6 +86,9 @@ final class EgresosArchitectureTest extends TestCase
         self::assertContains('central.permission:egresos.certificates.create', $create->gatherMiddleware());
         self::assertContains('central.permission:egresos.certificates.update', $update->gatherMiddleware());
         self::assertContains('central.permission:egresos.certificates.cancel', $cancel->gatherMiddleware());
+        self::assertContains('central.permission:egresos.view', $view->gatherMiddleware());
+        self::assertContains('central.permission:egresos.view', $print->gatherMiddleware());
+        self::assertContains('central.permission:egresos.view', $authorizePrint->gatherMiddleware());
         self::assertContains('central.permission:egresos.configuration.manage', $configuration->gatherMiddleware());
         self::assertContains('central.permission:egresos.history.view', $audit->gatherMiddleware());
         self::assertContains('central.permission:egresos.records.create', $recordCreate->gatherMiddleware());

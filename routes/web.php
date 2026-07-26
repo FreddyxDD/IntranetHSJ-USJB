@@ -106,6 +106,14 @@ Route::prefix('egresos')->middleware('legacy.module:egresos')->group(function ()
     Route::get('/api/auditoria', [AuditoriaController::class, 'index'])
         ->middleware('central.permission:egresos.history.view')
         ->name('egresos.audit.index');
+    Route::get('/constancias/{constancia}', [ConstanciaController::class, 'viewDocument'])
+        ->whereNumber('constancia')
+        ->middleware('central.permission:egresos.view')
+        ->name('egresos.certificates.view');
+    Route::post('/api/constancias/{constancia}/autorizar-impresion', [ConstanciaController::class, 'authorizePrint'])
+        ->whereNumber('constancia')
+        ->middleware('central.permission:egresos.view')
+        ->name('egresos.certificates.authorize-print');
     Route::get('/constancias/{constancia}/imprimir', [ConstanciaController::class, 'print'])
         ->whereNumber('constancia')
         ->middleware('central.permission:egresos.view')

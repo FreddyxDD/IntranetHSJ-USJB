@@ -18,7 +18,15 @@ final class Constancia extends Model
             'fecing' => 'date',
             'fecegr' => 'date',
             'cancelled_at' => 'datetime',
+            'first_printed_at' => 'datetime',
+            'last_printed_at' => 'datetime',
+            'print_count' => 'integer',
         ];
+    }
+
+    public function canBePrinted(): bool
+    {
+        return $this->estado !== 'anulada';
     }
 
     public function getDocumentoAttribute(): ?string

@@ -128,9 +128,11 @@ consultar historial o generar constancias.
 | POST | `/egresos/api/constancias` | Emisión transaccional |
 | PUT | `/egresos/api/constancias/{id}` | Edición transaccional |
 | DELETE | `/egresos/api/constancias/{id}` | Anulación transaccional |
-| GET | `/egresos/api/configuracion-constancias` | Leer configuración |
-| PUT | `/egresos/api/configuracion-constancias` | Actualizar configuración |
-| GET | `/egresos/constancias/{id}/imprimir` | Documento imprimible |
+| GET | `/egresos/api/configuracion-constancias` | Leer versión activa e historial |
+| PUT | `/egresos/api/configuracion-constancias` | Registrar y activar una nueva versión |
+| GET | `/egresos/constancias/{id}` | Consulta histórica sin impresión |
+| GET | `/egresos/constancias/{id}/imprimir` | Preparar impresión; rechaza anuladas |
+| POST | `/egresos/api/constancias/{id}/autorizar-impresion` | Revalidar estado y auditar impresión |
 
 Estas rutas están declaradas antes del puente PHP legado y son atendidas
 únicamente por controladores Laravel.
@@ -149,8 +151,8 @@ La emisión se ejecuta dentro de una transacción SQL Server:
 
 ## Validaciones ejecutadas
 
-- 20 pruebas Laravel aprobadas y 1 prueba SQL Server omitida en SQLite;
-- 91 aserciones;
+- 22 pruebas Laravel aprobadas y 1 prueba SQL Server omitida en SQLite;
+- 109 aserciones;
 - sintaxis PHP validada;
 - rutas verificadas con `php artisan route:list --path=egresos`;
 - consulta real validada sobre 5,872 egresos;
@@ -298,6 +300,33 @@ funcional, incluyendo documentos completados o corregidos desde
 El detalle del paciente incorpora una línea de tiempo ordenada por fecha. El
 primer episodio y cada reingreso muestran ingreso, egreso, UPS, diagnóstico,
 fuente y días transcurridos desde el alta anterior.
+
+## Control legal de constancias y configuración versionada
+
+Las constancias anuladas permanecen disponibles mediante una ruta exclusiva de
+consulta histórica. La ruta de impresión las rechaza desde el servidor y la
+vista de consulta no incluye botón de impresión. Incluso una página abierta
+antes de la anulación debe solicitar una autorización nueva al servidor justo
+antes de cada impresión; `Ctrl+P` sin autorización sustituye el documento por
+un aviso de impresión no autorizada.
+
+Cada acceso autorizado a la vista de impresión incrementa el contador de la
+constancia y registra fecha, usuario, historial funcional y evento central de
+auditoría. La anulación continúa conservando responsable, fecha y motivo.
+
+La configuración institucional mantiene un registro activo para emitir nuevas
+constancias, pero el formulario administrativo nunca precarga esa versión.
+Cada guardado:
+
+1. valida los responsables, cargos e iniciales obligatorios;
+2. crea una versión en `egresos.configuracion_constancia_historial`;
+3. activa sus valores para las constancias futuras;
+4. conserva actor, fecha, IP y agente de usuario;
+5. genera el evento `certificate_configuration.registered`.
+
+La pantalla presenta los campos en el lado izquierdo y la vista preliminar en
+el derecho. Cada campo tiene una ayuda contextual que explica su efecto en el
+documento, y el historial de configuraciones queda disponible al final.
 
 ### Validación con el archivo mensual entregado
 

@@ -221,14 +221,81 @@ final class ConstanciaController extends Controller
         Constancia $constancia,
         ConstanciaDocumentPresenter $presenter
     ): View {
-        if (! ueei_tiene_permiso('egresos.history.view')
-            && ! ueei_tiene_permiso('egresos.certificates.create')) {
-            abort(403);
+        $this->authorizeDocumentAccess();
+        if (! $constancia->canBePrinted()) {
+            abort(409, 'La constancia está anulada y su reimpresión no está autorizada. Puede consultarla desde el historial.');
         }
 
         return view('egresos.certificate', [
             'constancia' => $constancia,
             'document' => $presenter->present($constancia),
+            'allowPrint' => true,
+            'printAuthorizationUrl' => route('egresos.certificates.authorize-print', $constancia, false),
         ]);
+    }
+
+    public function authorizePrint(Request $request, Constancia $constancia): JsonResponse
+    {
+        $this->authorizeDocumentAccess();
+        $actor = EgresoController::centralActor();
+
+        $printable = DB::transaction(function () use ($constancia, $actor, $request): Constancia {
+            $locked = Constancia::query()->lockForUpdate()->findOrFail($constancia->id);
+            if (! $locked->canBePrinted()) {
+                throw ValidationException::withMessages([
+                    'constancia' => 'La constancia fue anulada y no puede imprimirse.',
+                ]);
+            }
+
+            $before = $locked->toArray();
+            $locked->print_count = ((int) $locked->print_count) + 1;
+            $locked->first_printed_at ??= now();
+            $locked->last_printed_at = now();
+            $locked->last_printed_by_account_id = $actor['account_id'];
+            $locked->last_printed_by_username = $actor['username'];
+            $locked->save();
+
+            app(ConstanciaTrace::class)->record(
+                $locked,
+                'imprimir',
+                "Se autorizó la impresión de la constancia {$locked->numero}-{$locked->anio}.",
+                $before,
+                $locked->fresh()->toArray(),
+                $actor,
+                $request
+            );
+
+            return $locked->fresh();
+        }, 3);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Impresión autorizada y registrada.',
+            'data' => [
+                'print_count' => $printable->print_count,
+                'authorized_at' => $printable->last_printed_at,
+            ],
+        ]);
+    }
+
+    public function viewDocument(
+        Constancia $constancia,
+        ConstanciaDocumentPresenter $presenter
+    ): View {
+        $this->authorizeDocumentAccess();
+
+        return view('egresos.certificate', [
+            'constancia' => $constancia,
+            'document' => $presenter->present($constancia),
+            'allowPrint' => false,
+        ]);
+    }
+
+    private function authorizeDocumentAccess(): void
+    {
+        if (! ueei_tiene_permiso('egresos.history.view')
+            && ! ueei_tiene_permiso('egresos.certificates.create')) {
+            abort(403);
+        }
     }
 }

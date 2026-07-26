@@ -520,9 +520,19 @@
                     element('div', `mt-1 text-xs font-semibold ${stateClass}`, `Estado: ${item.estado} · ${item.issuer_display_name || item.issuer_username || 'Importación histórica'}`)
                 );
                 const actions = element('div', 'flex flex-wrap justify-end gap-2');
-                const link = element('a', 'rounded-xl border border-blue-200 px-4 py-2 text-center text-sm font-bold text-blue-700 hover:bg-blue-50', 'Ver / imprimir');
-                link.href = `/egresos/constancias/${item.id}/imprimir`;
+                const cancelled = item.estado === 'anulada';
+                const link = element(
+                    'a',
+                    `rounded-xl border px-4 py-2 text-center text-sm font-bold ${cancelled ? 'border-slate-300 text-slate-700 hover:bg-slate-50' : 'border-blue-200 text-blue-700 hover:bg-blue-50'}`,
+                    cancelled ? 'Visualizar anulada' : 'Ver / imprimir'
+                );
+                link.href = cancelled
+                    ? `/egresos/constancias/${item.id}`
+                    : `/egresos/constancias/${item.id}/imprimir`;
                 link.target = '_blank';
+                if (cancelled) {
+                    link.title = 'Disponible solo para consulta histórica; la reimpresión está bloqueada.';
+                }
                 actions.append(link);
                 if (config.abilities.updateCertificates && item.estado !== 'anulada') {
                     const edit = element('button', 'rounded-xl border border-amber-200 px-4 py-2 text-sm font-bold text-amber-700', 'Editar');
@@ -592,20 +602,43 @@
         }
     }
 
-    async function loadConfiguration() {
+    async function loadConfiguration(message = 'Formulario limpio para crear un nuevo registro.') {
         const form = $('#configuration-form');
         if (!form) return;
         const status = $('#configuration-status');
-        status.textContent = 'Cargando configuración…';
+        form.reset();
+        updateConfigurationPreview();
+        status.textContent = message;
         try {
             const response = await request(config.configurationUrl);
-            Object.entries(response.data).forEach(([name, value]) => {
-                if (form.elements[name]) form.elements[name].value = value || '';
-            });
-            updateConfigurationPreview();
-            status.textContent = 'Configuración cargada.';
+            renderConfigurationRecords(response.data);
         } catch (error) {
             status.textContent = error.message;
+        }
+    }
+
+    function renderConfigurationRecords(data) {
+        const list = $('#configuration-history');
+        const active = $('#configuration-active');
+        if (!list || !active) return;
+        const current = data?.active || {};
+        active.textContent = current.updated_at
+            ? `Configuración activa desde ${formatDateTime(current.updated_at)}`
+            : 'Aún no existe una configuración activa';
+        list.replaceChildren();
+        (data?.records || []).forEach((item) => {
+            const card = element('article', 'grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[1fr_auto] sm:items-center');
+            const values = element('div');
+            values.append(
+                element('div', 'font-bold text-blue-950', `Registro #${item.id} · ${item.nombre_director || item.cargo_director || 'Configuración institucional'}`),
+                element('div', 'mt-1 text-xs text-slate-600', `${item.actor_display_name || item.actor_username || 'Usuario central'} · ${formatDateTime(item.created_at)}`),
+                element('div', 'mt-2 text-xs text-slate-500', `Iniciales: ${item.iniciales_jefe || item.iniciales_director || '—'} / ${item.iniciales_ccp || '—'}${item.observacion ? ` · ${item.observacion}` : ''}`)
+            );
+            card.append(values, element('span', 'rounded-full bg-emerald-100 px-3 py-1 text-center text-xs font-bold text-emerald-800', item.id === data.records[0]?.id ? 'Última versión' : 'Histórica'));
+            list.append(card);
+        });
+        if (!(data?.records || []).length) {
+            list.append(element('div', 'rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500', 'No hay configuraciones registradas todavía.'));
         }
     }
 
@@ -620,7 +653,9 @@
                 method: 'PUT', body: JSON.stringify(Object.fromEntries(new FormData(form).entries())),
             });
             status.textContent = response.message;
+            form.reset();
             updateConfigurationPreview();
+            await loadConfiguration(response.message);
             if ($('#panel-audit') && !$('#panel-audit').classList.contains('hidden')) loadAudit();
         } catch (error) {
             status.textContent = error.message;
@@ -649,7 +684,9 @@
         'certificate.generar': 'Constancia generada',
         'certificate.editar': 'Constancia modificada',
         'certificate.anular': 'Constancia anulada',
+        'certificate.imprimir': 'Impresión de constancia habilitada',
         'certificate_configuration.updated': 'Configuración actualizada',
+        'certificate_configuration.registered': 'Configuración registrada',
         'record.create': 'Egreso registrado',
         'record.update': 'Egreso corregido',
         'import.previewed': 'Archivo analizado',

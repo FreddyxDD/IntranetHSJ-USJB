@@ -1,8 +1,10 @@
+@php($canPrint = ($allowPrint ?? false) && $constancia->canBePrinted())
 <!doctype html>
 <html lang="es">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ $document['correlative'] }} - Constancia de Hospitalización</title>
     <style>
         @page { size: A4 portrait; margin: 0; }
@@ -29,6 +31,21 @@
             font-weight: 700;
             padding: 12px 18px;
         }
+        .legal-notice {
+            background: #fff;
+            border: 1px solid #fecaca;
+            border-radius: 9px;
+            color: #991b1b;
+            font-size: 13px;
+            font-weight: 700;
+            left: 18px;
+            max-width: 520px;
+            padding: 11px 14px;
+            position: fixed;
+            top: 18px;
+            z-index: 20;
+        }
+        .print-revoked { display: none; }
         .sheet {
             background: #fff;
             box-shadow: 0 8px 30px #0002;
@@ -179,8 +196,20 @@
         }
         @media print {
             body { background: #fff; }
-            .sheet { box-shadow: none; margin: 0; }
-            .print-actions { display: none; }
+            .print-actions, .legal-notice { display: none; }
+            .sheet { display: none !important; }
+            .print-revoked {
+                color: #991b1b;
+                display: block;
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: 18pt;
+                font-weight: 700;
+                margin: 35mm auto;
+                max-width: 170mm;
+                text-align: center;
+            }
+            body.print-authorized .sheet { box-shadow: none; display: block !important; margin: 0; }
+            body.print-authorized .print-revoked { display: none; }
         }
         @media screen and (max-width: 850px) {
             .sheet {
@@ -192,8 +221,23 @@
     </style>
 </head>
 <body>
-    <div class="print-actions">
-        <button type="button" onclick="window.print()">Imprimir / guardar PDF</button>
+    @if ($canPrint)
+        <div class="print-actions">
+            <button id="authorize-print" type="button" data-url="{{ $printAuthorizationUrl }}">Autorizar e imprimir</button>
+        </div>
+    @else
+        <div class="legal-notice">
+            @if ($constancia->estado === 'anulada')
+                Documento anulado: disponible únicamente para consulta histórica. Su reimpresión está bloqueada.
+            @else
+                Vista de consulta sin autorización de impresión.
+            @endif
+        </div>
+    @endif
+
+    <div class="print-revoked">
+        IMPRESIÓN NO AUTORIZADA<br>
+        Esta constancia se encuentra anulada o fue abierta únicamente en modo consulta.
     </div>
 
     <article class="sheet">
@@ -267,5 +311,39 @@
             </div>
         </section>
     </article>
+    @if ($canPrint)
+        <script>
+            (() => {
+                const button = document.getElementById('authorize-print');
+                window.addEventListener('afterprint', () => document.body.classList.remove('print-authorized'));
+                button?.addEventListener('click', async () => {
+                    button.disabled = true;
+                    button.textContent = 'Validando estado…';
+                    try {
+                        const response = await fetch(button.dataset.url, {
+                            method: 'POST',
+                            headers: {
+                                Accept: 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            },
+                        });
+                        const payload = await response.json().catch(() => ({}));
+                        if (!response.ok) {
+                            const validation = payload.errors ? Object.values(payload.errors).flat()[0] : null;
+                            throw new Error(validation || payload.message || 'La impresión no fue autorizada.');
+                        }
+                        document.body.classList.add('print-authorized');
+                        window.print();
+                    } catch (error) {
+                        document.body.classList.remove('print-authorized');
+                        window.alert(error.message);
+                    } finally {
+                        button.disabled = false;
+                        button.textContent = 'Autorizar e imprimir';
+                    }
+                });
+            })();
+        </script>
+    @endif
 </body>
 </html>

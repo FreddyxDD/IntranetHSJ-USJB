@@ -7,6 +7,13 @@ los principios de Keep a Changelog.
 
 ### Egresos - entrega funcional
 
+- Análisis de solo lectura de financiamiento y condición de alta en SIGH:
+  se definió `Atenciones.idFuenteFinanciamiento` como origen y `CodigoHIS`
+  como código de conciliación legado; la condición queda pendiente del
+  catálogo oficial para evitar correspondencias inventadas.
+- Comparación del `CIE10_2021.csv` contra `catalogos.cie10`: 12,673 códigos
+  coincidentes sin diferencias descriptivas, 350 códigos adicionales en la
+  base central y un código no estándar (`U06AG`) pendiente de validación.
 - Diccionario funcional y técnico de las 14 tablas que participan en Egresos,
   con propósito de cada campo, relaciones físicas y lógicas, procesos que lo
   escriben y pantallas o servicios que lo consumen.

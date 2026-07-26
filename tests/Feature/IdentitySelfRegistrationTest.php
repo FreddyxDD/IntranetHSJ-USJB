@@ -86,13 +86,62 @@ final class IdentitySelfRegistrationTest extends TestCase
         self::assertNull($user->accessAccount->registration_instructions_acknowledged_at);
     }
 
+    public function test_unknown_dni_creates_a_pending_person_and_account_for_admin_approval(): void
+    {
+        $identity = DB::connection('identity');
+        $identity->table('personnel_document_types')->insert(['id' => 1, 'code' => 'DNI']);
+        $identity->table('access_applications')->insert([
+            'id' => 2,
+            'code' => 'intranet_hsj',
+            'is_active' => true,
+        ]);
+        $identity->table('access_roles')->insert([
+            'id' => 14,
+            'application_id' => 2,
+            'code' => 'consulta',
+        ]);
+
+        $lookup = app(SelfRegistrationService::class)->lookupDni('87654321');
+        self::assertFalse($lookup['found']);
+
+        $result = app(SelfRegistrationService::class)->createPendingAccount([
+            'dni' => '87654321',
+            'names' => 'Ana María',
+            'paternal_last_name' => 'Pérez',
+            'maternal_last_name' => 'López',
+            'birth_date' => '1992-11-10',
+            'email' => 'ana.perez@example.com',
+            'phone' => '987654321',
+        ]);
+        $user = $result['user']->fresh(['person', 'accessAccount.roles']);
+
+        self::assertFalse($user->activo);
+        self::assertSame('pending', $user->person->status);
+        self::assertSame('self_registration', $user->person->data_origin);
+        self::assertSame('pending', $user->accessAccount->status);
+        self::assertSame('consulta', $user->accessAccount->roles->sole()->code);
+        self::assertNull($user->accessAccount->approved_at);
+        self::assertTrue(Hash::check('101119924321', $user->password));
+
+        $approved = app(SelfRegistrationService::class)->approvePendingAccount($user, 99);
+
+        self::assertTrue($approved->activo);
+        self::assertSame('active', $approved->person->status);
+        self::assertSame('active', $approved->accessAccount->status);
+        self::assertSame(99, (int) $approved->accessAccount->approved_by);
+        self::assertNotNull($approved->accessAccount->approved_at);
+        self::assertNull($approved->accessAccount->registration_instructions_acknowledged_at);
+    }
+
     public function test_login_page_explains_validation_and_initial_access(): void
     {
         $html = file_get_contents(base_path('views/ueei/index.php'));
 
-        self::assertStringContainsString('Solo podrás crear la cuenta si tu DNI se encuentra activo en HSJ_Identity.', $html);
+        self::assertStringContainsString('Si tu DNI existe en HSJ_Identity, la cuenta se activará automáticamente.', $html);
         self::assertStringContainsString('Perfil inicial:', $html);
         self::assertStringContainsString('Confirmo que leí y guardé mis datos de acceso.', $html);
+        self::assertStringContainsString('Completa tus datos personales', $html);
+        self::assertStringContainsString('Pendiente de aprobación', $html);
     }
 
     private function createIdentitySchema(): void
@@ -112,7 +161,11 @@ final class IdentitySelfRegistrationTest extends TestCase
             $table->string('maternal_last_name')->nullable();
             $table->date('birth_date')->nullable();
             $table->string('email')->nullable();
+            $table->string('phone')->nullable();
             $table->string('status');
+            $table->string('data_origin')->nullable();
+            $table->dateTime('last_synced_at')->nullable();
+            $table->timestamps();
         });
         $schema->create('personnel_records', function (Blueprint $table): void {
             $table->id();
@@ -161,6 +214,8 @@ final class IdentitySelfRegistrationTest extends TestCase
             $table->boolean('must_change_password');
             $table->dateTime('last_login_at')->nullable();
             $table->dateTime('registration_instructions_acknowledged_at')->nullable();
+            $table->dateTime('approved_at')->nullable();
+            $table->unsignedBigInteger('approved_by')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
         });

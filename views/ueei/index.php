@@ -162,7 +162,7 @@
                     <div class="registration-panel" id="registrationPanel" hidden>
                         <div class="registration-notice">
                             <strong>Registro con identidad institucional</strong>
-                            <span>Solo podrás crear la cuenta si tu DNI se encuentra activo en HSJ_Identity.</span>
+                            <span>Si tu DNI existe en HSJ_Identity, la cuenta se activará automáticamente. Si aún no existe, podrás enviar tus datos para aprobación.</span>
                         </div>
 
                         <label class="field" for="registrationDni">
@@ -189,6 +189,45 @@
                                 <strong>Identidad validada</strong>
                                 <span id="validatedPersonName"></span>
                             </div>
+                        </div>
+
+                        <div class="manual-identity-form" id="manualIdentityForm" hidden>
+                            <div class="manual-identity-form__header">
+                                <strong>Completa tus datos personales</strong>
+                                <span>La información será revisada por un administrador antes de habilitar la cuenta.</span>
+                            </div>
+
+                            <label class="field" for="registrationNames">
+                                <span class="field__label">Nombres</span>
+                                <input class="field__input" id="registrationNames" name="names" type="text" maxlength="180" autocomplete="given-name">
+                            </label>
+
+                            <div class="registration-fields-grid">
+                                <label class="field" for="registrationPaternalName">
+                                    <span class="field__label">Apellido paterno</span>
+                                    <input class="field__input" id="registrationPaternalName" name="paternal_last_name" type="text" maxlength="80" autocomplete="family-name">
+                                </label>
+
+                                <label class="field" for="registrationMaternalName">
+                                    <span class="field__label">Apellido materno</span>
+                                    <input class="field__input" id="registrationMaternalName" name="maternal_last_name" type="text" maxlength="80">
+                                </label>
+                            </div>
+
+                            <label class="field" for="registrationBirthDate">
+                                <span class="field__label">Fecha de nacimiento</span>
+                                <input class="field__input" id="registrationBirthDate" name="birth_date" type="date" autocomplete="bday">
+                            </label>
+
+                            <label class="field" for="registrationEmail">
+                                <span class="field__label">Correo electrónico</span>
+                                <input class="field__input" id="registrationEmail" name="email" type="email" maxlength="255" autocomplete="email">
+                            </label>
+
+                            <label class="field" for="registrationPhone">
+                                <span class="field__label">Teléfono</span>
+                                <input class="field__input" id="registrationPhone" name="phone" type="tel" maxlength="30" autocomplete="tel" placeholder="Ej. 987654321">
+                            </label>
                         </div>
 
                         <div class="credential-rule">
@@ -261,6 +300,42 @@
                 Entendido, ingresar al portal
             </button>
             <div class="message" id="activationMessage" role="alert" aria-live="polite"></div>
+        </div>
+    </dialog>
+
+    <dialog class="activation-dialog" id="pendingDialog" aria-labelledby="pendingTitle">
+        <div class="activation-dialog__content">
+            <div class="activation-dialog__badge activation-dialog__badge--pending">Solicitud registrada</div>
+            <h2 id="pendingTitle">Pendiente de aprobación</h2>
+            <p>La cuenta fue creada, pero todavía no tiene acceso a las áreas del Intranet.</p>
+
+            <dl class="activation-credentials">
+                <div>
+                    <dt>Usuario asignado</dt>
+                    <dd id="pendingUsername"></dd>
+                </div>
+                <div>
+                    <dt>Contraseña inicial</dt>
+                    <dd id="pendingPassword"></dd>
+                </div>
+                <div>
+                    <dt>Estado</dt>
+                    <dd>Pendiente</dd>
+                </div>
+            </dl>
+
+            <div class="activation-dialog__warning">
+                Un administrador revisará tus datos. Podrás iniciar sesión con estas credenciales después de que la solicitud sea aprobada.
+            </div>
+
+            <label class="activation-confirmation">
+                <input type="checkbox" id="pendingAcknowledgement" />
+                <span>Confirmo que guardé mis datos de acceso y comprendí que debo esperar la aprobación.</span>
+            </label>
+
+            <button class="btn" type="button" id="closePendingBtn" disabled>
+                Entendido, volver al inicio
+            </button>
         </div>
     </dialog>
 

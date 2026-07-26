@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
@@ -25,23 +26,27 @@ final class User extends Authenticatable
         return $this->hasOne(AccessAccount::class, 'user_id');
     }
 
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class, 'person_id');
+    }
+
     public function hasRole(string $code, ?string $application = null): bool
     {
         $application ??= (string) config('access.application');
-        return $this->accessAccount?->roles->contains(fn (AccessRole $role): bool =>
-            $role->code === $code && $role->application?->code === $application && $role->application?->is_active
+
+        return $this->accessAccount?->roles->contains(fn (AccessRole $role): bool => $role->code === $code && $role->application?->code === $application && $role->application?->is_active
         ) ?? false;
     }
 
     public function hasPermission(string $code, ?string $application = null): bool
     {
         $application ??= (string) config('access.application');
+
         return $this->accessAccount?->roles
-            ->contains(fn (AccessRole $role): bool =>
-                $role->application?->code === $application
+            ->contains(fn (AccessRole $role): bool => $role->application?->code === $application
                 && $role->application?->is_active
-                && $role->permissions->contains(fn (AccessPermission $permission): bool =>
-                    $permission->code === $code && $permission->application?->code === $application
+                && $role->permissions->contains(fn (AccessPermission $permission): bool => $permission->code === $code && $permission->application?->code === $application
                 )
             ) ?? false;
     }

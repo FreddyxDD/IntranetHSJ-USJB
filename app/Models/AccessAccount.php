@@ -20,6 +20,7 @@ final class AccessAccount extends Model
             'must_change_password' => 'boolean',
             'last_login_at' => 'datetime',
             'registration_instructions_acknowledged_at' => 'datetime',
+            'approved_at' => 'datetime',
         ];
     }
 

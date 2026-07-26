@@ -58,6 +58,29 @@ La validación y la creación tienen límites por dirección IP, la validación
 vence en diez minutos y el nombre retornado antes del alta se muestra
 enmascarado.
 
+### DNI todavía no registrado
+
+Si el DNI no existe en `people`, el autoservicio permite enviar una solicitud
+con todos los datos básicos obligatorios: nombres, apellidos paterno y materno,
+fecha de nacimiento, correo y teléfono. En una sola transacción se crean:
+
+- la persona con `status = pending` y `data_origin = self_registration`;
+- el usuario compatible con `activo = false`;
+- la cuenta central con `status = pending`;
+- la asignación inicial del rol `consulta`, todavía sin acceso efectivo.
+
+La solicitud no inicia sesión ni permite ingresar a las áreas. El usuario
+recibe su identificador y contraseña inicial, pero debe esperar la revisión.
+Cuando intenta iniciar sesión con credenciales correctas, el sistema informa
+que la aprobación continúa pendiente.
+
+El panel administrativo distingue estas solicitudes de las cuentas inactivas,
+muestra nombre, DNI, correo y teléfono y ofrece la acción **Revisar y
+aprobar**. La aprobación activa conjuntamente `people`, `users` y
+`access_accounts`, y registra `approved_at` y `approved_by`. En el primer
+ingreso posterior, el usuario todavía debe confirmar que leyó las instrucciones
+de su cuenta antes de navegar.
+
 ## Flujo de acceso
 
 ```mermaid

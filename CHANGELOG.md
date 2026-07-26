@@ -7,6 +7,14 @@ los principios de Keep a Changelog.
 
 ### Identidad - registro institucional por DNI
 
+- Se agregó el registro alternativo para DNI aún inexistentes en `people`,
+  solicitando nombres, ambos apellidos, fecha de nacimiento, correo y teléfono.
+- Las nuevas personas y cuentas quedan en estado `pending`, sin sesión ni
+  acceso a las áreas hasta recibir aprobación administrativa.
+- El panel de administración identifica las solicitudes pendientes, muestra
+  los datos necesarios para revisarlas y permite aprobarlas.
+- La aprobación activa persona, usuario y cuenta en una transacción, guardando
+  fecha e identificador del administrador responsable.
 - Registro en dos pasos validando primero el DNI activo contra
   `HSJ_Identity`.
 - Cuenta central vinculada con `people` y el legajo activo disponible, DNI

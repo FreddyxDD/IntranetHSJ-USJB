@@ -53,8 +53,35 @@ final class UeeiAuthController
         }
 
         try {
-            $result = app(SelfRegistrationService::class)->createAccount($dni);
+            $manualRegistration = ($validation['mode'] ?? 'existing') === 'manual';
+            $result = $manualRegistration
+                ? app(SelfRegistrationService::class)->createPendingAccount($input)
+                : app(SelfRegistrationService::class)->createAccount($dni);
             unset($_SESSION['self_registration_validation']);
+
+            if ($manualRegistration) {
+                logger()->info('Solicitud de cuenta institucional creada por autoservicio.', [
+                    'user_id' => $result['user']->id,
+                    'person_id' => $result['user']->person_id,
+                    'registration_source' => SelfRegistrationService::REGISTRATION_SOURCE,
+                    'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+                ]);
+
+                json_response([
+                    'success' => true,
+                    'ok' => true,
+                    'pending_approval' => true,
+                    'message' => 'Tu solicitud fue registrada y está pendiente de aprobación por un administrador.',
+                    'account_instructions' => [
+                        'username' => $result['username'],
+                        'initial_password' => $result['initial_password'],
+                        'password_rule' => 'Fecha de nacimiento en formato DDMMAAAA + últimos 4 dígitos del DNI',
+                        'access_level' => 'Pendiente de aprobación',
+                        'access_request_message' => 'Podrás iniciar sesión cuando el administrador apruebe y active tu cuenta.',
+                    ],
+                ], 201);
+            }
+
             session_regenerate_id(true);
             $user = self::userQuery()->findOrFail($result['user']->id);
             self::establecerSesion($user);
@@ -104,20 +131,25 @@ final class UeeiAuthController
         $dni = (string) (get_json_input()['dni'] ?? '');
 
         try {
-            $identity = app(SelfRegistrationService::class)->validateDni($dni);
+            $identity = app(SelfRegistrationService::class)->lookupDni($dni);
             $_SESSION['self_registration_validation'] = [
                 'dni' => $identity['dni'],
-                'person_id' => $identity['person_id'],
+                'person_id' => $identity['person_id'] ?? null,
+                'mode' => $identity['found'] ? 'existing' : 'manual',
                 'expires_at' => time() + 600,
             ];
 
             json_response([
                 'success' => true,
                 'ok' => true,
-                'message' => 'DNI validado con la identidad institucional.',
+                'message' => $identity['found']
+                    ? 'DNI validado con la identidad institucional.'
+                    : 'El DNI no existe en HSJ_Identity. Completa tus datos para enviar una solicitud de registro.',
                 'data' => [
                     'dni' => $identity['dni'],
-                    'masked_name' => $identity['masked_name'],
+                    'found' => $identity['found'],
+                    'registration_mode' => $identity['found'] ? 'existing' : 'manual',
+                    'masked_name' => $identity['masked_name'] ?? null,
                     'expires_in_minutes' => 10,
                 ],
             ]);
@@ -192,11 +224,19 @@ final class UeeiAuthController
             })
             ->first();
 
-        if (! $user || ! $user->activo || ! Hash::check($password, (string) $user->password)) {
+        if (! $user || ! Hash::check($password, (string) $user->password)) {
             self::genericAuthError();
         }
 
-        if ($user->accessAccount && $user->accessAccount->status !== 'active') {
+        if ($user->accessAccount?->status === 'pending') {
+            json_response([
+                'success' => false,
+                'ok' => false,
+                'message' => 'Tu solicitud todavía está pendiente de aprobación por un administrador.',
+            ], 403);
+        }
+
+        if (! $user->activo || ($user->accessAccount && $user->accessAccount->status !== 'active')) {
             self::genericAuthError();
         }
 

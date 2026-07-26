@@ -885,6 +885,12 @@ small {
     color: #b91c1c;
 }
 
+.badge.pending {
+    color: #92400e;
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
+}
+
 .modules-tags {
     display: flex;
     flex-wrap: wrap;

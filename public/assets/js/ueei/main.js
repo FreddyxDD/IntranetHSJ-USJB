@@ -22,15 +22,30 @@ document.addEventListener("DOMContentLoaded", () => {
     const validateDniBtn = byId("validateDniBtn");
     const identityResult = byId("identityResult");
     const validatedPersonName = byId("validatedPersonName");
+    const manualIdentityForm = byId("manualIdentityForm");
+    const manualFields = [
+        byId("registrationNames"),
+        byId("registrationPaternalName"),
+        byId("registrationMaternalName"),
+        byId("registrationBirthDate"),
+        byId("registrationEmail"),
+        byId("registrationPhone"),
+    ];
     const activationDialog = byId("activationDialog");
     const activationUsername = byId("activationUsername");
     const activationPassword = byId("activationPassword");
     const activationAcknowledgement = byId("activationAcknowledgement");
     const confirmActivationBtn = byId("confirmActivationBtn");
     const activationMessage = byId("activationMessage");
+    const pendingDialog = byId("pendingDialog");
+    const pendingUsername = byId("pendingUsername");
+    const pendingPassword = byId("pendingPassword");
+    const pendingAcknowledgement = byId("pendingAcknowledgement");
+    const closePendingBtn = byId("closePendingBtn");
 
     let registrationMode = false;
     let registrationValidated = false;
+    let manualRegistration = false;
     let sending = false;
 
     function showMessage(text, type = "error") {
@@ -49,13 +64,18 @@ document.addEventListener("DOMContentLoaded", () => {
         switchModeBtn.disabled = loading;
         validateDniBtn.disabled = loading;
         submitBtn.textContent = loading
-            ? registrationMode ? "Creando cuenta..." : "Ingresando..."
-            : registrationMode ? "Crear y activar mi cuenta" : "Ingresar";
+            ? registrationMode
+                ? (manualRegistration ? "Enviando solicitud..." : "Creando cuenta...")
+                : "Ingresando..."
+            : registrationMode
+                ? (manualRegistration ? "Enviar solicitud para aprobación" : "Crear y activar mi cuenta")
+                : "Ingresar";
     }
 
     function activateRegistrationMode() {
         registrationMode = true;
         registrationValidated = false;
+        manualRegistration = false;
         formTitle.textContent = "Crear cuenta";
         formSubtitle.textContent = "Valida tu DNI con la identidad institucional.";
         switchModeBtn.textContent = "¿Ya tienes cuenta? Inicia sesión";
@@ -67,6 +87,11 @@ document.addEventListener("DOMContentLoaded", () => {
         passwordInput.required = false;
         registrationDni.required = true;
         identityResult.hidden = true;
+        manualIdentityForm.hidden = true;
+        manualFields.forEach((field) => {
+            field.required = false;
+            field.value = "";
+        });
         validatedPersonName.textContent = "";
         submitBtn.disabled = true;
         submitBtn.textContent = "Crear y activar mi cuenta";
@@ -77,6 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function activateLoginMode() {
         registrationMode = false;
         registrationValidated = false;
+        manualRegistration = false;
         formTitle.textContent = "Iniciar sesión";
         formSubtitle.textContent = "Ingresa con tu DNI, correo o usuario.";
         switchModeBtn.textContent = "¿No tienes cuenta? Créate una";
@@ -89,6 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
         registrationDni.required = false;
         registrationDni.value = "";
         identityResult.hidden = true;
+        manualIdentityForm.hidden = true;
         submitBtn.disabled = false;
         submitBtn.textContent = "Ingresar";
         clearMessage();
@@ -144,6 +171,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function showPendingRequest(data) {
+        const instructions = data.account_instructions || {};
+        pendingUsername.textContent = instructions.username || registrationDni.value;
+        pendingPassword.textContent = instructions.initial_password || "La contraseña generada";
+        pendingAcknowledgement.checked = false;
+        closePendingBtn.disabled = true;
+
+        if (!pendingDialog.open) {
+            pendingDialog.showModal();
+        }
+    }
+
     async function verifySession() {
         try {
             const data = await requestJSON(apiUrl("/me-ueei"), { method: "GET" });
@@ -170,7 +209,13 @@ document.addEventListener("DOMContentLoaded", () => {
     registrationDni.addEventListener("input", () => {
         registrationDni.value = registrationDni.value.replace(/\D/g, "").slice(0, 8);
         registrationValidated = false;
+        manualRegistration = false;
         identityResult.hidden = true;
+        manualIdentityForm.hidden = true;
+        manualFields.forEach((field) => {
+            field.required = false;
+            field.value = "";
+        });
         submitBtn.disabled = true;
         clearMessage();
     });
@@ -191,9 +236,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ dni }),
             });
             registrationValidated = true;
-            validatedPersonName.textContent = data.data?.masked_name || "Personal institucional";
-            identityResult.hidden = false;
-            showMessage("Identidad validada. Ya puedes crear y activar tu cuenta.", "success");
+            manualRegistration = data.data?.registration_mode === "manual";
+            manualIdentityForm.hidden = !manualRegistration;
+            manualFields.forEach((field) => {
+                field.required = manualRegistration;
+            });
+
+            if (manualRegistration) {
+                identityResult.hidden = true;
+                showMessage("DNI disponible. Completa todos tus datos para enviar la solicitud al administrador.", "success");
+                manualFields[0].focus();
+            } else {
+                validatedPersonName.textContent = data.data?.masked_name || "Personal institucional";
+                identityResult.hidden = false;
+                showMessage("Identidad validada. Ya puedes crear y activar tu cuenta.", "success");
+            }
         } catch (error) {
             registrationValidated = false;
             identityResult.hidden = true;
@@ -220,8 +277,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const data = await requestJSON(apiUrl("/crear-cuenta-ueei"), {
                     method: "POST",
-                    body: JSON.stringify({ dni: registrationDni.value.trim() }),
+                    body: JSON.stringify({
+                        dni: registrationDni.value.trim(),
+                        names: byId("registrationNames").value.trim(),
+                        paternal_last_name: byId("registrationPaternalName").value.trim(),
+                        maternal_last_name: byId("registrationMaternalName").value.trim(),
+                        birth_date: byId("registrationBirthDate").value,
+                        email: byId("registrationEmail").value.trim(),
+                        phone: byId("registrationPhone").value.trim(),
+                    }),
                 });
+
+                if (data.pending_approval) {
+                    showPendingRequest(data);
+                    return;
+                }
+
                 showActivation(data);
                 return;
             }
@@ -253,6 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     activationDialog.addEventListener("cancel", (event) => event.preventDefault());
+    pendingDialog.addEventListener("cancel", (event) => event.preventDefault());
 
     activationAcknowledgement.addEventListener("change", () => {
         confirmActivationBtn.disabled = !activationAcknowledgement.checked;
@@ -277,6 +349,19 @@ document.addEventListener("DOMContentLoaded", () => {
         } finally {
             confirmActivationBtn.textContent = "Entendido, ingresar al portal";
         }
+    });
+
+    pendingAcknowledgement.addEventListener("change", () => {
+        closePendingBtn.disabled = !pendingAcknowledgement.checked;
+    });
+
+    closePendingBtn.addEventListener("click", () => {
+        if (!pendingAcknowledgement.checked) return;
+        pendingDialog.close();
+        activateLoginMode();
+        identifierInput.value = pendingUsername.textContent;
+        passwordInput.value = "";
+        showMessage("Solicitud pendiente. Podrás iniciar sesión cuando un administrador la apruebe.", "success");
     });
 
     verifySession();

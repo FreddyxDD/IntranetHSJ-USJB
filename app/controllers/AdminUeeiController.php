@@ -4,6 +4,7 @@ declare(strict_types=1);
 use App\Models\AccessAccount;
 use App\Models\AccessRole;
 use App\Models\User;
+use App\Services\Identity\SelfRegistrationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -40,6 +41,7 @@ final class AdminUeeiController
             'totalUsuarios' => User::query()->count(),
             'usuariosActivos' => User::query()->where('activo', true)->count(),
             'usuariosInactivos' => User::query()->where('activo', false)->count(),
+            'solicitudesPendientes' => AccessAccount::query()->where('status', 'pending')->count(),
             'totalAreas' => self::rolesQuery()->count(),
             'totalModulos' => count(intranet_module_catalog()),
         ]]);
@@ -75,7 +77,7 @@ final class AdminUeeiController
         self::requireAdmin();
 
         $users = User::query()
-            ->with(['accessAccount.roles.application', 'accessAccount.roles.permissions.application'])
+            ->with(['person', 'accessAccount.roles.application', 'accessAccount.roles.permissions.application'])
             ->latest('id')
             ->get()
             ->map(fn (User $user): array => self::serializeUser($user))
@@ -142,7 +144,7 @@ final class AdminUeeiController
             json_response(['ok' => false, 'message' => 'Ya existe otra cuenta con ese correo.'], 409);
         }
 
-        $user = User::query()->with('accessAccount')->find($id);
+        $user = User::query()->with(['person', 'accessAccount'])->find($id);
         if (! $user) {
             json_response(['ok' => false, 'message' => 'Usuario no encontrado.'], 404);
         }
@@ -202,12 +204,33 @@ final class AdminUeeiController
             json_response(['ok' => false, 'message' => 'Usuario no encontrado.'], 404);
         }
 
-        DB::connection('identity')->transaction(function () use ($user, $state): void {
-            $user->forceFill(['activo' => (bool) $state])->save();
-            $user->accessAccount?->forceFill(['status' => $state ? 'active' : 'inactive'])->save();
-        });
+        $approvingRequest = $state === 1 && $user->accessAccount?->status === 'pending';
 
-        json_response(['ok' => true, 'message' => $state ? 'Usuario activado correctamente.' : 'Usuario desactivado correctamente.']);
+        if ($approvingRequest) {
+            app(SelfRegistrationService::class)->approvePendingAccount(
+                $user,
+                (int) ($_SESSION['ueei_id'] ?? 0)
+            );
+        } else {
+            DB::connection('identity')->transaction(function () use ($user, $state): void {
+                $user->forceFill(['activo' => (bool) $state])->save();
+                $user->accessAccount?->forceFill(['status' => $state ? 'active' : 'inactive'])->save();
+            });
+        }
+
+        logger()->info($approvingRequest ? 'Solicitud de cuenta aprobada.' : 'Estado de cuenta actualizado.', [
+            'user_id' => $user->id,
+            'person_id' => $user->person_id,
+            'approved_by' => (int) ($_SESSION['ueei_id'] ?? 0) ?: null,
+            'status' => $state ? 'active' : 'inactive',
+        ]);
+
+        json_response([
+            'ok' => true,
+            'message' => $approvingRequest
+                ? 'Solicitud aprobada. La persona ya puede iniciar sesión con acceso de consulta.'
+                : ($state ? 'Usuario activado correctamente.' : 'Usuario desactivado correctamente.'),
+        ]);
     }
 
     public static function cambiarPassword(int $id): void
@@ -253,10 +276,18 @@ final class AdminUeeiController
         return [
             'id' => (int) $user->id,
             'correo' => $user->email,
+            'nombre' => $user->name,
+            'dni' => $user->registration_document_number,
+            'telefono' => $user->person?->phone,
+            'fecha_nacimiento' => $user->person?->birth_date?->format('Y-m-d'),
             'rol' => self::legacyRole($primaryRole?->code ?? $user->rol),
             'area_id' => $primaryRole?->id ? (int) $primaryRole->id : null,
             'area_nombre' => $primaryRole?->name,
             'estado' => $user->activo ? 1 : 0,
+            'estado_cuenta' => $user->accessAccount?->status ?? ($user->activo ? 'active' : 'inactive'),
+            'solicitud_pendiente' => $user->accessAccount?->status === 'pending',
+            'fecha_aprobacion' => $user->accessAccount?->approved_at?->format('Y-m-d H:i:s'),
+            'aprobado_por' => $user->accessAccount?->approved_by,
             'session_version' => 1,
             'fecha_creacion' => optional($user->created_at)->format('Y-m-d H:i:s'),
             'fecha_actualizacion' => optional($user->updated_at)->format('Y-m-d H:i:s'),

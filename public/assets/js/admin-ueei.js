@@ -36,6 +36,7 @@
 
         totalUsuarios: $("#totalUsuarios"),
         usuariosActivos: $("#usuariosActivos"),
+        solicitudesPendientes: $("#solicitudesPendientes"),
         totalAreas: $("#totalAreas"),
         totalModulos: $("#totalModulos"),
 
@@ -330,6 +331,10 @@
             elementos.usuariosActivos.textContent = resumen.usuariosActivos ?? 0;
         }
 
+        if (elementos.solicitudesPendientes) {
+            elementos.solicitudesPendientes.textContent = resumen.solicitudesPendientes ?? 0;
+        }
+
         if (elementos.totalAreas) {
             elementos.totalAreas.textContent = resumen.totalAreas ?? 0;
         }
@@ -491,17 +496,22 @@
                 `
                 : `<span class="text-muted">Sin módulos</span>`;
 
-            const estadoTexto = Number(usuario.estado) === 1 ? "Activo" : "Inactivo";
-            const estadoClase = Number(usuario.estado) === 1 ? "active" : "inactive";
+            const pendiente = Boolean(usuario.solicitud_pendiente);
+            const estadoTexto = pendiente ? "Pendiente de aprobación" : (Number(usuario.estado) === 1 ? "Activo" : "Inactivo");
+            const estadoClase = pendiente ? "pending" : (Number(usuario.estado) === 1 ? "active" : "inactive");
 
-            const estadoBotonTexto = Number(usuario.estado) === 1 ? "Desactivar" : "Activar";
-            const estadoBotonClase = Number(usuario.estado) === 1 ? "btn-danger" : "btn-warning";
+            const estadoBotonTexto = pendiente ? "Revisar y aprobar" : (Number(usuario.estado) === 1 ? "Desactivar" : "Activar");
+            const estadoBotonClase = pendiente ? "btn-warning" : (Number(usuario.estado) === 1 ? "btn-danger" : "btn-warning");
 
             return `
                 <tr data-id="${Number(usuario.id)}">
                     <td>
                         <div class="user-cell">
-                            <strong>${escapeHtml(usuario.correo)}</strong>
+                            <strong>${escapeHtml(usuario.nombre || usuario.correo)}</strong>
+                            <span>DNI: ${escapeHtml(usuario.dni || "No informado")}</span>
+                            <span>${escapeHtml(usuario.correo)}</span>
+                            ${usuario.telefono ? `<span>Teléfono: ${escapeHtml(usuario.telefono)}</span>` : ""}
+                            ${usuario.fecha_nacimiento ? `<span>Fecha de nacimiento: ${escapeHtml(usuario.fecha_nacimiento)}</span>` : ""}
                             <span>Creado: ${escapeHtml(formatoFecha(usuario.fecha_creacion))}</span>
                         </div>
                     </td>
@@ -528,21 +538,21 @@
 
                     <td>
                         <div class="action-buttons">
-                            <button
+                            ${pendiente ? "" : `<button
                                 type="button"
                                 class="btn-mini btn-editar"
                                 data-id="${Number(usuario.id)}"
                             >
                                 Editar
-                            </button>
+                            </button>`}
 
-                            <button
+                            ${pendiente ? "" : `<button
                                 type="button"
                                 class="btn-mini btn-password"
                                 data-id="${Number(usuario.id)}"
                             >
                                 Contraseña
-                            </button>
+                            </button>`}
 
                             <button
                                 type="button"
@@ -597,6 +607,11 @@
         state.usuariosFiltrados = state.usuarios.filter((usuario) => {
             const texto = [
                 usuario.correo,
+                usuario.nombre,
+                usuario.dni,
+                usuario.telefono,
+                usuario.fecha_nacimiento,
+                usuario.estado_cuenta,
                 usuario.rol,
                 usuario.area_nombre,
                 ...(usuario.modulo_nombres || [])
@@ -777,9 +792,14 @@
     }
 
     async function cambiarEstadoUsuario(id, estado) {
-        const accion = Number(estado) === 1 ? "activar" : "desactivar";
+        const usuario = state.usuarios.find((item) => Number(item.id) === Number(id));
+        const pendiente = Boolean(usuario?.solicitud_pendiente);
+        const accion = pendiente ? "aprobar esta solicitud" : (Number(estado) === 1 ? "activar" : "desactivar");
+        const detalle = pendiente
+            ? `\n\n${usuario.nombre || ""}\nDNI: ${usuario.dni || ""}\nCorreo: ${usuario.correo || ""}\n\nAl aprobar se activará la persona y recibirá acceso de consulta.`
+            : "";
 
-        const confirmar = window.confirm(`¿Seguro que deseas ${accion} este usuario?`);
+        const confirmar = window.confirm(`¿Seguro que deseas ${accion}?${detalle}`);
 
         if (!confirmar) return;
 

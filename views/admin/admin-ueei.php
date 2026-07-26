@@ -168,6 +168,29 @@ $adminRol = $_SESSION['ueei_rol'] ?? 'admin';
                 </div>
             </article>
 
+            <!-- SOLICITUDES PENDIENTES -->
+            <article class="flex min-h-[120px] items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-7 py-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+                <div>
+                    <span class="block text-[13px] font-black uppercase tracking-wider text-amber-700">
+                        Solicitudes pendientes
+                    </span>
+
+                    <strong
+                        id="solicitudesPendientes"
+                        class="mt-3 block text-4xl font-black leading-none text-amber-900"
+                    >
+                        0
+                    </strong>
+                </div>
+
+                <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-amber-600">
+                    <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 7v5l3 2"/>
+                    </svg>
+                </div>
+            </article>
+
             <!-- ÁREAS -->
             <article class="flex min-h-[120px] items-center justify-between rounded-2xl border border-slate-200 bg-white px-7 py-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
                 <div>

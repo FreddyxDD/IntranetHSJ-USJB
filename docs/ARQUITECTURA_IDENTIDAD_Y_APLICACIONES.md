@@ -85,15 +85,22 @@ de su cuenta antes de navegar.
 
 Una persona importada puede existir en `people` con estado `inactive` porque su
 legajo de origen fue deshabilitado, aunque nunca haya tenido usuario ni cuenta.
-Este caso no se bloquea ni genera una persona duplicada. El formulario solicita
-nuevamente los datos básicos y crea una solicitud de reactivación reutilizando
-el mismo `people.id`.
+Este estado representa la ausencia de un vínculo laboral vigente y el Intranet
+no tiene autoridad para reactivarlo.
 
-Al enviar la solicitud se actualizan los datos declarados, la persona cambia a
-`pending` y se crean `users` y `access_accounts` también pendientes. Si ya
-existe una cuenta o solicitud para esa persona, el registro continúa bloqueado
-para evitar duplicidades. La activación final sigue dependiendo del
-administrador.
+El formulario permite aportar datos de contacto y el motivo, pero únicamente
+crea un registro `personnel_review_requests` dirigido a la aplicación
+`legajos_hsj`. No modifica `people`, no crea `users`, no crea
+`access_accounts` y no asigna permisos.
+
+La solicitud conserva una fotografía de la identidad y del último legajo para
+que el administrador de Legajos evalúe el caso. Solo Legajos puede registrar un
+nuevo vínculo y reactivar la persona. Después de esa resolución, el interesado
+debe validar nuevamente su DNI para acceder al flujo normal del Intranet.
+
+Una solicitud pendiente adicional para la misma persona y aplicación se
+rechaza para evitar duplicidades. También continúa bloqueado cualquier intento
+si ya existe una cuenta asociada.
 
 ## Flujo de acceso
 

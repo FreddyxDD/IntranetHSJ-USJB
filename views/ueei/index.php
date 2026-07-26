@@ -162,7 +162,7 @@
                     <div class="registration-panel" id="registrationPanel" hidden>
                         <div class="registration-notice">
                             <strong>Registro con identidad institucional</strong>
-                            <span>Si tu DNI existe en HSJ_Identity, la cuenta se activará automáticamente. Si aún no existe, podrás enviar tus datos para aprobación.</span>
+                            <span>Si tu DNI existe y tiene vínculo activo, la cuenta se activará automáticamente. Si no existe o está inactivo, el sistema aplicará el flujo de evaluación correspondiente.</span>
                         </div>
 
                         <label class="field" for="registrationDni">
@@ -228,9 +228,14 @@
                                 <span class="field__label">Teléfono</span>
                                 <input class="field__input" id="registrationPhone" name="phone" type="tel" maxlength="30" autocomplete="tel" placeholder="Ej. 987654321">
                             </label>
+
+                            <label class="field" id="registrationReasonField" for="registrationReason" hidden>
+                                <span class="field__label">Motivo de la solicitud a Legajos</span>
+                                <textarea class="field__input field__input--textarea" id="registrationReason" name="request_reason" maxlength="1000" placeholder="Indica por qué solicitas que Legajos evalúe nuevamente tu vínculo laboral."></textarea>
+                            </label>
                         </div>
 
-                        <div class="credential-rule">
+                        <div class="credential-rule" id="credentialRule">
                             <strong>Tu acceso se generará automáticamente</strong>
                             <span><b>Usuario:</b> tu número de DNI.</span>
                             <span><b>Contraseña inicial:</b> fecha de nacimiento (DDMMAAAA) + últimos 4 dígitos del DNI.</span>
@@ -334,6 +339,37 @@
             </label>
 
             <button class="btn" type="button" id="closePendingBtn" disabled>
+                Entendido, volver al inicio
+            </button>
+        </div>
+    </dialog>
+
+    <dialog class="activation-dialog" id="personnelReviewDialog" aria-labelledby="personnelReviewTitle">
+        <div class="activation-dialog__content">
+            <div class="activation-dialog__badge activation-dialog__badge--pending">Enviado a Legajos</div>
+            <h2 id="personnelReviewTitle">Solicitud de evaluación registrada</h2>
+            <p>El Intranet no creó ni reactivó una cuenta porque actualmente no existe un vínculo laboral activo.</p>
+
+            <dl class="activation-credentials">
+                <div>
+                    <dt>Número de solicitud</dt>
+                    <dd id="personnelReviewNumber"></dd>
+                </div>
+                <div>
+                    <dt>Área responsable</dt>
+                    <dd>Legajos</dd>
+                </div>
+                <div>
+                    <dt>Estado</dt>
+                    <dd>Pendiente</dd>
+                </div>
+            </dl>
+
+            <div class="activation-dialog__warning">
+                El administrador de Legajos evaluará el vínculo laboral. Solo si registra un vínculo vigente y reactiva la identidad podrás volver a solicitar una cuenta del Intranet.
+            </div>
+
+            <button class="btn" type="button" id="closePersonnelReviewBtn">
                 Entendido, volver al inicio
             </button>
         </div>

@@ -420,6 +420,15 @@ body::after{
     transform: translateY(-1px);
 }
 
+.field__input--textarea{
+    min-height: 96px;
+    height: auto;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    resize: vertical;
+    line-height: 1.45;
+}
+
 /* PASSWORD */
 .password{
     position: relative;
@@ -1523,6 +1532,15 @@ body::after{
 }
 
 /* Ícono correo al lado derecho del primer input */
+.field__input.field__input--textarea{
+    min-height: 96px;
+    height: auto;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    resize: vertical;
+    line-height: 1.45;
+}
+
 input[type="email"].field__input,
 input[name*="email"].field__input,
 input[name*="correo"].field__input,

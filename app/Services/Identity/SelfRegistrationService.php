@@ -43,7 +43,7 @@ final class SelfRegistrationService
         if ($person->status !== 'active') {
             return [
                 'found' => true,
-                'registration_mode' => 'manual_existing',
+                'registration_mode' => 'personnel_review',
                 'dni' => $dni,
                 'person_id' => (int) $person->id,
                 'display_name' => $this->displayName($person),
@@ -159,8 +159,8 @@ final class SelfRegistrationService
 
         return DB::connection('identity')->transaction(function () use ($data): array {
             $lookup = $this->lookupDni($data['dni']);
-            if ($lookup['registration_mode'] === 'existing') {
-                throw new DomainException('El DNI fue incorporado a la identidad institucional durante el registro. Vuelve a validarlo.');
+            if ($lookup['registration_mode'] !== 'manual_new') {
+                throw new DomainException('El DNI ya tiene una identidad institucional. Vuelve a validarlo para continuar con el flujo correspondiente.');
             }
 
             if (
@@ -171,7 +171,7 @@ final class SelfRegistrationService
             }
 
             $role = $this->queryRole();
-            $personValues = [
+            $personId = (int) DB::connection('identity')->table('people')->insertGetId([
                 'document_type_id' => $this->dniDocumentTypeId(),
                 'document_number' => $data['dni'],
                 'paternal_last_name' => $data['paternal_last_name'],
@@ -185,17 +185,7 @@ final class SelfRegistrationService
                 'last_synced_at' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ];
-            $personId = isset($lookup['person_id'])
-                ? (int) $lookup['person_id']
-                : (int) DB::connection('identity')->table('people')->insertGetId($personValues);
-
-            if (isset($lookup['person_id'])) {
-                unset($personValues['created_at']);
-                DB::connection('identity')->table('people')
-                    ->where('id', $personId)
-                    ->update($personValues);
-            }
+            ]);
             $displayName = trim($data['names'].' '.$data['paternal_last_name'].' '.$data['maternal_last_name']);
             $password = self::initialPassword($data['birth_date'], $data['dni']);
             $hash = Hash::make($password);
@@ -238,6 +228,85 @@ final class SelfRegistrationService
                 'username' => $data['dni'],
                 'initial_password' => $password,
                 'display_name' => $displayName,
+            ];
+        }, 3);
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array{request_id:int, person_id:int, document_number:string}
+     */
+    public function createPersonnelReviewRequest(array $input): array
+    {
+        $data = $this->validateManualIdentity($input);
+        $reason = trim((string) ($input['request_reason'] ?? ''));
+
+        if (mb_strlen($reason) < 10 || mb_strlen($reason) > 1000) {
+            throw new DomainException('Describe en al menos 10 caracteres por qué solicitas la evaluación de Legajos.');
+        }
+
+        return DB::connection('identity')->transaction(function () use ($data, $reason): array {
+            $lookup = $this->lookupDni($data['dni']);
+
+            if ($lookup['registration_mode'] !== 'personnel_review' || empty($lookup['person_id'])) {
+                throw new DomainException('La situación de la identidad cambió. Vuelve a validar el DNI.');
+            }
+
+            $identity = DB::connection('identity');
+            $applicationId = $identity->table('access_applications')
+                ->where('code', 'legajos_hsj')
+                ->where('is_active', true)
+                ->value('id');
+
+            if (! $applicationId) {
+                throw new DomainException('La aplicación Legajos no está habilitada para recibir solicitudes.');
+            }
+
+            $pending = $identity->table('personnel_review_requests')
+                ->where('person_id', $lookup['person_id'])
+                ->where('target_application_id', $applicationId)
+                ->where('status', 'pending')
+                ->first();
+
+            if ($pending) {
+                throw new DomainException("Ya existe una solicitud pendiente de evaluación en Legajos (N.º {$pending->id}).");
+            }
+
+            $person = $identity->table('people')->where('id', $lookup['person_id'])->first();
+            $latestPersonnelRecord = $identity->table('personnel_records')
+                ->where('document_number', $data['dni'])
+                ->latest('source_registered_at')
+                ->latest('id')
+                ->first();
+            $requestId = (int) $identity->table('personnel_review_requests')->insertGetId([
+                'person_id' => $lookup['person_id'],
+                'target_application_id' => $applicationId,
+                'document_number' => $data['dni'],
+                'request_type' => 'employment_reactivation',
+                'status' => 'pending',
+                'submitted_names' => $data['names'],
+                'submitted_paternal_last_name' => $data['paternal_last_name'],
+                'submitted_maternal_last_name' => $data['maternal_last_name'],
+                'submitted_birth_date' => $data['birth_date'],
+                'submitted_email' => $data['email'],
+                'submitted_phone' => $data['phone'],
+                'request_reason' => $reason,
+                'identity_snapshot' => json_encode([
+                    'person' => $person,
+                    'latest_personnel_record' => $latestPersonnelRecord,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'requested_at' => now(),
+                'reviewed_by' => null,
+                'reviewed_at' => null,
+                'resolution_notes' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return [
+                'request_id' => $requestId,
+                'person_id' => (int) $lookup['person_id'],
+                'document_number' => $data['dni'],
             ];
         }, 3);
     }

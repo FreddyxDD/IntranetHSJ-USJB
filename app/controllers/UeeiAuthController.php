@@ -53,7 +53,30 @@ final class UeeiAuthController
         }
 
         try {
-            $manualRegistration = str_starts_with((string) ($validation['mode'] ?? 'existing'), 'manual_');
+            $registrationMode = (string) ($validation['mode'] ?? 'existing');
+            $manualRegistration = str_starts_with($registrationMode, 'manual_');
+
+            if ($registrationMode === 'personnel_review') {
+                $request = app(SelfRegistrationService::class)->createPersonnelReviewRequest($input);
+                unset($_SESSION['self_registration_validation']);
+
+                logger()->info('Solicitud de evaluación laboral enviada a Legajos.', [
+                    'request_id' => $request['request_id'],
+                    'person_id' => $request['person_id'],
+                    'document_number_hash' => hash('sha256', $request['document_number']),
+                    'target_application' => 'legajos_hsj',
+                    'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
+                ]);
+
+                json_response([
+                    'success' => true,
+                    'ok' => true,
+                    'personnel_review_pending' => true,
+                    'request_id' => $request['request_id'],
+                    'message' => 'La solicitud fue enviada a Legajos. No se creó ni reactivó ninguna cuenta.',
+                ], 201);
+            }
+
             $result = $manualRegistration
                 ? app(SelfRegistrationService::class)->createPendingAccount($input)
                 : app(SelfRegistrationService::class)->createAccount($dni);
@@ -144,7 +167,7 @@ final class UeeiAuthController
                 'ok' => true,
                 'message' => match ($identity['registration_mode']) {
                     'existing' => 'DNI validado con la identidad institucional.',
-                    'manual_existing' => 'El DNI tiene una identidad histórica inactiva y no posee cuenta. Completa tus datos para solicitar su reactivación.',
+                    'personnel_review' => 'El DNI corresponde a una persona sin vínculo laboral activo. Completa los datos para solicitar una evaluación al administrador de Legajos.',
                     default => 'El DNI no existe en HSJ_Identity. Completa tus datos para enviar una solicitud de registro.',
                 },
                 'data' => [

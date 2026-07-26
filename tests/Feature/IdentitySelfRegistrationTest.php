@@ -69,6 +69,11 @@ final class IdentitySelfRegistrationTest extends TestCase
             'code' => 'intranet_hsj',
             'is_active' => true,
         ]);
+        $identity->table('access_applications')->insert([
+            'id' => 3,
+            'code' => 'legajos_hsj',
+            'is_active' => true,
+        ]);
         $identity->table('access_roles')->insert([
             'id' => 14,
             'application_id' => 2,
@@ -133,13 +138,18 @@ final class IdentitySelfRegistrationTest extends TestCase
         self::assertNull($approved->accessAccount->registration_instructions_acknowledged_at);
     }
 
-    public function test_inactive_identity_without_account_is_reused_for_a_reactivation_request(): void
+    public function test_inactive_identity_without_employment_is_sent_to_legajos_without_creating_account(): void
     {
         $identity = DB::connection('identity');
         $identity->table('personnel_document_types')->insert(['id' => 1, 'code' => 'DNI']);
         $identity->table('access_applications')->insert([
             'id' => 2,
             'code' => 'intranet_hsj',
+            'is_active' => true,
+        ]);
+        $identity->table('access_applications')->insert([
+            'id' => 3,
+            'code' => 'legajos_hsj',
             'is_active' => true,
         ]);
         $identity->table('access_roles')->insert([
@@ -161,10 +171,10 @@ final class IdentitySelfRegistrationTest extends TestCase
 
         $lookup = app(SelfRegistrationService::class)->lookupDni('43243226');
 
-        self::assertSame('manual_existing', $lookup['registration_mode']);
+        self::assertSame('personnel_review', $lookup['registration_mode']);
         self::assertSame(956, $lookup['person_id']);
 
-        $result = app(SelfRegistrationService::class)->createPendingAccount([
+        $result = app(SelfRegistrationService::class)->createPersonnelReviewRequest([
             'dni' => '43243226',
             'names' => 'Mónica Eliana',
             'paternal_last_name' => 'Carbajal',
@@ -172,20 +182,24 @@ final class IdentitySelfRegistrationTest extends TestCase
             'birth_date' => '1985-08-27',
             'email' => 'monica.carbajal@example.com',
             'phone' => '956123456',
+            'request_reason' => 'Solicito que Legajos evalúe si corresponde registrar un nuevo vínculo laboral.',
         ]);
 
         self::assertSame(1, $identity->table('people')->where('document_number', '43243226')->count());
-        self::assertSame(956, (int) $result['user']->person_id);
-        self::assertSame('pending', $identity->table('people')->where('id', 956)->value('status'));
-        self::assertSame('monica.carbajal@example.com', $identity->table('people')->where('id', 956)->value('email'));
-        self::assertSame('pending', $result['user']->fresh('accessAccount')->accessAccount->status);
+        self::assertSame(956, $result['person_id']);
+        self::assertSame('inactive', $identity->table('people')->where('id', 956)->value('status'));
+        self::assertSame('personnel_source', $identity->table('people')->where('id', 956)->value('data_origin'));
+        self::assertSame(0, $identity->table('users')->where('registration_document_number', '43243226')->count());
+        self::assertSame(0, $identity->table('access_accounts')->where('username', '43243226')->count());
+        self::assertSame('pending', $identity->table('personnel_review_requests')->where('id', $result['request_id'])->value('status'));
+        self::assertSame(3, (int) $identity->table('personnel_review_requests')->where('id', $result['request_id'])->value('target_application_id'));
     }
 
     public function test_login_page_explains_validation_and_initial_access(): void
     {
         $html = file_get_contents(base_path('views/ueei/index.php'));
 
-        self::assertStringContainsString('Si tu DNI existe en HSJ_Identity, la cuenta se activará automáticamente.', $html);
+        self::assertStringContainsString('Si tu DNI existe y tiene vínculo activo, la cuenta se activará automáticamente.', $html);
         self::assertStringContainsString('Perfil inicial:', $html);
         self::assertStringContainsString('Confirmo que leí y guardé mis datos de acceso.', $html);
         self::assertStringContainsString('Completa tus datos personales', $html);
@@ -272,6 +286,27 @@ final class IdentitySelfRegistrationTest extends TestCase
             $table->unsignedBigInteger('role_id');
             $table->dateTime('assigned_at');
             $table->unsignedBigInteger('assigned_by')->nullable();
+        });
+        $schema->create('personnel_review_requests', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('person_id');
+            $table->unsignedBigInteger('target_application_id');
+            $table->string('document_number');
+            $table->string('request_type');
+            $table->string('status');
+            $table->string('submitted_names');
+            $table->string('submitted_paternal_last_name');
+            $table->string('submitted_maternal_last_name');
+            $table->date('submitted_birth_date');
+            $table->string('submitted_email');
+            $table->string('submitted_phone');
+            $table->text('request_reason');
+            $table->text('identity_snapshot')->nullable();
+            $table->dateTime('requested_at');
+            $table->unsignedBigInteger('reviewed_by')->nullable();
+            $table->dateTime('reviewed_at')->nullable();
+            $table->text('resolution_notes')->nullable();
+            $table->timestamps();
         });
     }
 }

@@ -23,6 +23,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const identityResult = byId("identityResult");
     const validatedPersonName = byId("validatedPersonName");
     const manualIdentityForm = byId("manualIdentityForm");
+    const registrationReasonField = byId("registrationReasonField");
+    const registrationReason = byId("registrationReason");
+    const credentialRule = byId("credentialRule");
     const manualFields = [
         byId("registrationNames"),
         byId("registrationPaternalName"),
@@ -42,10 +45,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const pendingPassword = byId("pendingPassword");
     const pendingAcknowledgement = byId("pendingAcknowledgement");
     const closePendingBtn = byId("closePendingBtn");
+    const personnelReviewDialog = byId("personnelReviewDialog");
+    const personnelReviewNumber = byId("personnelReviewNumber");
+    const closePersonnelReviewBtn = byId("closePersonnelReviewBtn");
 
     let registrationMode = false;
     let registrationValidated = false;
     let manualRegistration = false;
+    let personnelReview = false;
     let sending = false;
 
     function showMessage(text, type = "error") {
@@ -65,10 +72,10 @@ document.addEventListener("DOMContentLoaded", () => {
         validateDniBtn.disabled = loading;
         submitBtn.textContent = loading
             ? registrationMode
-                ? (manualRegistration ? "Enviando solicitud..." : "Creando cuenta...")
+                ? (personnelReview ? "Enviando a Legajos..." : (manualRegistration ? "Enviando solicitud..." : "Creando cuenta..."))
                 : "Ingresando..."
             : registrationMode
-                ? (manualRegistration ? "Enviar solicitud para aprobación" : "Crear y activar mi cuenta")
+                ? (personnelReview ? "Enviar solicitud a Legajos" : (manualRegistration ? "Enviar solicitud para aprobación" : "Crear y activar mi cuenta"))
                 : "Ingresar";
     }
 
@@ -76,6 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
         registrationMode = true;
         registrationValidated = false;
         manualRegistration = false;
+        personnelReview = false;
         formTitle.textContent = "Crear cuenta";
         formSubtitle.textContent = "Valida tu DNI con la identidad institucional.";
         switchModeBtn.textContent = "¿Ya tienes cuenta? Inicia sesión";
@@ -88,6 +96,10 @@ document.addEventListener("DOMContentLoaded", () => {
         registrationDni.required = true;
         identityResult.hidden = true;
         manualIdentityForm.hidden = true;
+        registrationReasonField.hidden = true;
+        registrationReason.required = false;
+        registrationReason.value = "";
+        credentialRule.hidden = false;
         manualFields.forEach((field) => {
             field.required = false;
             field.value = "";
@@ -103,6 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
         registrationMode = false;
         registrationValidated = false;
         manualRegistration = false;
+        personnelReview = false;
         formTitle.textContent = "Iniciar sesión";
         formSubtitle.textContent = "Ingresa con tu DNI, correo o usuario.";
         switchModeBtn.textContent = "¿No tienes cuenta? Créate una";
@@ -116,6 +129,9 @@ document.addEventListener("DOMContentLoaded", () => {
         registrationDni.value = "";
         identityResult.hidden = true;
         manualIdentityForm.hidden = true;
+        registrationReasonField.hidden = true;
+        registrationReason.required = false;
+        credentialRule.hidden = false;
         submitBtn.disabled = false;
         submitBtn.textContent = "Ingresar";
         clearMessage();
@@ -183,6 +199,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function showPersonnelReview(data) {
+        personnelReviewNumber.textContent = `N.º ${data.request_id}`;
+        if (!personnelReviewDialog.open) {
+            personnelReviewDialog.showModal();
+        }
+    }
+
     async function verifySession() {
         try {
             const data = await requestJSON(apiUrl("/me-ueei"), { method: "GET" });
@@ -210,8 +233,13 @@ document.addEventListener("DOMContentLoaded", () => {
         registrationDni.value = registrationDni.value.replace(/\D/g, "").slice(0, 8);
         registrationValidated = false;
         manualRegistration = false;
+        personnelReview = false;
         identityResult.hidden = true;
         manualIdentityForm.hidden = true;
+        registrationReasonField.hidden = true;
+        registrationReason.required = false;
+        registrationReason.value = "";
+        credentialRule.hidden = false;
         manualFields.forEach((field) => {
             field.required = false;
             field.value = "";
@@ -236,13 +264,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify({ dni }),
             });
             registrationValidated = true;
-            manualRegistration = String(data.data?.registration_mode || "").startsWith("manual_");
-            manualIdentityForm.hidden = !manualRegistration;
+            const registrationMode = String(data.data?.registration_mode || "");
+            manualRegistration = registrationMode.startsWith("manual_");
+            personnelReview = registrationMode === "personnel_review";
+            manualIdentityForm.hidden = !(manualRegistration || personnelReview);
+            registrationReasonField.hidden = !personnelReview;
+            registrationReason.required = personnelReview;
+            credentialRule.hidden = personnelReview;
             manualFields.forEach((field) => {
-                field.required = manualRegistration;
+                field.required = manualRegistration || personnelReview;
             });
 
-            if (manualRegistration) {
+            if (manualRegistration || personnelReview) {
                 identityResult.hidden = true;
                 showMessage(data.message || "Completa todos tus datos para enviar la solicitud al administrador.", "success");
                 manualFields[0].focus();
@@ -285,8 +318,14 @@ document.addEventListener("DOMContentLoaded", () => {
                         birth_date: byId("registrationBirthDate").value,
                         email: byId("registrationEmail").value.trim(),
                         phone: byId("registrationPhone").value.trim(),
+                        request_reason: registrationReason.value.trim(),
                     }),
                 });
+
+                if (data.personnel_review_pending) {
+                    showPersonnelReview(data);
+                    return;
+                }
 
                 if (data.pending_approval) {
                     showPendingRequest(data);
@@ -325,6 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     activationDialog.addEventListener("cancel", (event) => event.preventDefault());
     pendingDialog.addEventListener("cancel", (event) => event.preventDefault());
+    personnelReviewDialog.addEventListener("cancel", (event) => event.preventDefault());
 
     activationAcknowledgement.addEventListener("change", () => {
         confirmActivationBtn.disabled = !activationAcknowledgement.checked;
@@ -362,6 +402,12 @@ document.addEventListener("DOMContentLoaded", () => {
         identifierInput.value = pendingUsername.textContent;
         passwordInput.value = "";
         showMessage("Solicitud pendiente. Podrás iniciar sesión cuando un administrador la apruebe.", "success");
+    });
+
+    closePersonnelReviewBtn.addEventListener("click", () => {
+        personnelReviewDialog.close();
+        activateLoginMode();
+        showMessage("La evaluación quedó pendiente en Legajos. No se creó una cuenta de acceso.", "success");
     });
 
     verifySession();

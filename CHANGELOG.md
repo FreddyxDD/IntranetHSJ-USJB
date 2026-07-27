@@ -5,6 +5,20 @@ los principios de Keep a Changelog.
 
 ## [Sin publicar]
 
+### Arquitectura - transición a Laravel 13
+
+- Se consolidó en un documento único el flujo HTTP desde `public/index.php`
+  hasta las rutas Laravel o el puente `LegacyApplicationController`.
+- Se documentaron las responsabilidades de `routes/web.php`,
+  `legacy/index.php`, controladores heredados, controladores Laravel y vistas.
+- Se incorporó una matriz del estado de migración de Egresos, Citas,
+  Cirugías, administración, UVI e indicadores.
+- Se registraron los cambios funcionales aplicados al enrutador PHP original,
+  el procedimiento obligatorio para migrar rutas y las condiciones
+  verificables para retirar el legado.
+- Se actualizó el flujo Git después de fusionar el Pull Request #1 y eliminar
+  su rama temporal.
+
 ### Identidad - registro institucional por DNI
 
 - Las identidades históricas `inactive` sin vínculo vigente ya no pueden crear

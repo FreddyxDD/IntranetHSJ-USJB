@@ -46,6 +46,11 @@ Las credenciales y nombres reales de servidores se configuran únicamente en
 - La autenticación y autorización nuevas consumen la base central
   `HSJ_Identity`.
 
+El flujo completo de solicitudes, el estado de migración de cada módulo, los
+cambios efectuados sobre el enrutador PHP original y las condiciones para
+retirar el puente se encuentran en
+[Transición de PHP tradicional a Laravel 13](docs/TRANSICION_PHP_TRADICIONAL_A_LARAVEL.md).
+
 El contrato obligatorio para integrar Cirugías y futuras aplicaciones está
 documentado en
 [Arquitectura central de identidad e integración](docs/ARQUITECTURA_IDENTIDAD_Y_APLICACIONES.md).
@@ -57,28 +62,15 @@ reversión, se encuentra definida en el
 
 ## Flujo de ramas y revisión
 
-El repositorio utiliza ramas temporales y Pull Requests para que cada entrega
-pueda revisarse antes de incorporarse a la versión estable.
+`main` es la rama estable y contiene la publicación consolidada del proyecto.
+El
+[Pull Request #1](https://github.com/FreddyxDD/IntranetHSJ-USJB/pull/1)
+fue fusionado y su rama temporal fue eliminada.
 
-- `main`: rama estable y base del repositorio.
-- `agent/responsive-areas-preline`: contiene la publicación inicial del
-  proyecto y los cambios responsive que se encuentran en revisión.
-
-Como el repositorio estaba completamente vacío, primero se creó `main`.
-Posteriormente, el proyecto se publicó en una rama separada para que GitHub
-pudiera mostrar y revisar los 285 archivos antes de incorporarlos.
-
-La publicación inicial se revisa mediante el
-[Pull Request #1](https://github.com/FreddyxDD/IntranetHSJ-USJB/pull/1).
-Cuando sea aprobado y fusionado:
-
-1. Todo el proyecto pasará a `main`.
-2. Se podrá eliminar la rama `agent/responsive-areas-preline`.
-3. Las siguientes mejoras partirán de `main` y utilizarán ramas temporales
-   independientes.
-
-Este flujo evita modificar directamente la rama estable sin una revisión
-previa y conserva un historial claro de cada mejora.
+Actualmente los cambios se documentan, validan y publican en `main` mediante
+commits descriptivos. Cuando una mejora requiera revisión aislada se podrá
+crear una rama temporal desde `main`; después de su incorporación deberá
+eliminarse para evitar ramas permanentes divergentes.
 
 ## Recursos frontend
 

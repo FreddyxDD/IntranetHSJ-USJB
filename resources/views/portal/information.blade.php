@@ -1,6 +1,3 @@
-<?php
-declare(strict_types=1);
-?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -8,17 +5,17 @@ declare(strict_types=1);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Información | Hospital San José</title>
 
-    <link rel="icon" href="<?= e(url_path('/assets/images/logohsj.png')) ?>">
-    <link rel="stylesheet" href="<?= e(url_path('/assets/css/informacion.css')) ?>?v=2">
+    <link rel="icon" href="{{ asset('assets/images/logohsj.png') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/informacion.css') }}?v=2">
 </head>
 <body>
 
 <header class="topbar">
     <div class="topbar__inner">
 
-        <a href="<?= e(url_path('/principal')) ?>" class="brand">
+        <a href="{{ url('/principal') }}" class="brand">
             <img
-                src="<?= e(url_path('/assets/images/logohsj.png')) ?>"
+                src="{{ asset('assets/images/logohsj.png') }}"
                 alt="Logo Hospital San José"
             >
 
@@ -29,7 +26,7 @@ declare(strict_types=1);
         </a>
 
         <nav class="nav">
-            <a href="<?= e(url_path('/principal')) ?>">Inicio</a>
+            <a href="{{ url('/principal') }}">Inicio</a>
             <a href="#paneles">Paneles</a>
             <a href="#tablas">Tablas</a>
             <a href="#resumen">Resumen</a>
@@ -262,10 +259,10 @@ declare(strict_types=1);
 </main>
 
 <footer class="footer">
-    © <?= date('Y') ?> Hospital San José - Módulo de información institucional
+    © {{ date('Y') }} Hospital San José - Módulo de información institucional
 </footer>
 
-<script src="<?= e(url_path('/assets/js/informacion.js')) ?>?v=1"></script>
+<script src="{{ asset('assets/js/informacion.js') }}?v=1"></script>
 
 </body>
 </html>

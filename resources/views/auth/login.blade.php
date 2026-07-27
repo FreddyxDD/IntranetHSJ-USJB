@@ -11,8 +11,8 @@
         content="Sistema de acceso a la Unidad de Estadística e Información del Hospital San José"
     />
 
-    <link rel="icon" href="<?= e(url_path('/assets/images/logohsj.png')) ?>" type="image/png" />
-    <link rel="shortcut icon" href="<?= e(url_path('/assets/images/logohsj.png')) ?>" type="image/png" />
+    <link rel="icon" href="{{ asset('assets/images/logohsj.png') }}" type="image/png" />
+    <link rel="shortcut icon" href="{{ asset('assets/images/logohsj.png') }}" type="image/png" />
     <link rel="stylesheet" href="/assets/css/UEeI.css?v=3">
 </head>
 
@@ -22,7 +22,7 @@
             <div class="brand">
                 <img
                     class="brand__logo"
-                    src="<?= e(url_path('/assets/images/logohsj.png')) ?>"
+                    src="{{ asset('assets/images/logohsj.png') }}"
                     alt="Logo del Hospital San José"
                 />
 
@@ -376,9 +376,9 @@
     </dialog>
 
     <script>
-        window.APP_BASE = "<?= e(app_base()) ?>";
+        window.APP_BASE = @json(request()->getBaseUrl());
     </script>
 
-    <script type="module" src="<?= e(url_path('/assets/js/ueei/main.js')) ?>"></script>
+    <script type="module" src="{{ asset('assets/js/ueei/main.js') }}"></script>
 </body>
 </html>

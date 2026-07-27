@@ -1,19 +1,11 @@
 <?php
 
 $esc = function ($value): string {
-    if (function_exists('e')) {
-        return e((string) $value);
-    }
-
-    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    return e((string) $value);
 };
 
 $url = function (string $path): string {
-    if (function_exists('url_path')) {
-        return url_path($path);
-    }
-
-    return $path;
+    return url($path);
 };
 
 $usuario = $usuario ?? [

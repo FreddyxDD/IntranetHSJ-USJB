@@ -4,6 +4,7 @@ declare(strict_types=1);
 use App\Models\AccessAccount;
 use App\Models\AccessRole;
 use App\Models\User;
+use App\Http\Controllers\Auth\InstitutionalAuthController;
 use App\Services\Identity\SelfRegistrationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -177,7 +178,7 @@ final class AdminUeeiController
             ->findOrFail($id);
 
         if ($id === (int) ($_SESSION['ueei_id'] ?? 0)) {
-            UeeiAuthController::refrescarSesion($updatedUser);
+            InstitutionalAuthController::refrescarSesion($updatedUser);
         }
 
         json_response([

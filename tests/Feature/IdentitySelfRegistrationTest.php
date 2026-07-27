@@ -197,7 +197,7 @@ final class IdentitySelfRegistrationTest extends TestCase
 
     public function test_login_page_explains_validation_and_initial_access(): void
     {
-        $html = file_get_contents(base_path('views/ueei/index.php'));
+        $html = file_get_contents(resource_path('views/auth/login.blade.php'));
 
         self::assertStringContainsString('Si tu DNI existe y tiene vínculo activo, la cuenta se activará automáticamente.', $html);
         self::assertStringContainsString('Perfil inicial:', $html);

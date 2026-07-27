@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Appointments\AppointmentApiController;
+use App\Http\Controllers\Auth\InstitutionalAuthController;
 use App\Http\Controllers\Egresos\AuditoriaController;
 use App\Http\Controllers\Egresos\Cie10CatalogController;
 use App\Http\Controllers\Egresos\ConfiguracionConstanciaController;
@@ -10,9 +11,34 @@ use App\Http\Controllers\Egresos\ImportacionController;
 use App\Http\Controllers\Egresos\ReporteController;
 use App\Http\Controllers\Indicators\IndicatorController;
 use App\Http\Controllers\LegacyApplicationController;
+use App\Http\Controllers\Portal\PortalController;
 use App\Http\Controllers\Uvi\UviController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
+
+Route::view('/', 'auth.login')->name('login');
+Route::post('/crear-cuenta-ueei', [InstitutionalAuthController::class, 'register']);
+Route::post('/validar-dni-ueei', [InstitutionalAuthController::class, 'validateRegistrationDni']);
+Route::post('/confirmar-cuenta-ueei', [InstitutionalAuthController::class, 'confirmAccountInstructions']);
+Route::post('/login-ueei', [InstitutionalAuthController::class, 'login']);
+Route::get('/me-ueei', [InstitutionalAuthController::class, 'me']);
+Route::post('/logout-ueei', [InstitutionalAuthController::class, 'logout']);
+
+Route::middleware('central.auth')->group(function (): void {
+    Route::get('/principal', [PortalController::class, 'principal'])->name('portal.principal');
+    Route::get('/pages/principal', [PortalController::class, 'principal']);
+    Route::get('/pages/principal.html', [PortalController::class, 'principal']);
+    Route::get('/areas', [PortalController::class, 'areas'])->name('portal.areas');
+    Route::get('/pages/Areas.html', [PortalController::class, 'areas']);
+    Route::get('/perfil', [PortalController::class, 'profile'])->name('portal.profile');
+    Route::get('/pages/perfil', [PortalController::class, 'profile']);
+    Route::get('/pages/perfil.html', [PortalController::class, 'profile']);
+});
+
+Route::middleware('module.access:informacion')->group(function (): void {
+    Route::get('/informacion', [PortalController::class, 'information'])->name('portal.information');
+    Route::get('/pages/informacion.html', [PortalController::class, 'information']);
+});
 
 /*
 |--------------------------------------------------------------------------

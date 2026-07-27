@@ -7,6 +7,13 @@ los principios de Keep a Changelog.
 
 ### Arquitectura - transición a Laravel 13
 
+- Login, registro por DNI, confirmación inicial, consulta de sesión y logout
+  fueron migrados a `InstitutionalAuthController`.
+- Principal, Áreas, Perfil e Información dejaron el enrutador heredado y
+  utilizan `PortalController` con vistas Blade.
+- La sesión institucional `hospital_sid` ahora se inicia desde middleware
+  Laravel y el catálogo visible se resuelve mediante `ModuleCatalogService`
+  contra los permisos de `HSJ_Identity`.
 - Se retiraron el login, la sesión y el CRUD local de cuentas UVI; sus URL
   históricas utilizan el acceso central y los endpoints de cuentas responden
   como retirados en lugar de modificar `usuarios_uvi`.

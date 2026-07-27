@@ -3,11 +3,9 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/app/config/app.php';
 
-require_once BASE_PATH . '/app/controllers/UeeiAuthController.php';
 require_once BASE_PATH . '/app/controllers/AdminUeeiController.php';
 require_once BASE_PATH . '/app/controllers/CirugiasAuthController.php';
 require_once BASE_PATH . '/app/controllers/CirugiasController.php';
-require_once BASE_PATH . '/app/controllers/UeeiPerfilController.php';
 require_once BASE_PATH . '/app/helpers/modulos.php';
 require_once BASE_PATH . '/app/controllers/CitasAdminController.php';
 
@@ -160,42 +158,8 @@ if (preg_match('#^/api/admin-ueei/usuarios/(\d+)/password$#', $uri, $m)) {
 
 match (true) {
 
-    /* ==============================
-       LOGIN GENERAL UEEI
-    ============================== */
-
-    $method === 'GET' && $uri === '/'
-        => require BASE_PATH . '/views/ueei/index.php',
-
-    $method === 'POST' && $uri === '/crear-cuenta-ueei'
-        => UeeiAuthController::register(),
-
-    $method === 'POST' && $uri === '/validar-dni-ueei'
-        => UeeiAuthController::validateRegistrationDni(),
-
-    $method === 'POST' && $uri === '/confirmar-cuenta-ueei'
-        => UeeiAuthController::confirmAccountInstructions(),
-
-    $method === 'POST' && $uri === '/login-ueei'
-        => UeeiAuthController::login(),
-
-    $method === 'GET' && $uri === '/me-ueei'
-        => UeeiAuthController::me(),
-
-    $method === 'POST' && $uri === '/logout-ueei'
-        => UeeiAuthController::logout(),
-
     $method === 'GET' && $uri === '/admin-ueei'
         => (require_ueei_admin()) ?? require BASE_PATH . '/views/admin/admin-ueei.php',
-
-    $method === 'GET' && ($uri === '/pages/principal.html' || $uri === '/pages/principal' || $uri === '/principal')
-        => (require_ueei_login()) ?? require BASE_PATH . '/views/pages/principal.php',
-
-    $method === 'GET' && ($uri === '/areas' || $uri === '/pages/Areas.html')
-        => (require_ueei_login()) ?? require BASE_PATH . '/views/pages/areas.php',
-
-    $method === 'GET' && ($uri === '/perfil' || $uri === '/pages/perfil.html' || $uri === '/pages/perfil')
-        => UeeiPerfilController::index(),
 
     /* ==============================
        API ADMIN UEeI
@@ -221,13 +185,6 @@ match (true) {
 
     $method === 'PATCH' && $adminUeeiUsuarioPasswordId !== null
         => AdminUeeiController::cambiarPassword($adminUeeiUsuarioPasswordId),
-
-    /* ==============================
-       MÓDULO INFORMACIÓN
-    ============================== */
-
-    $method === 'GET' && ($uri === '/informacion' || $uri === '/pages/informacion.html')
-        => (require_modulo('informacion')) ?? require BASE_PATH . '/views/pages/informacion.php',
 
     /* ==============================
        MÓDULO CIRUGÍAS - LOGIN

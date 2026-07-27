@@ -1,41 +1,3 @@
-<?php
-$correo = (string) ($_SESSION['ueei_correo'] ?? '');
-$rol = (string) ($_SESSION['ueei_rol'] ?? '');
-$areaId = isset($_SESSION['ueei_area_id']) ? (int) $_SESSION['ueei_area_id'] : null;
-$modulos = function_exists('modulos_autorizados')
-    ? modulos_autorizados($areaId, $rol)
-    : [];
-
-$quickAccess = array_slice($modulos, 0, 3);
-$isAdmin = in_array(strtolower($rol), ['admin', 'administrador'], true);
-$profileLabel = trim((string) strtok($correo, '@')) ?: 'Mi perfil';
-$profileInitial = mb_strtoupper(mb_substr($profileLabel, 0, 1));
-
-function area_card_class(string $codigo): string
-{
-    return 'card card--'.str_replace('_', '-', $codigo);
-}
-
-function area_icon_html(?string $icono, string $nombre): string
-{
-    $icono = trim((string) $icono);
-
-    if ($icono === '') {
-        return '<i class="bi bi-grid-1x2-fill" aria-hidden="true"></i>';
-    }
-
-    if (str_starts_with($icono, '/')) {
-        return '<img src="'.e($icono).'" alt="'.e($nombre).'" />';
-    }
-
-    if (str_starts_with($icono, 'bi ')) {
-        return '<i class="'.e($icono).'" aria-hidden="true"></i>';
-    }
-
-    return e($icono);
-}
-?>
-
 <!doctype html>
 <html lang="es">
 <head>
@@ -44,8 +6,8 @@ function area_icon_html(?string $icono, string $nombre): string
 
     <title>Áreas | Hospital San José</title>
 
-    <link rel="icon" href="<?= e(url_path('/assets/images/logohsj.png')) ?>?v=1" type="image/png" />
-    <link rel="stylesheet" href="<?= e(url_path('/assets/css/Areas.css')) ?>?v=3" />
+    <link rel="icon" href="<?= e(asset('assets/images/logohsj.png')) ?>?v=1" type="image/png" />
+    <link rel="stylesheet" href="<?= e(asset('assets/css/Areas.css')) ?>?v=3" />
     <link
         rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
@@ -55,9 +17,9 @@ function area_icon_html(?string $icono, string $nombre): string
 <body>
     <header class="topbar">
         <div class="topbar__inner">
-            <a href="<?= e(url_path('/principal')) ?>" class="brand">
+            <a href="<?= e(url('/principal')) ?>" class="brand">
                 <img
-                    src="<?= e(url_path('/assets/images/logohsj.png')) ?>?v=1"
+                    src="<?= e(asset('assets/images/logohsj.png')) ?>?v=1"
                     alt="Logo Hospital San José"
                 />
 
@@ -81,16 +43,16 @@ function area_icon_html(?string $icono, string $nombre): string
 
             <div id="hsj-navbar-collapse" class="navbar-collapse hidden">
                 <nav class="navbar-links" aria-label="Navegación principal">
-                    <a href="<?= e(url_path('/principal')) ?>">
+                    <a href="<?= e(url('/principal')) ?>">
                         <i class="bi bi-house-door" aria-hidden="true"></i>
                         <span>Inicio</span>
                     </a>
-                    <a href="<?= e(url_path('/areas')) ?>" class="active" aria-current="page">
+                    <a href="<?= e(url('/areas')) ?>" class="active" aria-current="page">
                         <i class="bi bi-grid" aria-hidden="true"></i>
                         <span>Áreas</span>
                     </a>
                     <?php if ($isAdmin): ?>
-                        <a href="<?= e(url_path('/admin-ueei')) ?>">
+                        <a href="<?= e(url('/admin-ueei')) ?>">
                             <i class="bi bi-people" aria-hidden="true"></i>
                             <span>Perfiles y accesos (CRUD)</span>
                         </a>
@@ -124,19 +86,19 @@ function area_icon_html(?string $icono, string $nombre): string
                             <span><?= e($rol ?: 'Usuario autorizado') ?></span>
                         </div>
 
-                        <a href="<?= e(url_path('/perfil')) ?>" role="menuitem">
+                        <a href="<?= e(url('/perfil')) ?>" role="menuitem">
                             <i class="bi bi-person-circle" aria-hidden="true"></i>
                             Mi perfil
                         </a>
 
                         <?php if ($isAdmin): ?>
-                            <a href="<?= e(url_path('/admin-ueei')) ?>" role="menuitem">
+                            <a href="<?= e(url('/admin-ueei')) ?>" role="menuitem">
                                 <i class="bi bi-person-gear" aria-hidden="true"></i>
                                 Gestionar perfiles
                             </a>
                         <?php endif; ?>
 
-                        <form method="post" action="<?= e(url_path('/logout-ueei')) ?>">
+                        <form method="post" action="<?= e(url('/logout-ueei')) ?>">
                             <button type="submit" role="menuitem">
                                 <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
                                 Cerrar sesión
@@ -179,8 +141,8 @@ function area_icon_html(?string $icono, string $nombre): string
 
                 <div class="quick-access__buttons">
                     <?php foreach ($quickAccess as $modulo): ?>
-                        <a href="<?= e(url_path($modulo['ruta'])) ?>">
-                            <?= area_icon_html($modulo['icono'] ?? '', $modulo['nombre'] ?? 'Módulo') ?>
+                        <a href="<?= e(url($modulo['ruta'])) ?>">
+                            <?= $modulo['icon_html'] ?>
                             <span><?= e($modulo['nombre'] ?? 'Módulo') ?></span>
                         </a>
                     <?php endforeach; ?>
@@ -220,9 +182,9 @@ function area_icon_html(?string $icono, string $nombre): string
                             $icono = (string) ($modulo['icono'] ?? '');
                         ?>
 
-                        <a href="<?= e(url_path($ruta)) ?>" class="<?= e(area_card_class($codigo)) ?>">
+                        <a href="<?= e(url($ruta)) ?>" class="<?= e($modulo['card_class']) ?>">
                             <div class="card__icon">
-                                <?= area_icon_html($icono, $nombre) ?>
+                                <?= $modulo['icon_html'] ?>
                             </div>
 
                             <div class="card__content">
@@ -239,8 +201,8 @@ function area_icon_html(?string $icono, string $nombre): string
 
     <footer class="site-footer">
         <div class="site-footer__inner">
-            <a href="<?= e(url_path('/principal')) ?>" class="site-footer__brand">
-                <img src="<?= e(url_path('/assets/images/logohsj.png')) ?>" alt="" />
+            <a href="<?= e(url('/principal')) ?>" class="site-footer__brand">
+                <img src="<?= e(asset('assets/images/logohsj.png')) ?>" alt="" />
                 <span>
                     <strong>Hospital San José</strong>
                     <small>Unidad de Estadística e Información</small>
@@ -248,15 +210,15 @@ function area_icon_html(?string $icono, string $nombre): string
             </a>
 
             <nav class="site-footer__links" aria-label="Enlaces del pie de página">
-                <a href="<?= e(url_path('/principal')) ?>">Inicio</a>
-                <a href="<?= e(url_path('/areas')) ?>">Áreas</a>
-                <a href="<?= e(url_path('/perfil')) ?>">Mi perfil</a>
+                <a href="<?= e(url('/principal')) ?>">Inicio</a>
+                <a href="<?= e(url('/areas')) ?>">Áreas</a>
+                <a href="<?= e(url('/perfil')) ?>">Mi perfil</a>
             </nav>
 
             <p>© <?= date('Y') ?> Hospital San José. Uso institucional.</p>
         </div>
     </footer>
 
-    <script src="<?= e(url_path('/assets/vendor/preline/preline.js')) ?>?v=4.2.0"></script>
+    <script src="<?= e(asset('assets/vendor/preline/preline.js')) ?>?v=4.2.0"></script>
 </body>
 </html>

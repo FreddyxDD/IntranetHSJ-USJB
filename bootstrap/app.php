@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Middleware\EnsureCentralPermission;
+use App\Http\Middleware\EnsureInstitutionalAuthentication;
 use App\Http\Middleware\EnsureModuleAccess;
+use App\Http\Middleware\StartInstitutionalSession;
 use App\Support\UserFacingError;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
@@ -16,7 +18,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+            StartInstitutionalSession::class,
+        ]);
+
         $middleware->alias([
+            'central.auth' => EnsureInstitutionalAuthentication::class,
             'module.access' => EnsureModuleAccess::class,
             'central.permission' => EnsureCentralPermission::class,
         ]);

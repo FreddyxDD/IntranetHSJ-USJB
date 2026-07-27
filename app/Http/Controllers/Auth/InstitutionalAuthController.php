@@ -2,31 +2,35 @@
 
 declare(strict_types=1);
 
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Identity\ModuleCatalogService;
 use App\Services\Identity\SelfRegistrationService;
+use DomainException;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Throwable;
 
-require_once BASE_PATH.'/app/helpers/response.php';
-require_once BASE_PATH.'/app/helpers/modulos.php';
-
-final class UeeiAuthController
+final class InstitutionalAuthController extends Controller
 {
     public static function me(): void
     {
         $userId = (int) ($_SESSION['ueei_id'] ?? 0);
 
         if ($userId <= 0) {
-            json_response(['ok' => false, 'message' => 'No autenticado UEeI'], 401);
+            self::json(['ok' => false, 'message' => 'No autenticado UEeI'], 401);
         }
 
         $user = self::userQuery()->find($userId);
 
         if (! $user || ! $user->activo) {
             self::destruirSesion();
-            json_response(['ok' => false, 'message' => 'Sesión UEeI inválida o expirada.'], 401);
+            self::json(['ok' => false, 'message' => 'Sesión UEeI inválida o expirada.'], 401);
         }
 
         self::establecerSesion($user);
@@ -36,7 +40,7 @@ final class UeeiAuthController
     public static function register(): void
     {
         self::guardSelfRegistrationRate('create', 3);
-        $input = get_json_input();
+        $input = request()->json()->all();
         $dni = preg_replace('/\D+/', '', (string) ($input['dni'] ?? '')) ?? '';
         $validation = $_SESSION['self_registration_validation'] ?? null;
 
@@ -45,7 +49,7 @@ final class UeeiAuthController
             || ! hash_equals((string) ($validation['dni'] ?? ''), $dni)
             || (int) ($validation['expires_at'] ?? 0) < time()
         ) {
-            json_response([
+            self::json([
                 'success' => false,
                 'ok' => false,
                 'message' => 'Primero valida el DNI. La validación tiene una vigencia de 10 minutos.',
@@ -68,7 +72,7 @@ final class UeeiAuthController
                     'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
                 ]);
 
-                json_response([
+                self::json([
                     'success' => true,
                     'ok' => true,
                     'personnel_review_pending' => true,
@@ -90,7 +94,7 @@ final class UeeiAuthController
                     'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
                 ]);
 
-                json_response([
+                self::json([
                     'success' => true,
                     'ok' => true,
                     'pending_approval' => true,
@@ -127,20 +131,20 @@ final class UeeiAuthController
                 ],
             ]);
         } catch (DomainException $exception) {
-            json_response(['success' => false, 'ok' => false, 'message' => $exception->getMessage()], 422);
+            self::json(['success' => false, 'ok' => false, 'message' => $exception->getMessage()], 422);
         } catch (QueryException $exception) {
             logger()->warning('Conflicto al crear una cuenta institucional.', [
                 'dni_hash' => hash('sha256', $dni),
                 'error' => $exception->getMessage(),
             ]);
-            json_response([
+            self::json([
                 'success' => false,
                 'ok' => false,
                 'message' => 'No se pudo crear la cuenta. El DNI o sus datos de acceso ya se encuentran registrados.',
             ], 409);
         } catch (Throwable $exception) {
             report($exception);
-            json_response([
+            self::json([
                 'success' => false,
                 'ok' => false,
                 'message' => 'No se pudo completar el registro institucional. Inténtalo nuevamente o comunícate con el administrador.',
@@ -151,7 +155,7 @@ final class UeeiAuthController
     public static function validateRegistrationDni(): void
     {
         self::guardSelfRegistrationRate('validate', 5);
-        $dni = (string) (get_json_input()['dni'] ?? '');
+        $dni = (string) request()->json('dni', '');
 
         try {
             $identity = app(SelfRegistrationService::class)->lookupDni($dni);
@@ -162,7 +166,7 @@ final class UeeiAuthController
                 'expires_at' => time() + 600,
             ];
 
-            json_response([
+            self::json([
                 'success' => true,
                 'ok' => true,
                 'message' => match ($identity['registration_mode']) {
@@ -180,10 +184,10 @@ final class UeeiAuthController
             ]);
         } catch (DomainException $exception) {
             unset($_SESSION['self_registration_validation']);
-            json_response(['success' => false, 'ok' => false, 'message' => $exception->getMessage()], 422);
+            self::json(['success' => false, 'ok' => false, 'message' => $exception->getMessage()], 422);
         } catch (Throwable $exception) {
             report($exception);
-            json_response([
+            self::json([
                 'success' => false,
                 'ok' => false,
                 'message' => 'No se pudo validar el DNI con la identidad institucional. Inténtalo nuevamente.',
@@ -196,11 +200,11 @@ final class UeeiAuthController
         $user = self::userQuery()->find((int) ($_SESSION['ueei_id'] ?? 0));
 
         if (! $user || ! self::requiresAccountConfirmation($user)) {
-            json_response(['success' => false, 'ok' => false, 'message' => 'No existe una activación pendiente.'], 409);
+            self::json(['success' => false, 'ok' => false, 'message' => 'No existe una activación pendiente.'], 409);
         }
 
-        if ((bool) (get_json_input()['acknowledged'] ?? false) !== true) {
-            json_response(['success' => false, 'ok' => false, 'message' => 'Debes confirmar que leíste las instrucciones.'], 422);
+        if ((bool) request()->json('acknowledged', false) !== true) {
+            self::json(['success' => false, 'ok' => false, 'message' => 'Debes confirmar que leíste las instrucciones.'], 422);
         }
 
         DB::connection('identity')->transaction(function () use ($user): void {
@@ -217,25 +221,25 @@ final class UeeiAuthController
             'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
         ]);
 
-        json_response([
+        self::json([
             'success' => true,
             'ok' => true,
             'message' => 'Confirmación registrada. Ya puedes navegar con el perfil de consulta.',
-            'redirect' => url_path('/pages/principal.html'),
+            'redirect' => url('/pages/principal.html'),
         ]);
     }
 
     public static function login(): void
     {
-        $input = get_json_input();
+        $input = request()->json()->all();
         $identifier = strtolower(trim((string) ($input['correo'] ?? '')));
         $password = (string) ($input['password'] ?? '');
 
         if ($identifier === '' || $password === '') {
-            json_response(['success' => false, 'ok' => false, 'message' => 'Completa todos los campos.'], 400);
+            self::json(['success' => false, 'ok' => false, 'message' => 'Completa todos los campos.'], 400);
         }
 
-        if ((! valid_email($identifier) && ! preg_match('/^\d{8}$/', $identifier)) || strlen($password) > 200) {
+        if ((! filter_var($identifier, FILTER_VALIDATE_EMAIL) && ! preg_match('/^\d{8}$/', $identifier)) || strlen($password) > 200) {
             self::genericAuthError();
         }
 
@@ -254,7 +258,7 @@ final class UeeiAuthController
         }
 
         if ($user->accessAccount?->status === 'pending') {
-            json_response([
+            self::json([
                 'success' => false,
                 'ok' => false,
                 'message' => 'Tu solicitud todavía está pendiente de aprobación por un administrador.',
@@ -290,7 +294,7 @@ final class UeeiAuthController
     public static function logout(): void
     {
         self::destruirSesion();
-        json_response(['ok' => true, 'success' => true, 'message' => 'Sesión cerrada correctamente']);
+        self::json(['ok' => true, 'success' => true, 'message' => 'Sesión cerrada correctamente']);
     }
 
     private static function userQuery()
@@ -343,7 +347,7 @@ final class UeeiAuthController
             'area_id' => null,
             'roles' => $_SESSION['identity_roles'],
             'permisos' => $_SESSION['identity_permissions'],
-            'modulos' => modulos_autorizados(),
+            'modulos' => app(ModuleCatalogService::class)->forUser($user),
         ];
 
         $payload = array_merge($payload, $extras);
@@ -366,7 +370,7 @@ final class UeeiAuthController
             $payload['message'] = $message;
         }
 
-        json_response($payload);
+        self::json($payload);
     }
 
     private static function destruirSesion(): void
@@ -383,7 +387,7 @@ final class UeeiAuthController
 
     private static function genericAuthError(): never
     {
-        json_response(['success' => false, 'ok' => false, 'message' => 'Credenciales inválidas.'], 401);
+        self::json(['success' => false, 'ok' => false, 'message' => 'Credenciales inválidas.'], 401);
     }
 
     private static function requiresAccountConfirmation(User $user): bool
@@ -398,7 +402,7 @@ final class UeeiAuthController
         $key = 'identity-self-registration:'.$action.':'.($_SERVER['REMOTE_ADDR'] ?? 'unknown');
 
         if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
-            json_response([
+            self::json([
                 'success' => false,
                 'ok' => false,
                 'message' => 'Se realizaron demasiados intentos. Espera un minuto antes de volver a intentar.',
@@ -407,5 +411,10 @@ final class UeeiAuthController
         }
 
         RateLimiter::hit($key, 60);
+    }
+
+    private static function json(array $payload, int $status = 200): never
+    {
+        throw new HttpResponseException(response()->json($payload, $status));
     }
 }

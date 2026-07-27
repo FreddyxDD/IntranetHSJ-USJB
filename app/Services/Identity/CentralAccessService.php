@@ -11,7 +11,10 @@ final class CentralAccessService
 
     private bool $resolved = false;
 
-    public function __construct(private readonly InstitutionalSession $session) {}
+    public function __construct(
+        private readonly InstitutionalSession $session,
+        private readonly ModuleCatalogService $modules,
+    ) {}
 
     public function user(): ?User
     {
@@ -64,6 +67,11 @@ final class CentralAccessService
         $permission = config("modules.catalog.{$module}.permission");
 
         return is_string($permission) && $this->hasPermission($permission);
+    }
+
+    public function modules(): array
+    {
+        return $this->modules->forUser($this->user());
     }
 
     public function confirmationPending(): bool

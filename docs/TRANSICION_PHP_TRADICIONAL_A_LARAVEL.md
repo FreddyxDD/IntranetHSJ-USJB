@@ -111,12 +111,12 @@ autenticación API definida explícitamente; no deben copiar esa excepción.
 | Citas administrativas | Híbrido | Las consultas de citas diarias, pacientes y cambio de estado están en controladores Laravel; otras funciones conservan temporalmente el despacho heredado. |
 | Cirugías | Híbrido | Conserva controladores y vistas heredados, pero reutiliza la sesión, perfiles y permisos centrales. No debe mantener login ni CRUD local de cuentas. |
 | Administración del Intranet | Híbrido | Conserva parte de la interfaz y controladores heredados, pero administra identidad, roles y permisos en `HSJ_Identity`. |
-| Registro y perfil institucional | Híbrido | La interfaz mantiene compatibilidad heredada y la persistencia se realiza sobre la identidad central. |
+| Registro y perfil institucional | Laravel nativo | Login, validación de DNI, registro, confirmación, perfil y sesión se atienden mediante controlador, middleware y vistas Laravel. |
 | UVI | Acceso centralizado | Se retiraron login, sesión y CRUD de cuentas locales. Los accesos históricos redirigen al portal o a la administración central según el perfil. |
 | Indicadores de producción | Laravel nativo | Ruta, middleware, controlador, consulta y vista Blade migrados; ya no participa en `legacy/index.php`. |
 | Indicadores de eficiencia | Laravel nativo | Consulta y mantenimiento administrativo migrados a Laravel con validación y errores controlados. |
 | Indicadores de calidad | Laravel nativo | Consulta y mantenimiento administrativo migrados a Laravel con validación y errores controlados. |
-| Información institucional y páginas generales | Heredado pendiente | Conservan sus URL y vistas durante la refactorización. |
+| Información institucional y páginas generales | Laravel nativo | Principal, Áreas, Perfil e Información conservan sus URL y utilizan `PortalController` y vistas Blade. |
 
 La matriz debe actualizarse en el mismo commit que complete la migración de un
 módulo.
@@ -132,6 +132,17 @@ limitada al login y mantenimiento de `usuarios_uvi`. Por ello no se trasladó
 esa tabla ni su CRUD. Se retiraron ambos y las URL históricas ahora utilizan la
 sesión y los perfiles centrales; los endpoints locales responden como recursos
 retirados para identificar clientes desactualizados.
+
+El acceso institucional también fue retirado del enrutador manual. La sesión
+compatible `hospital_sid` se inicia mediante middleware Laravel; el login,
+registro por DNI, confirmación inicial, cierre de sesión y consulta del usuario
+son responsabilidad de `InstitutionalAuthController`. Principal, Áreas, Perfil
+e Información son servidos por `PortalController` y vistas Blade.
+
+El catálogo de módulos se trasladó a `config/modules.php` y
+`ModuleCatalogService` calcula los módulos visibles desde los permisos
+efectivos de `HSJ_Identity`. Las páginas ya no llaman
+`modulos_autorizados()`, `url_path()` ni controladores globales.
 
 El middleware `legacy.module` también fue sustituido en las rutas Laravel por
 `module.access`. La nueva implementación consulta la cuenta, roles y permisos

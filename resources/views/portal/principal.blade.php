@@ -1,12 +1,3 @@
-<?php
-$correo = $_SESSION['ueei_correo'] ?? '';
-$rol = $_SESSION['ueei_rol'] ?? '';
-$areaId = isset($_SESSION['ueei_area_id']) ? (int) $_SESSION['ueei_area_id'] : null;
-$modulosAutorizados = function_exists('modulos_autorizados')
-    ? modulos_autorizados($areaId, $rol)
-    : [];
-?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -109,17 +100,17 @@ $modulosAutorizados = function_exists('modulos_autorizados')
             </p>
 
             <div class="nosotros-botones">
-                <?php if (empty($modulosAutorizados)): ?>
+                @if (empty($modulos))
                     <span class="nosotros-btn">
                         No tienes módulos asignados. Solicita acceso al administrador.
                     </span>
-                <?php else: ?>
-                    <?php foreach ($modulosAutorizados as $modulo): ?>
-                        <a href="<?= e(url_path($modulo['ruta'])) ?>" class="nosotros-btn">
-                            <?= e($modulo['nombre']) ?>
+                @else
+                    @foreach ($modulos as $modulo)
+                        <a href="{{ url($modulo['ruta']) }}" class="nosotros-btn">
+                            {{ $modulo['nombre'] }}
                         </a>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                    @endforeach
+                @endif
             </div>
         </div>
     </section>
@@ -378,11 +369,11 @@ $modulosAutorizados = function_exists('modulos_autorizados')
     <script>
         window.APP_BASE = "";
         window.UEEI_USER = {
-            correo: <?= json_encode($correo, JSON_UNESCAPED_UNICODE) ?>,
-            rol: <?= json_encode($rol, JSON_UNESCAPED_UNICODE) ?>,
-            area_id: <?= json_encode($areaId, JSON_UNESCAPED_UNICODE) ?>
+            correo: @json($correo),
+            rol: @json($rol),
+            area_id: @json($areaId)
         };
-        window.UEEI_MODULOS = <?= json_encode($modulosAutorizados, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+        window.UEEI_MODULOS = @json($modulos);
     </script>
 
     <script src="/assets/js/principal.js?v=2"></script>

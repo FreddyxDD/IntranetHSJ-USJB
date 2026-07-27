@@ -6,7 +6,6 @@ require_once dirname(__DIR__) . '/app/config/app.php';
 require_once BASE_PATH . '/app/controllers/UeeiAuthController.php';
 require_once BASE_PATH . '/app/controllers/AdminUeeiController.php';
 require_once BASE_PATH . '/app/controllers/CirugiasAuthController.php';
-require_once BASE_PATH . '/app/controllers/UviAuthController.php';
 require_once BASE_PATH . '/app/controllers/CirugiasController.php';
 require_once BASE_PATH . '/app/controllers/UeeiPerfilController.php';
 require_once BASE_PATH . '/app/helpers/modulos.php';
@@ -229,46 +228,6 @@ match (true) {
 
     $method === 'GET' && ($uri === '/informacion' || $uri === '/pages/informacion.html')
         => (require_modulo('informacion')) ?? require BASE_PATH . '/views/pages/informacion.php',
-
-    /* ==============================
-       MÓDULO UVI
-    ============================== */
-
-    $method === 'GET' && ($uri === '/uvi-login' || $uri === '/pages/UVILogin.html')
-        => (require_modulo('uvi')) ?? require BASE_PATH . '/views/pages/uvi-login.php',
-
-    $method === 'GET' && ($uri === '/admin-uvi' || $uri === '/pages/AdminUVI.html')
-        => (require_modulo('uvi')) ?? require BASE_PATH . '/views/pages/admin-uvi.php',
-
-    $method === 'POST' && $uri === '/login-uvi'
-        => UviAuthController::login(),
-
-    $method === 'POST' && $uri === '/logout-uvi'
-        => UviAuthController::logout(),
-
-    $method === 'GET' && $uri === '/usuarios-uvi'
-        => (function (): void {
-            require_modulo_api('uvi');
-            UviAuthController::listarUsuarios();
-        })(),
-
-    $method === 'POST' && $uri === '/crear-cuenta-uvi'
-        => (function (): void {
-            require_modulo_api('uvi');
-            UviAuthController::crearCuenta();
-        })(),
-
-    $method === 'PUT' && preg_match('#^/usuarios-uvi/(\d+)$#', $uri, $m)
-        => (function () use ($m): void {
-            require_modulo_api('uvi');
-            UviAuthController::actualizarUsuario((int) $m[1]);
-        })(),
-
-    $method === 'PATCH' && preg_match('#^/usuarios-uvi/(\d+)/estado$#', $uri, $m)
-        => (function () use ($m): void {
-            require_modulo_api('uvi');
-            UviAuthController::cambiarEstadoUsuario((int) $m[1]);
-        })(),
 
     /* ==============================
        MÓDULO CIRUGÍAS - LOGIN

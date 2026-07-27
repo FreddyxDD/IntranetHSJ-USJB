@@ -10,6 +10,7 @@ use App\Http\Controllers\Egresos\ImportacionController;
 use App\Http\Controllers\Egresos\ReporteController;
 use App\Http\Controllers\Indicators\IndicatorController;
 use App\Http\Controllers\LegacyApplicationController;
+use App\Http\Controllers\Uvi\UviController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
@@ -62,6 +63,22 @@ Route::middleware('module.access:calidad')->group(function (): void {
         ->name('indicators.quality.admin');
     Route::put('/admin/indicadores/calidad', [IndicatorController::class, 'updateQuality'])
         ->name('indicators.quality.update');
+});
+
+Route::middleware('module.access:uvi')->group(function (): void {
+    Route::get('/uvi-login', [UviController::class, 'index'])->name('uvi.index');
+    Route::get('/pages/UVILogin.html', [UviController::class, 'index']);
+    Route::get('/admin-uvi', [UviController::class, 'index']);
+    Route::get('/pages/AdminUVI.html', [UviController::class, 'index']);
+
+    Route::post('/login-uvi', [UviController::class, 'retiredLocalAccounts']);
+    Route::post('/logout-uvi', [UviController::class, 'retiredLocalAccounts']);
+    Route::get('/usuarios-uvi', [UviController::class, 'retiredLocalAccounts']);
+    Route::post('/crear-cuenta-uvi', [UviController::class, 'retiredLocalAccounts']);
+    Route::put('/usuarios-uvi/{usuario}', [UviController::class, 'retiredLocalAccounts'])
+        ->whereNumber('usuario');
+    Route::patch('/usuarios-uvi/{usuario}/estado', [UviController::class, 'retiredLocalAccounts'])
+        ->whereNumber('usuario');
 });
 
 Route::prefix('egresos')->middleware('module.access:egresos')->group(function (): void {

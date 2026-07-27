@@ -7,6 +7,9 @@ los principios de Keep a Changelog.
 
 ### Arquitectura - transición a Laravel 13
 
+- Se retiraron el login, la sesión y el CRUD local de cuentas UVI; sus URL
+  históricas utilizan el acceso central y los endpoints de cuentas responden
+  como retirados en lugar de modificar `usuarios_uvi`.
 - Producción, Eficiencia y Calidad dejaron de depender de `legacy/index.php`:
   sus páginas son Blade y sus rutas, consultas, validaciones y respuestas se
   atienden mediante un controlador Laravel.

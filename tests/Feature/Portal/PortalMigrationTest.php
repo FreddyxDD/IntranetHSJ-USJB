@@ -30,6 +30,12 @@ final class PortalMigrationTest extends TestCase
             ]);
     }
 
+    public function test_identity_administration_requires_the_central_session(): void
+    {
+        $this->get('/admin-ueei')->assertRedirect('/');
+        $this->getJson('/api/admin-ueei/usuarios')->assertUnauthorized();
+    }
+
     public function test_portal_routes_are_absent_from_the_legacy_router(): void
     {
         $legacyRouter = file_get_contents(base_path('legacy/index.php'));
@@ -43,6 +49,8 @@ final class PortalMigrationTest extends TestCase
             "\$uri === '/areas'",
             "\$uri === '/perfil'",
             "\$uri === '/informacion'",
+            "\$uri === '/admin-ueei'",
+            "\$uri === '/api/admin-ueei/usuarios'",
         ] as $condition) {
             $this->assertStringNotContainsString($condition, $legacyRouter);
         }

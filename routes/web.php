@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Appointments\AppointmentApiController;
+use App\Http\Controllers\Admin\IdentityAdminController;
 use App\Http\Controllers\Auth\InstitutionalAuthController;
 use App\Http\Controllers\Egresos\AuditoriaController;
 use App\Http\Controllers\Egresos\Cie10CatalogController;
@@ -38,6 +39,20 @@ Route::middleware('central.auth')->group(function (): void {
 Route::middleware('module.access:informacion')->group(function (): void {
     Route::get('/informacion', [PortalController::class, 'information'])->name('portal.information');
     Route::get('/pages/informacion.html', [PortalController::class, 'information']);
+});
+
+Route::middleware('central.auth')->group(function (): void {
+    Route::get('/admin-ueei', [IdentityAdminController::class, 'page'])->name('identity.admin');
+    Route::get('/api/admin-ueei/resumen', [IdentityAdminController::class, 'resumen']);
+    Route::get('/api/admin-ueei/catalogos', [IdentityAdminController::class, 'catalogos']);
+    Route::get('/api/admin-ueei/usuarios', [IdentityAdminController::class, 'usuarios']);
+    Route::post('/api/admin-ueei/usuarios', [IdentityAdminController::class, 'crearUsuario']);
+    Route::put('/api/admin-ueei/usuarios/{usuario}', [IdentityAdminController::class, 'actualizarUsuario'])
+        ->whereNumber('usuario');
+    Route::patch('/api/admin-ueei/usuarios/{usuario}/estado', [IdentityAdminController::class, 'cambiarEstado'])
+        ->whereNumber('usuario');
+    Route::patch('/api/admin-ueei/usuarios/{usuario}/password', [IdentityAdminController::class, 'cambiarPassword'])
+        ->whereNumber('usuario');
 });
 
 /*

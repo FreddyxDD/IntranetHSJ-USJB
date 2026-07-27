@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/app/config/app.php';
 
-require_once BASE_PATH . '/app/controllers/AdminUeeiController.php';
 require_once BASE_PATH . '/app/controllers/CirugiasAuthController.php';
 require_once BASE_PATH . '/app/controllers/CirugiasController.php';
 require_once BASE_PATH . '/app/helpers/modulos.php';
@@ -131,60 +130,10 @@ if (preg_match('#^/api/citas-admin/citas-diarias/(\d+)/pacientes$#', $uri, $m)) 
 }
 
 /* ==============================
-   IDS DINÁMICOS ADMIN UEeI
-============================== */
-
-$adminUeeiUsuarioId = null;
-
-if (preg_match('#^/api/admin-ueei/usuarios/(\d+)$#', $uri, $m)) {
-    $adminUeeiUsuarioId = (int) $m[1];
-}
-
-$adminUeeiUsuarioEstadoId = null;
-
-if (preg_match('#^/api/admin-ueei/usuarios/(\d+)/estado$#', $uri, $m)) {
-    $adminUeeiUsuarioEstadoId = (int) $m[1];
-}
-
-$adminUeeiUsuarioPasswordId = null;
-
-if (preg_match('#^/api/admin-ueei/usuarios/(\d+)/password$#', $uri, $m)) {
-    $adminUeeiUsuarioPasswordId = (int) $m[1];
-}
-
-/* ==============================
    RUTAS
 ============================== */
 
 match (true) {
-
-    $method === 'GET' && $uri === '/admin-ueei'
-        => (require_ueei_admin()) ?? require BASE_PATH . '/views/admin/admin-ueei.php',
-
-    /* ==============================
-       API ADMIN UEeI
-    ============================== */
-
-    $method === 'GET' && $uri === '/api/admin-ueei/resumen'
-        => AdminUeeiController::resumen(),
-
-    $method === 'GET' && $uri === '/api/admin-ueei/catalogos'
-        => AdminUeeiController::catalogos(),
-
-    $method === 'GET' && $uri === '/api/admin-ueei/usuarios'
-        => AdminUeeiController::usuarios(),
-
-    $method === 'POST' && $uri === '/api/admin-ueei/usuarios'
-        => AdminUeeiController::crearUsuario(),
-
-    $method === 'PUT' && $adminUeeiUsuarioId !== null
-        => AdminUeeiController::actualizarUsuario($adminUeeiUsuarioId),
-
-    $method === 'PATCH' && $adminUeeiUsuarioEstadoId !== null
-        => AdminUeeiController::cambiarEstado($adminUeeiUsuarioEstadoId),
-
-    $method === 'PATCH' && $adminUeeiUsuarioPasswordId !== null
-        => AdminUeeiController::cambiarPassword($adminUeeiUsuarioPasswordId),
 
     /* ==============================
        MÓDULO CIRUGÍAS - LOGIN

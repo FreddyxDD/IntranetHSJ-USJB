@@ -7,6 +7,9 @@ los principios de Keep a Changelog.
 
 ### Arquitectura - transición a Laravel 13
 
+- El CRUD institucional de usuarios, perfiles, estados y contraseñas fue
+  migrado a `IdentityAdminController`, rutas Laravel y vista Blade, eliminando
+  `AdminUeeiController.php` y su despacho manual.
 - Login, registro por DNI, confirmación inicial, consulta de sesión y logout
   fueron migrados a `InstitutionalAuthController`.
 - Principal, Áreas, Perfil e Información dejaron el enrutador heredado y

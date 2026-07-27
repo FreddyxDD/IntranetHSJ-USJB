@@ -1,10 +1,3 @@
-<?php
-declare(strict_types=1);
-
-$adminCorreo = $_SESSION['ueei_correo'] ?? 'Administrador';
-$adminRol = $_SESSION['ueei_rol'] ?? 'admin';
-?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -12,8 +5,8 @@ $adminRol = $_SESSION['ueei_rol'] ?? 'admin';
     <title>Panel Administrador UEeI - Hospital San José</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="stylesheet" href="<?= e(url_path('/assets/css/tailwind.css')) ?>?v=4">
-    <link rel="stylesheet" href="<?= e(url_path('/assets/css/admin-ueei.css')) ?>?v=1.1.0">
+    <link rel="stylesheet" href="{{ asset('assets/css/tailwind.css') }}?v=4">
+    <link rel="stylesheet" href="{{ asset('assets/css/admin-ueei.css') }}?v=1.1.0">
 </head>
 <body>
 
@@ -484,18 +477,18 @@ $adminRol = $_SESSION['ueei_rol'] ?? 'admin';
 </div>
 
 <script>
-    window.APP_BASE = "<?= e(app_base()) ?>";
+    window.APP_BASE = @json(request()->getBaseUrl());
 
     window.ADMIN_UEEI = {
-        resumen: "<?= e(url_path('/api/admin-ueei/resumen')) ?>",
-        catalogos: "<?= e(url_path('/api/admin-ueei/catalogos')) ?>",
-        usuarios: "<?= e(url_path('/api/admin-ueei/usuarios')) ?>",
-        logout: "<?= e(url_path('/logout-ueei')) ?>",
-        areas: "<?= e(url_path('/areas')) ?>"
+        resumen: "{{ url('/api/admin-ueei/resumen') }}",
+        catalogos: "{{ url('/api/admin-ueei/catalogos') }}",
+        usuarios: "{{ url('/api/admin-ueei/usuarios') }}",
+        logout: "{{ url('/logout-ueei') }}",
+        areas: "{{ url('/areas') }}"
     };
 </script>
 
-<script src="<?= e(url_path('/assets/js/admin-ueei.js')) ?>?v=1.2.0"></script>
+<script src="{{ asset('assets/js/admin-ueei.js') }}?v=1.2.0"></script>
 
 </body>
 </html>

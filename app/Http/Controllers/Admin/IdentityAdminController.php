@@ -1,18 +1,23 @@
 <?php
+
 declare(strict_types=1);
 
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Auth\InstitutionalAuthController;
+use App\Http\Controllers\Controller;
 use App\Models\AccessAccount;
 use App\Models\AccessRole;
 use App\Models\User;
-use App\Http\Controllers\Auth\InstitutionalAuthController;
+use App\Services\Identity\CentralAccessService;
+use App\Services\Identity\ModuleCatalogService;
 use App\Services\Identity\SelfRegistrationService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
-require_once BASE_PATH . '/app/helpers/response.php';
-require_once BASE_PATH . '/app/helpers/modulos.php';
-
-final class AdminUeeiController
+final class IdentityAdminController extends Controller
 {
     private const LEGACY_ROLES = ['admin', 'director', 'supervisor', 'trabajador'];
 
@@ -23,14 +28,21 @@ final class AdminUeeiController
         'trabajador' => 'consulta',
     ];
 
+    public function page(): View
+    {
+        self::requireAdmin();
+        $user = app(CentralAccessService::class)->user();
+
+        return view('admin.identity', [
+            'adminCorreo' => $user?->email ?? 'Administrador',
+            'adminRol' => 'admin',
+        ]);
+    }
+
     private static function requireAdmin(): void
     {
-        if (empty($_SESSION['ueei_id'])) {
-            json_response(['ok' => false, 'message' => 'Sesión no iniciada.'], 401);
-        }
-
-        if (! ueei_usuario_es_admin()) {
-            json_response(['ok' => false, 'message' => 'No tienes permisos de administrador.'], 403);
+        if (! app(CentralAccessService::class)->isAdministrator()) {
+            self::json(['ok' => false, 'message' => 'No tienes permisos de administrador.'], 403);
         }
     }
 
@@ -38,13 +50,13 @@ final class AdminUeeiController
     {
         self::requireAdmin();
 
-        json_response(['ok' => true, 'data' => [
+        self::json(['ok' => true, 'data' => [
             'totalUsuarios' => User::query()->count(),
             'usuariosActivos' => User::query()->where('activo', true)->count(),
             'usuariosInactivos' => User::query()->where('activo', false)->count(),
             'solicitudesPendientes' => AccessAccount::query()->where('status', 'pending')->count(),
             'totalAreas' => self::rolesQuery()->count(),
-            'totalModulos' => count(intranet_module_catalog()),
+            'totalModulos' => count(app(ModuleCatalogService::class)->all()),
         ]]);
     }
 
@@ -65,11 +77,11 @@ final class AdminUeeiController
             'modulo_ids' => self::moduleIdsForRole($role),
         ])->all();
 
-        json_response([
+        self::json([
             'ok' => true,
             'roles' => self::LEGACY_ROLES,
             'areas' => $areas,
-            'modulos' => modulos_todos_activos(),
+            'modulos' => app(ModuleCatalogService::class)->all(),
         ]);
     }
 
@@ -84,13 +96,13 @@ final class AdminUeeiController
             ->map(fn (User $user): array => self::serializeUser($user))
             ->all();
 
-        json_response(['ok' => true, 'data' => $users]);
+        self::json(['ok' => true, 'data' => $users]);
     }
 
     public static function crearUsuario(): void
     {
         self::requireAdmin();
-        $input = get_json_input();
+        $input = request()->json()->all();
         $email = normalize_email($input['correo'] ?? '');
         $password = (string) ($input['password'] ?? '');
         $legacyRole = (string) ($input['rol'] ?? 'trabajador');
@@ -98,7 +110,7 @@ final class AdminUeeiController
         self::validateInput($email, $password, $legacyRole, true);
 
         if (User::query()->where('email', $email)->exists()) {
-            json_response(['ok' => false, 'message' => 'Ya existe una cuenta con ese correo.'], 409);
+            self::json(['ok' => false, 'message' => 'Ya existe una cuenta con ese correo.'], 409);
         }
 
         $role = self::resolveRole($legacyRole, $input['area_id'] ?? null);
@@ -130,24 +142,24 @@ final class AdminUeeiController
             return $user;
         });
 
-        json_response(['ok' => true, 'message' => 'Usuario creado correctamente.', 'id' => (int) $user->id]);
+        self::json(['ok' => true, 'message' => 'Usuario creado correctamente.', 'id' => (int) $user->id]);
     }
 
     public static function actualizarUsuario(int $id): void
     {
         self::requireAdmin();
-        $input = get_json_input();
+        $input = request()->json()->all();
         $email = normalize_email($input['correo'] ?? '');
         $legacyRole = (string) ($input['rol'] ?? 'trabajador');
         self::validateInput($email, '', $legacyRole, false);
 
         if (User::query()->where('email', $email)->where('id', '<>', $id)->exists()) {
-            json_response(['ok' => false, 'message' => 'Ya existe otra cuenta con ese correo.'], 409);
+            self::json(['ok' => false, 'message' => 'Ya existe otra cuenta con ese correo.'], 409);
         }
 
         $user = User::query()->with(['person', 'accessAccount'])->find($id);
         if (! $user) {
-            json_response(['ok' => false, 'message' => 'Usuario no encontrado.'], 404);
+            self::json(['ok' => false, 'message' => 'Usuario no encontrado.'], 404);
         }
 
         $role = self::resolveRole($legacyRole, $input['area_id'] ?? null);
@@ -181,7 +193,7 @@ final class AdminUeeiController
             InstitutionalAuthController::refrescarSesion($updatedUser);
         }
 
-        json_response([
+        self::json([
             'ok' => true,
             'message' => 'Usuario actualizado correctamente.',
             'data' => self::serializeUser($updatedUser),
@@ -191,18 +203,18 @@ final class AdminUeeiController
     public static function cambiarEstado(int $id): void
     {
         self::requireAdmin();
-        $state = (int) (get_json_input()['estado'] ?? -1);
+        $state = (int) request()->json('estado', -1);
 
         if (! in_array($state, [0, 1], true)) {
-            json_response(['ok' => false, 'message' => 'Estado inválido.'], 400);
+            self::json(['ok' => false, 'message' => 'Estado inválido.'], 400);
         }
         if ($id === (int) ($_SESSION['ueei_id'] ?? 0) && $state === 0) {
-            json_response(['ok' => false, 'message' => 'No puedes desactivar tu propia cuenta.'], 400);
+            self::json(['ok' => false, 'message' => 'No puedes desactivar tu propia cuenta.'], 400);
         }
 
         $user = User::query()->with('accessAccount')->find($id);
         if (! $user) {
-            json_response(['ok' => false, 'message' => 'Usuario no encontrado.'], 404);
+            self::json(['ok' => false, 'message' => 'Usuario no encontrado.'], 404);
         }
 
         $approvingRequest = $state === 1 && $user->accessAccount?->status === 'pending';
@@ -226,7 +238,7 @@ final class AdminUeeiController
             'status' => $state ? 'active' : 'inactive',
         ]);
 
-        json_response([
+        self::json([
             'ok' => true,
             'message' => $approvingRequest
                 ? 'Solicitud aprobada. La persona ya puede iniciar sesión con acceso de consulta.'
@@ -237,15 +249,15 @@ final class AdminUeeiController
     public static function cambiarPassword(int $id): void
     {
         self::requireAdmin();
-        $password = (string) (get_json_input()['password'] ?? '');
+        $password = (string) request()->json('password', '');
 
         if (strlen($password) < 8 || strlen($password) > 72) {
-            json_response(['ok' => false, 'message' => 'La contraseña debe tener entre 8 y 72 caracteres.'], 400);
+            self::json(['ok' => false, 'message' => 'La contraseña debe tener entre 8 y 72 caracteres.'], 400);
         }
 
         $user = User::query()->with('accessAccount')->find($id);
         if (! $user) {
-            json_response(['ok' => false, 'message' => 'Usuario no encontrado.'], 404);
+            self::json(['ok' => false, 'message' => 'Usuario no encontrado.'], 404);
         }
 
         DB::connection('identity')->transaction(function () use ($user, $password): void {
@@ -256,7 +268,7 @@ final class AdminUeeiController
             }
         });
 
-        json_response(['ok' => true, 'message' => 'Contraseña actualizada correctamente.']);
+        self::json(['ok' => true, 'message' => 'Contraseña actualizada correctamente.']);
     }
 
     private static function serializeUser(User $user): array
@@ -266,12 +278,7 @@ final class AdminUeeiController
             ->filter(fn ($role): bool => $role->application?->code === $application && $role->application?->is_active)
             ->values() ?? collect();
         $permissions = $roles->flatMap->permissions->pluck('code')->unique()->all();
-        $modules = $user->hasRole('administrador')
-            ? modulos_todos_activos()
-            : array_values(array_filter(modulos_todos_activos(), function (array $module) use ($permissions): bool {
-                $required = intranet_module_permission_map()[$module['codigo']] ?? [];
-                return array_intersect($required, $permissions) !== [];
-            }));
+        $modules = app(ModuleCatalogService::class)->forUser($user);
         $primaryRole = $roles->first();
 
         return [
@@ -308,6 +315,7 @@ final class AdminUeeiController
         }
 
         $code = self::ROLE_MAP[$legacyRole] ?? 'consulta';
+
         return self::rolesQuery()->where('access_roles.code', $code)->firstOrFail();
     }
 
@@ -320,14 +328,14 @@ final class AdminUeeiController
 
     private static function validateInput(string $email, string $password, string $role, bool $requiresPassword): void
     {
-        if (! valid_email($email)) {
-            json_response(['ok' => false, 'message' => 'El correo no es válido.'], 400);
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            self::json(['ok' => false, 'message' => 'El correo no es válido.'], 400);
         }
         if ($requiresPassword && (strlen($password) < 8 || strlen($password) > 72)) {
-            json_response(['ok' => false, 'message' => 'La contraseña debe tener entre 8 y 72 caracteres.'], 400);
+            self::json(['ok' => false, 'message' => 'La contraseña debe tener entre 8 y 72 caracteres.'], 400);
         }
         if (! in_array($role, self::LEGACY_ROLES, true)) {
-            json_response(['ok' => false, 'message' => 'Rol inválido.'], 400);
+            self::json(['ok' => false, 'message' => 'Rol inválido.'], 400);
         }
     }
 
@@ -344,7 +352,7 @@ final class AdminUeeiController
     private static function moduleIdsForRole(AccessRole $role): array
     {
         if ($role->code === 'administrador') {
-            return array_column(modulos_todos_activos(), 'id');
+            return array_column(app(ModuleCatalogService::class)->all(), 'id');
         }
 
         $application = (string) config('access.application');
@@ -353,16 +361,17 @@ final class AdminUeeiController
             ->pluck('code')
             ->unique()
             ->all();
-        $mapping = intranet_module_permission_map();
+        $modules = app(ModuleCatalogService::class)->all();
 
         return array_values(array_map(
             static fn (array $module): int => (int) $module['id'],
             array_filter(
-                modulos_todos_activos(),
-                static fn (array $module): bool => array_intersect(
-                    $mapping[$module['codigo']] ?? [],
-                    $permissionCodes
-                ) !== []
+                $modules,
+                static fn (array $module): bool => in_array(
+                    $module['permission'] ?? null,
+                    $permissionCodes,
+                    true,
+                )
             )
         ));
     }
@@ -380,6 +389,12 @@ final class AdminUeeiController
         while (AccessAccount::query()->where('username', $candidate)->exists()) {
             $candidate = substr($base, 0, 50).'-'.$suffix++;
         }
+
         return $candidate;
+    }
+
+    private static function json(array $payload, int $status = 200): never
+    {
+        throw new HttpResponseException(response()->json($payload, $status));
     }
 }

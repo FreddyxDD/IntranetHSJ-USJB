@@ -110,7 +110,7 @@ autenticación API definida explícitamente; no deben copiar esa excepción.
 | Egresos | Laravel nativo | Rutas, controladores, servicios, modelos, vistas y permisos declarados en Laravel. |
 | Citas administrativas | Híbrido | Las consultas de citas diarias, pacientes y cambio de estado están en controladores Laravel; otras funciones conservan temporalmente el despacho heredado. |
 | Cirugías | Híbrido | Conserva controladores y vistas heredados, pero reutiliza la sesión, perfiles y permisos centrales. No debe mantener login ni CRUD local de cuentas. |
-| Administración del Intranet | Híbrido | Conserva parte de la interfaz y controladores heredados, pero administra identidad, roles y permisos en `HSJ_Identity`. |
+| Administración del Intranet | Laravel nativo | El CRUD central utiliza `IdentityAdminController`, rutas Laravel, vista Blade y persistencia exclusiva en `HSJ_Identity`. |
 | Registro y perfil institucional | Laravel nativo | Login, validación de DNI, registro, confirmación, perfil y sesión se atienden mediante controlador, middleware y vistas Laravel. |
 | UVI | Acceso centralizado | Se retiraron login, sesión y CRUD de cuentas locales. Los accesos históricos redirigen al portal o a la administración central según el perfil. |
 | Indicadores de producción | Laravel nativo | Ruta, middleware, controlador, consulta y vista Blade migrados; ya no participa en `legacy/index.php`. |
@@ -143,6 +143,12 @@ El catálogo de módulos se trasladó a `config/modules.php` y
 `ModuleCatalogService` calcula los módulos visibles desde los permisos
 efectivos de `HSJ_Identity`. Las páginas ya no llaman
 `modulos_autorizados()`, `url_path()` ni controladores globales.
+
+La administración institucional también quedó migrada:
+`IdentityAdminController` atiende el resumen, catálogos, usuarios, altas,
+actualizaciones, estados y contraseñas. Las rutas dinámicas usan parámetros
+Laravel validados como numéricos y la interfaz reside en
+`resources/views/admin/identity.blade.php`.
 
 El middleware `legacy.module` también fue sustituido en las rutas Laravel por
 `module.access`. La nueva implementación consulta la cuenta, roles y permisos

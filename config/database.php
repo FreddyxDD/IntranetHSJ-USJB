@@ -66,11 +66,11 @@ return [
 
         'modules' => [
             'driver' => 'mysql',
-            'host' => env('MODULES_DB_HOST', env('LEGACY_DB_HOST', '127.0.0.1')),
-            'port' => env('MODULES_DB_PORT', env('LEGACY_DB_PORT', '3306')),
-            'database' => env('MODULES_DB_DATABASE', env('LEGACY_DB_DATABASE', 'hospital_ueei')),
-            'username' => env('MODULES_DB_USERNAME', env('LEGACY_DB_USERNAME', '')),
-            'password' => env('MODULES_DB_PASSWORD', env('LEGACY_DB_PASSWORD', '')),
+            'host' => env('MODULES_DB_HOST', '127.0.0.1'),
+            'port' => env('MODULES_DB_PORT', '3306'),
+            'database' => env('MODULES_DB_DATABASE', 'hospital_ueei'),
+            'username' => env('MODULES_DB_USERNAME', ''),
+            'password' => env('MODULES_DB_PASSWORD', ''),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
             'prefix' => '',
@@ -81,11 +81,11 @@ return [
 
         'appointments_portal' => [
             'driver' => 'mysql',
-            'host' => env('APPOINTMENTS_DB_HOST', env('CITAS_LEGACY_DB_HOST', '127.0.0.1')),
-            'port' => env('APPOINTMENTS_DB_PORT', env('CITAS_LEGACY_DB_PORT', '3306')),
-            'database' => env('APPOINTMENTS_DB_DATABASE', env('CITAS_LEGACY_DB_DATABASE', 'citas')),
-            'username' => env('APPOINTMENTS_DB_USERNAME', env('CITAS_LEGACY_DB_USERNAME', '')),
-            'password' => env('APPOINTMENTS_DB_PASSWORD', env('CITAS_LEGACY_DB_PASSWORD', '')),
+            'host' => env('APPOINTMENTS_DB_HOST', '127.0.0.1'),
+            'port' => env('APPOINTMENTS_DB_PORT', '3306'),
+            'database' => env('APPOINTMENTS_DB_DATABASE', 'citas'),
+            'username' => env('APPOINTMENTS_DB_USERNAME', ''),
+            'password' => env('APPOINTMENTS_DB_PASSWORD', ''),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
             'prefix' => '',

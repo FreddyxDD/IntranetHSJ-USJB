@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\Appointments\AppointmentApiController;
-use App\Http\Controllers\Appointments\AppointmentAdminController;
 use App\Http\Controllers\Admin\IdentityAdminController;
+use App\Http\Controllers\Appointments\AppointmentAdminController;
+use App\Http\Controllers\Appointments\AppointmentApiController;
 use App\Http\Controllers\Auth\InstitutionalAuthController;
 use App\Http\Controllers\Egresos\AuditoriaController;
 use App\Http\Controllers\Egresos\Cie10CatalogController;
@@ -12,10 +12,10 @@ use App\Http\Controllers\Egresos\EgresoController;
 use App\Http\Controllers\Egresos\ImportacionController;
 use App\Http\Controllers\Egresos\ReporteController;
 use App\Http\Controllers\Indicators\IndicatorController;
-use App\Http\Controllers\LegacyApplicationController;
 use App\Http\Controllers\Portal\PortalController;
+use App\Http\Controllers\Surgery\SurgeryController;
+use App\Http\Controllers\Surgery\SurgeryPortalController;
 use App\Http\Controllers\Uvi\UviController;
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'auth.login')->name('login');
@@ -127,6 +127,85 @@ Route::middleware('module.access:uvi')->group(function (): void {
         ->whereNumber('usuario');
     Route::patch('/usuarios-uvi/{usuario}/estado', [UviController::class, 'retiredLocalAccounts'])
         ->whereNumber('usuario');
+});
+
+Route::middleware('module.access:cirugias')->group(function (): void {
+    Route::get('/cirugias-login', [SurgeryPortalController::class, 'entry']);
+    Route::get('/pages/LoginLS.html', [SurgeryPortalController::class, 'entry']);
+    Route::get('/principal-cirugias', [SurgeryPortalController::class, 'page'])->name('surgery.page');
+    Route::get('/pages/principalLS.html', [SurgeryPortalController::class, 'page']);
+    Route::get('/manual-cirugias', [SurgeryPortalController::class, 'manual']);
+    Route::get('/pages/manualLS.html', [SurgeryPortalController::class, 'manual']);
+    Route::get('/cirugias-admin', [SurgeryPortalController::class, 'administration']);
+    Route::get('/me-ls', [SurgeryPortalController::class, 'me']);
+    Route::get('/me-cirugias', [SurgeryPortalController::class, 'me']);
+    Route::post('/logout-ls', [SurgeryPortalController::class, 'leave']);
+    Route::post('/logout-cirugias', [SurgeryPortalController::class, 'leave']);
+
+    Route::get('/cirugias', [SurgeryController::class, 'listar']);
+    Route::get('/cirugias-resumen', [SurgeryController::class, 'resumen']);
+    Route::get('/cirugias-hojas', [SurgeryController::class, 'hojas']);
+    Route::post('/cirugias-manual', [SurgeryController::class, 'crearManual'])
+        ->middleware('central.permission:cirugias.records.manage');
+    Route::put('/cirugias/{cirugia}', [SurgeryController::class, 'actualizar'])
+        ->whereNumber('cirugia')
+        ->middleware('central.permission:cirugias.records.manage');
+    Route::delete('/cirugias', [SurgeryController::class, 'eliminarTodo'])
+        ->middleware('central.permission:cirugias.imports.manage');
+    Route::post('/excel-hojas', [SurgeryController::class, 'excelHojas'])
+        ->middleware('central.permission:cirugias.imports.manage');
+    Route::post('/importar-cirugias', [SurgeryController::class, 'importarExcel'])
+        ->middleware('central.permission:cirugias.imports.manage');
+
+    Route::get('/especialidades', [SurgeryController::class, 'especialidades']);
+    Route::post('/especialidades', [SurgeryController::class, 'especialidades'])
+        ->middleware('central.permission:cirugias.records.manage');
+    Route::get('/cie10', [SurgeryController::class, 'cie10']);
+    Route::get('/cie10/buscar', [SurgeryController::class, 'cie10']);
+    Route::get('/cie10/estados', [SurgeryController::class, 'cie10Estados']);
+    Route::get('/cie10/sexos', [SurgeryController::class, 'cie10Sexos']);
+    Route::get('/personal-medico', [SurgeryController::class, 'personalMedico'])
+        ->middleware('central.permission:cirugias.staff.manage');
+    Route::get('/personal-medico/{personal}', [SurgeryController::class, 'mostrarPersonalMedico'])
+        ->whereNumber('personal')
+        ->middleware('central.permission:cirugias.staff.manage');
+    Route::post('/personal-medico', [SurgeryController::class, 'crearPersonalMedico'])
+        ->middleware('central.permission:cirugias.staff.manage');
+    Route::put('/personal-medico/{personal}', [SurgeryController::class, 'actualizarPersonalMedico'])
+        ->whereNumber('personal')
+        ->middleware('central.permission:cirugias.staff.manage');
+    Route::put('/personal-medico/{personal}/estado', [SurgeryController::class, 'cambiarEstadoPersonal'])
+        ->whereNumber('personal')
+        ->middleware('central.permission:cirugias.staff.manage');
+    Route::get('/personal-medico/profesiones', [SurgeryController::class, 'personalProfesiones'])
+        ->middleware('central.permission:cirugias.staff.manage');
+    Route::get('/pacientes', [SurgeryController::class, 'pacientes']);
+    Route::get('/pacientes/buscar', [SurgeryController::class, 'pacientes']);
+    Route::get('/pacientes/dni/{dni}', [SurgeryController::class, 'pacientes'])
+        ->where('dni', '\d{8}');
+    Route::get('/procedimientos', [SurgeryController::class, 'procedimientos']);
+    Route::get('/procedimientos/sugerencias', [SurgeryController::class, 'procedimientos']);
+    Route::get('/sigh/procedimientos/sugerencias', [SurgeryController::class, 'procedimientos']);
+    Route::get('/procedimientos/secciones', [SurgeryController::class, 'procedimientosSecciones']);
+    Route::get('/sigh/operacion-por-cie10', [SurgeryController::class, 'operacionPorCie10']);
+    Route::get('/tablas-sigh', [SurgeryController::class, 'tablasSigh']);
+    Route::get('/api/tablas-sigh', [SurgeryController::class, 'tablasSigh']);
+    Route::get('/api/importaciones', [SurgeryController::class, 'importaciones']);
+
+    Route::middleware('central.permission:cirugias.analytics.view')->group(function (): void {
+        Route::get('/api/analisis/meses-disponibles', [SurgeryController::class, 'analisisMeses']);
+        Route::get('/api/analisis/cirugias-mensual', [SurgeryController::class, 'analisisMensual']);
+        Route::get('/api/analisis/tipo-orden', [SurgeryController::class, 'analisisTipoOrden']);
+        Route::get('/api/analisis/resumen-periodo', [SurgeryController::class, 'analisisResumenPeriodo']);
+        Route::get('/api/analisis/mayor-menor-electiva', [SurgeryController::class, 'analisisMayorMenorElectiva']);
+        Route::get('/api/analisis/especialidades', [SurgeryController::class, 'analisisEspecialidades']);
+        Route::get('/api/analisis/detalle-especialidad', [SurgeryController::class, 'analisisDetalleEspecialidad']);
+    });
+
+    Route::middleware('central.permission:cirugias.reports.view')->group(function (): void {
+        Route::get('/api/reportes/meses-disponibles', [SurgeryController::class, 'reportesMeses']);
+        Route::get('/api/reportes/cirugias-mensual', [SurgeryController::class, 'reporteMensual']);
+    });
 });
 
 Route::prefix('egresos')->middleware('module.access:egresos')->group(function (): void {
@@ -256,7 +335,3 @@ Route::prefix('egresos')->middleware('module.access:egresos')->group(function ()
         ->middleware('central.permission:egresos.view')
         ->name('egresos.certificates.print');
 });
-
-Route::any('/{path?}', LegacyApplicationController::class)
-    ->where('path', '.*')
-    ->withoutMiddleware(ValidateCsrfToken::class);

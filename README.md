@@ -1,8 +1,7 @@
 # Intranet HSJ
 
-Plataforma institucional del Hospital San José migrada progresivamente desde
-PHP tradicional hacia Laravel 13. El proyecto conserva temporalmente módulos
-legacy mientras centraliza autenticación, usuarios, roles y permisos.
+Plataforma institucional del Hospital San José consolidada sobre Laravel 13,
+con autenticación, usuarios, roles y permisos centralizados en `HSJ_Identity`.
 
 ## Requisitos
 
@@ -35,20 +34,19 @@ Las credenciales y nombres reales de servidores se configuran únicamente en
 | `sigh` | Consulta de información clínica/citas en modo de solo lectura |
 | `modules` | Datos operativos de indicadores y módulos pendientes de consolidación |
 
-## Arquitectura de transición
+## Arquitectura actual
 
-- `routes/web.php` recibe las solicitudes Laravel.
-- `app/Http/Controllers/LegacyApplicationController.php` mantiene el puente
-  temporal hacia `legacy/index.php`.
-- `app/controllers` y `views` contienen módulos heredados aún no refactorizados.
-- `app/Models`, `app/Services` y `resources/views` contienen implementaciones
-  Laravel modernas.
-- La autenticación y autorización nuevas consumen la base central
-  `HSJ_Identity`.
+- `public/index.php` es el único punto de entrada web.
+- `routes/web.php` declara todas las rutas de la plataforma.
+- `app/Http/Controllers`, `app/Models` y `app/Services` contienen la lógica
+  Laravel.
+- `resources/views` contiene las vistas Blade.
+- La autenticación y autorización consumen exclusivamente `HSJ_Identity`.
+- Los módulos operativos no mantienen cuentas, roles ni contraseñas locales.
 
 El flujo completo de solicitudes, el estado de migración de cada módulo, los
-cambios efectuados sobre el enrutador PHP original y las condiciones para
-retirar el puente se encuentran en
+cambios efectuados sobre el enrutador PHP original y el cierre de su retiro se
+encuentran en
 [Transición de PHP tradicional a Laravel 13](docs/TRANSICION_PHP_TRADICIONAL_A_LARAVEL.md).
 
 El contrato obligatorio para integrar Cirugías y futuras aplicaciones está

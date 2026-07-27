@@ -15,11 +15,7 @@ final class AppointmentAdminMigrationTest extends TestCase
 
     public function test_appointment_admin_is_absent_from_the_legacy_router(): void
     {
-        $legacyRouter = file_get_contents(base_path('legacy/index.php'));
-
-        $this->assertIsString($legacyRouter);
-        $this->assertStringNotContainsString("\$uri === '/citas-admin'", $legacyRouter);
-        $this->assertStringNotContainsString("\$uri === '/api/citas-admin/registros'", $legacyRouter);
-        $this->assertStringNotContainsString('CitasAdminController', $legacyRouter);
+        $this->assertFileDoesNotExist(base_path('legacy/index.php'));
+        $this->assertFileDoesNotExist(app_path('controllers/CitasAdminController.php'));
     }
 }

@@ -1,24 +1,14 @@
-<?php
-$usuario = $_SESSION['ueei_nombre'] ?? $_SESSION['cirugias_usuario'] ?? '';
-$correo = $_SESSION['ueei_correo'] ?? '';
-$rol = (int) ($_SESSION['cirugias_rol'] ?? 1);
-$esAdmin = $rol === 0;
-$puedeAnalisis = ueei_tiene_permiso('cirugias.analytics.view');
-$puedeReportes = ueei_tiene_permiso('cirugias.reports.view');
-$puedeGestionarRegistros = ueei_tiene_permiso('cirugias.records.manage');
-$puedeImportar = ueei_tiene_permiso('cirugias.imports.manage');
-$puedeGestionarPersonal = ueei_tiene_permiso('cirugias.staff.manage');
-?>
-
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ asset('assets/js/csrf.js') }}" defer></script>
     <title>Cirugías</title>
 
-    <link rel="stylesheet" href="<?= e(url_path('/assets/css/principalLS.css')) ?>">
+    <link rel="stylesheet" href="{{ asset('assets/css/principalLS.css') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
 
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -43,7 +33,7 @@ $puedeGestionarPersonal = ueei_tiene_permiso('cirugias.staff.manage');
     <div class="layout">
         <aside class="sidebar">
             <div class="logo">
-                <img src="<?= e(url_path('/assets/images/logohsj.png')) ?>" alt="Hospital San José">
+                <img src="{{ asset('assets/images/logohsj.png') }}" alt="Hospital San José">
                 <span>Cirugías HSJ</span>
             </div>
 
@@ -68,19 +58,19 @@ $puedeGestionarPersonal = ueei_tiene_permiso('cirugias.staff.manage');
                     Gestión
                 </a>
 
-                <a href="<?= e(url_path('/perfil')) ?>">
+                <a href="{{ url('/perfil') }}">
                     <i class="fa-solid fa-user-shield"></i>
                     Mi perfil
                 </a>
 
                 <?php if ($esAdmin): ?>
-                    <a href="<?= e(url_path('/admin-ueei')) ?>">
+                    <a href="{{ url('/admin-ueei') }}">
                         <i class="fa-solid fa-users-gear"></i>
                         Perfiles y accesos
                     </a>
                 <?php endif; ?>
 
-                <a href="<?= e(url_path('/areas')) ?>" id="btnCerrarSesion" class="btn-logout">
+                <a href="{{ url('/areas') }}" id="btnCerrarSesion" class="btn-logout">
                     <i class="fa-solid fa-arrow-left"></i>
                     Volver a módulos
                 </a>
@@ -285,7 +275,7 @@ $puedeGestionarPersonal = ueei_tiene_permiso('cirugias.staff.manage');
 
                         <article class="analisis-card analisis-card-total">
                             <div class="analisis-card-icon analisis-card-icon-total">
-                                <img src="<?= e(url_path('/assets/icon/Total_cirugias.png')) ?>" alt="Total cirugías">
+                                <img src="{{ asset('assets/icon/Total_cirugias.png') }}" alt="Total cirugías">
                             </div>
 
                             <div class="analisis-card-info">
@@ -297,7 +287,7 @@ $puedeGestionarPersonal = ueei_tiene_permiso('cirugias.staff.manage');
 
                         <article class="analisis-card analisis-card-emergencia">
                             <div class="analisis-card-icon analisis-card-icon-emergencia">
-                                <img src="<?= e(url_path('/assets/icon/Emergencias.png')) ?>" alt="Emergencia">
+                                <img src="{{ asset('assets/icon/Emergencias.png') }}" alt="Emergencia">
                             </div>
 
                             <div class="analisis-card-info">
@@ -309,7 +299,7 @@ $puedeGestionarPersonal = ueei_tiene_permiso('cirugias.staff.manage');
 
                         <article class="analisis-card analisis-card-electiva">
                             <div class="analisis-card-icon analisis-card-icon-electiva">
-                                <img src="<?= e(url_path('/assets/icon/Electiva.png')) ?>" alt="Electiva">
+                                <img src="{{ asset('assets/icon/Electiva.png') }}" alt="Electiva">
                             </div>
 
                             <div class="analisis-card-info">
@@ -321,7 +311,7 @@ $puedeGestionarPersonal = ueei_tiene_permiso('cirugias.staff.manage');
 
                         <article class="analisis-card analisis-card-urgencia">
                             <div class="analisis-card-icon analisis-card-icon-urgencia">
-                                <img src="<?= e(url_path('/assets/icon/Tasa_Urgencia.png')) ?>" alt="Tasa de urgencia">
+                                <img src="{{ asset('assets/icon/Tasa_Urgencia.png') }}" alt="Tasa de urgencia">
                             </div>
 
                             <div class="analisis-card-info">
@@ -1463,9 +1453,9 @@ $puedeGestionarPersonal = ueei_tiene_permiso('cirugias.staff.manage');
                     <span>Unidad de Estadística e Información</span>
                 </div>
                 <nav aria-label="Enlaces institucionales">
-                    <a href="<?= e(url_path('/principal')) ?>">Inicio</a>
-                    <a href="<?= e(url_path('/areas')) ?>">Módulos</a>
-                    <a href="<?= e(url_path('/perfil')) ?>">Mi perfil</a>
+                    <a href="{{ url('/principal') }}">Inicio</a>
+                    <a href="{{ url('/areas') }}">Módulos</a>
+                    <a href="{{ url('/perfil') }}">Mi perfil</a>
                 </nav>
                 <small>Acceso administrado centralmente por HSJ Identity.</small>
             </footer>
@@ -1475,17 +1465,17 @@ $puedeGestionarPersonal = ueei_tiene_permiso('cirugias.staff.manage');
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-    window.APP_BASE = "<?= e(app_base()) ?>";
-    window.CIRUGIAS_USUARIO = "<?= e($usuario) ?>";
-    window.CIRUGIAS_ROL = <?= (int) $rol ?>;
-    window.CIRUGIAS_ES_ADMIN = <?= $esAdmin ? 'true' : 'false' ?>;
-    window.CIRUGIAS_PERMISOS = <?= json_encode([
+    window.APP_BASE = @json(request()->getBaseUrl());
+    window.CIRUGIAS_USUARIO = @json($usuario);
+    window.CIRUGIAS_ROL = @json((int) $rol);
+    window.CIRUGIAS_ES_ADMIN = @json($esAdmin);
+    window.CIRUGIAS_PERMISOS = @json([
         'analytics' => $puedeAnalisis,
         'reports' => $puedeReportes,
         'records_manage' => $puedeGestionarRegistros,
         'imports_manage' => $puedeImportar,
         'staff_manage' => $puedeGestionarPersonal,
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    ]);
 
     const fetchOriginalCirugias = window.fetch.bind(window);
 
@@ -1498,7 +1488,7 @@ $puedeGestionarPersonal = ueei_tiene_permiso('cirugias.staff.manage');
     };
 </script>
 
-<script src="<?= e(url_path('/assets/js/principalLS.js')) ?>"></script>
+<script src="{{ asset('assets/js/principalLS.js') }}"></script>
 
 </body>
 

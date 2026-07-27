@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ asset('assets/js/csrf.js') }}" defer></script>
     <title>Información | Hospital San José</title>
 
     <link rel="icon" href="{{ asset('assets/images/logohsj.png') }}">

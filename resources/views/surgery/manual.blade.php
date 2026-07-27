@@ -9,6 +9,6 @@
 
     <p>Manual pendiente de migración.</p>
 
-    <a href="/cirugias-login">Volver al login</a>
+    <a href="{{ url('/principal-cirugias') }}">Volver a Cirugías</a>
 </body>
 </html>

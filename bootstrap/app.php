@@ -28,9 +28,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'central.permission' => EnsureCentralPermission::class,
         ]);
 
-        // Compatibilidad temporal: los formularios existentes conservan sus
-        // contratos mientras cada módulo adopta tokens CSRF de Laravel.
-        $middleware->validateCsrfTokens(except: ['*']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (QueryException $exception, Request $request) {

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>Panel Administrador UEeI - Hospital San José</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script src="{{ asset('assets/js/csrf.js') }}" defer></script>
 
     <link rel="stylesheet" href="{{ asset('assets/css/tailwind.css') }}?v=4">
     <link rel="stylesheet" href="{{ asset('assets/css/admin-ueei.css') }}?v=1.1.0">

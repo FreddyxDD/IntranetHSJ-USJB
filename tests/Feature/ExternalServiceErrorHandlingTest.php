@@ -44,12 +44,12 @@ class ExternalServiceErrorHandlingTest extends TestCase
         $this->assertMatchesRegularExpression('/^INTRA-CITAS-\d{14}-[A-Z0-9]{6}$/', $payload['reference']);
     }
 
-    public function test_legacy_api_and_frontend_strip_debug_messages(): void
+    public function test_migrated_api_and_frontend_strip_debug_messages(): void
     {
-        $helper = file_get_contents(base_path('app/helpers/response.php'));
+        $controller = file_get_contents(app_path('Http/Controllers/Appointments/AppointmentAdminController.php'));
         $javascript = file_get_contents(base_path('public/assets/js/citasadmin.js'));
 
-        $this->assertStringContainsString("unset(\$data['debug'])", $helper);
+        $this->assertStringContainsString("unset(\$payload['debug'])", $controller);
         $this->assertStringNotContainsString('result.debug', $javascript);
     }
 }

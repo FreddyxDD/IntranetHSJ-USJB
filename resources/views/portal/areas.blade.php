@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <script src="{{ asset('assets/js/csrf.js') }}" defer></script>
 
     <title>Áreas | Hospital San José</title>
 
@@ -99,6 +101,7 @@
                         <?php endif; ?>
 
                         <form method="post" action="<?= e(url('/logout-ueei')) ?>">
+                            @csrf
                             <button type="submit" role="menuitem">
                                 <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
                                 Cerrar sesión

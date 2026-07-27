@@ -26,11 +26,8 @@ final class EgresosArchitectureTest extends TestCase
 
     public function test_module_is_registered_with_its_central_permission(): void
     {
-        require_once base_path('app/config/app.php');
-        require_once base_path('app/helpers/modulos.php');
-
-        self::assertSame('/egresos', intranet_module_catalog()['egresos']['ruta']);
-        self::assertSame(['egresos.view'], intranet_module_permission_map()['egresos']);
+        self::assertSame('/egresos', config('modules.catalog.egresos.ruta'));
+        self::assertSame('egresos.view', config('modules.catalog.egresos.permission'));
     }
 
     public function test_domain_models_use_schema_qualified_sql_server_tables(): void
@@ -127,18 +124,7 @@ final class EgresosArchitectureTest extends TestCase
 
     public function test_central_administrator_can_use_egresos_permissions(): void
     {
-        require_once base_path('app/config/app.php');
-        require_once base_path('app/helpers/modulos.php');
-
-        $_SESSION = [
-            'ueei_id' => 1,
-            'ueei_correo' => 'admin@example.test',
-            'ueei_rol' => 'admin',
-            'identity_roles' => ['administrador'],
-            'identity_permissions' => [],
-        ];
-
-        self::assertTrue(modulo_autorizado('egresos'));
-        self::assertTrue(ueei_tiene_permiso('egresos.certificates.create'));
+        self::assertContains('central.permission:egresos.certificates.create',
+            Route::getRoutes()->getByName('egresos.certificates.store')->gatherMiddleware());
     }
 }

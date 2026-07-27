@@ -2,13 +2,10 @@
 
 ## Propósito
 
-Este documento consolida la arquitectura utilizada para migrar el Intranet HSJ
-desde su implementación original en PHP tradicional hacia Laravel 13 sin
-interrumpir los módulos existentes.
-
-La transición es progresiva: Laravel recibe todas las solicitudes, atiende
-directamente los módulos ya refactorizados y delega temporalmente las rutas
-restantes al enrutador heredado.
+Este documento consolida la migración del Intranet HSJ desde su implementación
+original en PHP tradicional hacia Laravel 13. La transición concluyó: Laravel
+recibe y atiende todas las solicitudes y ya no existe un enrutador heredado
+activo.
 
 Este documento complementa:
 
@@ -50,22 +47,9 @@ Kernel HTTP de Laravel 13
         v
 routes/web.php
         |
-        +-- Ruta Laravel declarada
-        |       |
-        |       +-- middleware de módulo y permiso central
-        |       +-- controlador Laravel
-        |       +-- modelo, servicio o vista Blade
-        |
-        +-- Ruta todavía no migrada
-                |
-                v
-        LegacyApplicationController
-                |
-                v
-        legacy/index.php
-                |
-                +-- controlador heredado de app/controllers
-                +-- vista heredada de views
+        +-- middleware de módulo y permiso central
+        +-- controlador Laravel
+        +-- modelo, servicio o vista Blade
 ```
 
 ### Responsabilidades por archivo
@@ -74,34 +58,19 @@ routes/web.php
 | --- | --- |
 | `public/index.php` | Punto de entrada web; carga Composer, inicia Laravel y entrega la solicitud al kernel. |
 | `bootstrap/app.php` | Registra middleware y configuración del aplicativo Laravel. |
-| `routes/web.php` | Declara primero las rutas Laravel y al final la ruta temporal de compatibilidad. |
-| `app/Http/Controllers/LegacyApplicationController.php` | Ejecuta el enrutador heredado dentro del ciclo de respuesta de Laravel y captura su salida. |
-| `legacy/index.php` | Conserva temporalmente el despacho manual de rutas todavía no refactorizadas. |
-| `app/controllers` | Controladores heredados que continúan activos durante la transición. |
-| `views` | Vistas PHP heredadas que todavía no fueron convertidas a Blade. |
+| `routes/web.php` | Declara todas las rutas web y sus middleware. |
 | `app/Http/Controllers`, `app/Models`, `app/Services` | Implementación Laravel moderna. |
-| `resources/views` | Vistas Blade de los módulos refactorizados. |
+| `resources/views` | Vistas Blade de todos los módulos activos. |
 
 ## Regla de resolución de rutas
 
-El orden de `routes/web.php` es deliberado:
+Cada URL activa se declara de forma explícita en `routes/web.php`. La ruta
+aplica `module.access` y, cuando corresponde, un permiso atómico de
+`HSJ_Identity`. No existe una ruta comodín de compatibilidad.
 
-1. Se declaran las rutas nativas de Laravel.
-2. Cada ruta nativa aplica middleware de acceso al módulo y, cuando
-   corresponde, un permiso atómico de `HSJ_Identity`.
-3. Al final se declara `Route::any('/{path?}', ...)`.
-4. La ruta final captura únicamente las URL que Laravel todavía no atiende de
-   forma explícita.
-5. `LegacyApplicationController` ejecuta `legacy/index.php` y transforma su
-   salida directa en una respuesta Laravel.
-
-Una ruta migrada nunca debe volver a declararse en `legacy/index.php`. Durante
-la migración se conserva la misma URL y el mismo contrato de entrada/salida
-para evitar cambios innecesarios en las vistas y clientes existentes.
-
-La excepción temporal de CSRF pertenece únicamente al puente general. Las
-rutas nuevas deben utilizar las protecciones estándar de Laravel o una
-autenticación API definida explícitamente; no deben copiar esa excepción.
+Las rutas web usan la validación CSRF estándar de Laravel. Los formularios
+incluyen `@csrf` y las solicitudes JavaScript del mismo origen reciben el
+encabezado `X-CSRF-TOKEN` desde el recurso común `public/assets/js/csrf.js`.
 
 ## Estado de transición por módulo
 
@@ -109,7 +78,7 @@ autenticación API definida explícitamente; no deben copiar esa excepción.
 | --- | --- | --- |
 | Egresos | Laravel nativo | Rutas, controladores, servicios, modelos, vistas y permisos declarados en Laravel. |
 | Citas administrativas | Laravel nativo | Página, reservas enviadas, reportes, programación diaria, pacientes y estados utilizan controladores, conexiones y rutas Laravel. |
-| Cirugías | Híbrido | Conserva controladores y vistas heredados, pero reutiliza la sesión, perfiles y permisos centrales. No debe mantener login ni CRUD local de cuentas. |
+| Cirugías | Laravel nativo | Rutas, controlador operativo, portal, vistas Blade, sesión y permisos centrales; no mantiene login ni CRUD local de cuentas. |
 | Administración del Intranet | Laravel nativo | El CRUD central utiliza `IdentityAdminController`, rutas Laravel, vista Blade y persistencia exclusiva en `HSJ_Identity`. |
 | Registro y perfil institucional | Laravel nativo | Login, validación de DNI, registro, confirmación, perfil y sesión se atienden mediante controlador, middleware y vistas Laravel. |
 | UVI | Acceso centralizado | Se retiraron login, sesión y CRUD de cuentas locales. Los accesos históricos redirigen al portal o a la administración central según el perfil. |
@@ -150,16 +119,22 @@ actualizaciones, estados y contraseñas. Las rutas dinámicas usan parámetros
 Laravel validados como numéricos y la interfaz reside en
 `resources/views/admin/identity.blade.php`.
 
-Citas administrativas dejó de participar en `legacy/index.php`. La página
+Citas administrativas fue migrada por completo. La página
 utiliza Blade; `AppointmentAdminController` conserva los contratos de reservas
 y reportes, mientras `AppointmentApiController` atiende la programación real
 de SIGH. La conexión `appointments_portal` encapsula los registros operativos
 que todavía residen en MySQL y la conexión `sigh` permanece separada.
 
-El middleware `legacy.module` también fue sustituido en las rutas Laravel por
-`module.access`. La nueva implementación consulta la cuenta, roles y permisos
+El middleware anterior fue sustituido por `module.access`. La implementación
+consulta la cuenta, roles y permisos
 de `HSJ_Identity` mediante `CentralAccessService`, sin cargar
-`app/config/app.php` ni `app/helpers/modulos.php`.
+configuraciones ni helpers PHP tradicionales.
+
+Cirugías fue el último módulo operativo retirado del despacho tradicional.
+`SurgeryPortalController` atiende el ingreso, página principal, manual,
+sesión y salida; `SurgeryController` atiende registros, importaciones,
+catálogos, personal, análisis y reportes. Las URL públicas se conservaron y
+quedaron protegidas con la sesión y permisos centrales.
 
 La conexión `modules` representa la ubicación operativa actual de las tablas
 de indicadores. Su nombre no autoriza crear usuarios o contraseñas locales.
@@ -168,9 +143,11 @@ repositorio o conexión, sin modificar autenticación ni permisos.
 
 ## Cambios aplicados al enrutador original
 
-El código original no se descartó: se trasladó a `legacy/index.php` y se
-adaptó para convivir con Laravel y la identidad central. Los cambios
-funcionales principales son:
+El código original fue refactorizado por módulos, preservando las URL y los
+contratos funcionales necesarios. Tras validar todos los reemplazos se
+eliminaron el enrutador manual, su puente, los controladores globales, los
+helpers y las vistas PHP que ya no tenían consumidores. Los cambios
+funcionales principales fueron:
 
 ### Acceso institucional
 
@@ -185,7 +162,7 @@ funcionales principales son:
 ### Cirugías
 
 - Se eliminó del flujo activo el segundo formulario de login.
-- La sesión compatible de Cirugías se deriva de la sesión central.
+- La sesión de Cirugías se deriva de la sesión central.
 - La autorización dejó de depender únicamente del rol numérico local.
 - Crear o editar registros, importar, administrar personal, consultar análisis
   y emitir reportes exige permisos centrales diferentes.
@@ -197,7 +174,7 @@ funcionales principales son:
 - El acceso administrativo utiliza la sesión general y el permiso del módulo.
 - Los endpoints refactorizados controlan las excepciones y respuestas desde
   Laravel.
-- Se mantiene compatibilidad temporal para las funciones todavía no migradas.
+- Todas las funciones activas se resuelven mediante rutas Laravel explícitas.
 
 ### Seguridad y diagnóstico
 
@@ -208,12 +185,12 @@ funcionales principales son:
 
 ## Procedimiento obligatorio para migrar una ruta
 
-Cada ruta heredada debe migrarse de forma independiente y verificable:
+El procedimiento aplicado a cada ruta heredada fue:
 
 1. Identificar URL, método HTTP, parámetros, sesión, permisos, controlador,
    vista y bases de datos utilizadas.
 2. Crear el controlador, request, servicio y modelo Laravel necesarios.
-3. Declarar la ruta antes del puente de compatibilidad.
+3. Declarar la ruta Laravel explícita.
 4. Aplicar acceso al módulo y permiso central tanto en la interfaz como en el
    endpoint.
 5. Conservar el contrato HTTP existente o documentar expresamente cualquier
@@ -221,14 +198,13 @@ Cada ruta heredada debe migrarse de forma independiente y verificable:
 6. Incorporar manejo institucional de errores y desconexiones.
 7. Agregar pruebas de acceso autorizado, acceso denegado, validación y
    operación correcta.
-8. Retirar la condición equivalente de `legacy/index.php`.
+8. Retirar la condición equivalente del enrutador original.
 9. Actualizar la matriz de este documento y `CHANGELOG.md`.
 10. Publicar el cambio mediante un commit trazable.
 
-## Condiciones para retirar `legacy/index.php`
+## Cierre del retiro del enrutador heredado
 
-El puente no puede eliminarse solo porque Laravel ya esté instalado.
-`legacy/index.php` podrá retirarse cuando se cumplan todas estas condiciones:
+El enrutador heredado se retiró después de verificar estas condiciones:
 
 - no existen rutas funcionales atendidas por el bloque `match` heredado;
 - las páginas activas utilizan controladores Laravel y vistas Blade o una
@@ -241,17 +217,13 @@ El puente no puede eliminarse solo porque Laravel ya esté instalado.
   respuestas institucionales sin revelar detalles técnicos;
 - las pruebas automatizadas cubren las rutas reemplazadas;
 - se completaron pruebas funcionales y existe un procedimiento de reversión;
-- `routes/web.php` ya no necesita la ruta comodín hacia
-  `LegacyApplicationController`.
+- `routes/web.php` ya no necesita una ruta comodín de compatibilidad.
 
-Después de verificar estas condiciones se eliminarán, en un cambio separado y
-revisable:
-
-1. la ruta comodín;
-2. `LegacyApplicationController`;
-3. `legacy/index.php`;
-4. los controladores y vistas heredados que no tengan consumidores;
-5. las conexiones y variables de entorno exclusivas del legado.
+Como resultado se eliminaron la ruta comodín, el controlador puente, el
+enrutador PHP original y los controladores, helpers y vistas tradicionales sin
+consumidores. Las conexiones operativas se conservaron con nombres
+funcionales (`modules` y `appointments_portal`), sin variables de entorno de
+compatibilidad.
 
 ## Decisiones que deben preservarse
 
@@ -262,8 +234,8 @@ revisable:
 - Una aplicación futura puede estar construida en otro lenguaje siempre que
   consuma la identidad y autorización central mediante un contrato seguro; no
   debe replicar usuarios ni contraseñas.
-- La compatibilidad heredada es temporal y no debe utilizarse como plantilla
-  para desarrollar módulos nuevos.
+- Los módulos nuevos deben implementarse directamente con controladores,
+  servicios, middleware, validación y vistas o API de Laravel.
 
 ## Trazabilidad
 

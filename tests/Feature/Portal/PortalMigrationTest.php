@@ -38,21 +38,7 @@ final class PortalMigrationTest extends TestCase
 
     public function test_portal_routes_are_absent_from_the_legacy_router(): void
     {
-        $legacyRouter = file_get_contents(base_path('legacy/index.php'));
-
-        $this->assertIsString($legacyRouter);
-
-        foreach ([
-            "\$uri === '/login-ueei'",
-            "\$uri === '/crear-cuenta-ueei'",
-            "\$uri === '/principal'",
-            "\$uri === '/areas'",
-            "\$uri === '/perfil'",
-            "\$uri === '/informacion'",
-            "\$uri === '/admin-ueei'",
-            "\$uri === '/api/admin-ueei/usuarios'",
-        ] as $condition) {
-            $this->assertStringNotContainsString($condition, $legacyRouter);
-        }
+        $this->assertFileDoesNotExist(base_path('legacy/index.php'));
+        $this->assertFileDoesNotExist(app_path('Http/Controllers/LegacyApplicationController.php'));
     }
 }

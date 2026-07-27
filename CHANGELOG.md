@@ -7,6 +7,16 @@ los principios de Keep a Changelog.
 
 ### Arquitectura - transición a Laravel 13
 
+- Cirugías fue migrado a controladores Laravel, vistas Blade, rutas explícitas
+  y permisos centrales diferenciados para registros, importaciones, personal,
+  análisis y reportes.
+- Se retiraron definitivamente el enrutador `legacy/index.php`, su controlador
+  puente, los controladores/helpers PHP tradicionales y las vistas activas que
+  todavía dependían del despacho manual.
+- Se habilitó la validación CSRF estándar de Laravel en todas las rutas web y
+  se agregó el encabezado CSRF común para las solicitudes JavaScript internas.
+- Las conexiones operativas ahora usan exclusivamente las variables
+  `MODULES_DB_*` y `APPOINTMENTS_DB_*`, sin alias heredados.
 - Citas administrativas dejó `legacy/index.php`: página, reservas, reportes,
   programación diaria, pacientes y estados se atienden con controladores,
   conexiones y rutas Laravel.
@@ -35,10 +45,11 @@ los principios de Keep a Changelog.
   residen en MySQL, separando su ubicación física de la autenticación central.
 - Los errores de indicadores se registran con referencia de soporte y ya no
   entregan excepciones o detalles de conexión al usuario.
-- Se consolidó en un documento único el flujo HTTP desde `public/index.php`
-  hasta las rutas Laravel o el puente `LegacyApplicationController`.
-- Se documentaron las responsabilidades de `routes/web.php`,
-  `legacy/index.php`, controladores heredados, controladores Laravel y vistas.
+- Se consolidó en un documento único el flujo HTTP final desde
+  `public/index.php` hasta las rutas, middleware y controladores Laravel.
+- Se documentaron las responsabilidades actuales de `routes/web.php`,
+  controladores Laravel, servicios y vistas Blade, junto con el antecedente
+  histórico de la transición.
 - Se incorporó una matriz del estado de migración de Egresos, Citas,
   Cirugías, administración, UVI e indicadores.
 - Se registraron los cambios funcionales aplicados al enrutador PHP original,

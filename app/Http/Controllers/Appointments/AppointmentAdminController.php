@@ -1,20 +1,36 @@
 <?php
+
 declare(strict_types=1);
 
-require_once BASE_PATH . '/app/config/database.php';
-require_once BASE_PATH . '/app/helpers/response.php';
-require_once BASE_PATH . '/app/helpers/modulos.php';
+namespace App\Http\Controllers\Appointments;
 
-final class CitasAdminController
+use App\Http\Controllers\Controller;
+use App\Services\Identity\CentralAccessService;
+use App\Support\UserFacingError;
+use DateTimeInterface;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\DB;
+use PDO;
+use Throwable;
+
+final class AppointmentAdminController extends Controller
 {
+    public function page(): View
+    {
+        return view('appointments.admin', [
+            'usuarioCitasAdmin' => app(CentralAccessService::class)->user()?->email ?? '',
+        ]);
+    }
+
     private static function dbCitas(): PDO
     {
-        return db_citas();
+        return DB::connection('appointments_portal')->getPdo();
     }
 
     private static function dbSigh(): PDO
     {
-        return db_sigh();
+        return DB::connection('sigh')->getPdo();
     }
 
     /*
@@ -24,22 +40,9 @@ final class CitasAdminController
     */
     private static function requireAdmin(): void
     {
-        if (empty($_SESSION['ueei_correo'])) {
-            json_response([
-                'ok' => false,
-                'success' => false,
-                'error' => 'No has iniciado sesión en el intranet.',
-            ], 401);
-        }
-
-        if (!modulo_autorizado('citas_admin')) {
-            json_response([
-                'ok' => false,
-                'success' => false,
-                'error' => 'No tienes permiso para usar el módulo de Citas.',
-            ], 403);
-        }
+        // La autorización se resuelve mediante el middleware module.access.
     }
+
     private static function fechaInicio(): string
     {
         /*
@@ -49,13 +52,14 @@ final class CitasAdminController
            - No se fuerza a hoy cuando el usuario escoge una fecha anterior.
         */
         $fecha = self::normalizarFechaFiltro($_GET['fechaInicio'] ?? '');
-    
+
         if ($fecha === '') {
             return date('Y-m-d');
         }
-    
+
         return $fecha;
     }
+
     private static function fechaFin(): string
     {
         /*
@@ -64,19 +68,17 @@ final class CitasAdminController
         */
         $fechaInicio = self::fechaInicio();
         $fecha = self::normalizarFechaFiltro($_GET['fechaFin'] ?? '');
-    
+
         if ($fecha === '') {
             return $fechaInicio;
         }
-    
+
         if ($fecha < $fechaInicio) {
             return $fechaInicio;
         }
-    
+
         return $fecha;
     }
-
-
 
     private static function normalizarFechaFiltro(mixed $valor): string
     {
@@ -91,7 +93,7 @@ final class CitasAdminController
         }
 
         if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $fecha, $m)) {
-            return $m[3] . '-' . $m[2] . '-' . $m[1];
+            return $m[3].'-'.$m[2].'-'.$m[1];
         }
 
         return substr($fecha, 0, 10);
@@ -134,7 +136,7 @@ final class CitasAdminController
         return trim((string) ($valor ?? ''));
     }
 
-        private static function normalizarNombreEspecialidadReporte(string $valor): string
+    private static function normalizarNombreEspecialidadReporte(string $valor): string
     {
         $texto = trim($valor);
 
@@ -191,12 +193,12 @@ final class CitasAdminController
     private static function columnaExisteSigh(string $tabla, string $columna): bool
     {
         try {
-            $stmt = self::dbSigh()->prepare("
+            $stmt = self::dbSigh()->prepare('
                 SELECT COUNT(*)
                 FROM INFORMATION_SCHEMA.COLUMNS
                 WHERE TABLE_NAME = :tabla
                   AND COLUMN_NAME = :columna
-            ");
+            ');
 
             $stmt->execute([
                 ':tabla' => $tabla,
@@ -209,16 +211,15 @@ final class CitasAdminController
         }
     }
 
-
     private static function tipoColumnaSigh(string $tabla, string $columna): string
     {
         try {
-            $stmt = self::dbSigh()->prepare("
+            $stmt = self::dbSigh()->prepare('
                 SELECT TOP 1 DATA_TYPE
                 FROM INFORMATION_SCHEMA.COLUMNS
                 WHERE TABLE_NAME = :tabla
                   AND COLUMN_NAME = :columna
-            ");
+            ');
 
             $stmt->execute([
                 ':tabla' => $tabla,
@@ -230,8 +231,6 @@ final class CitasAdminController
             return '';
         }
     }
-
-
 
     private static function primeraColumnaExistenteSigh(string $tabla, array $columnas): ?string
     {
@@ -314,7 +313,7 @@ final class CitasAdminController
         try {
             self::requireAdmin();
 
-            $stmt = self::dbCitas()->query("
+            $stmt = self::dbCitas()->query('
                 SELECT
                     IdRegistro AS idRegistro,
                     Ticket AS ticket,
@@ -336,11 +335,11 @@ final class CitasAdminController
                 FROM salaesperaregistros
                 ORDER BY IdRegistro DESC
                 LIMIT 1000
-            ");
+            ');
 
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            json_response([
+            self::json([
                 'ok' => true,
                 'success' => true,
                 'total' => count($data),
@@ -348,7 +347,7 @@ final class CitasAdminController
                 'registros' => $data,
             ]);
         } catch (Throwable $e) {
-            json_response([
+            self::json([
                 'ok' => false,
                 'success' => false,
                 'error' => 'Error cargando registros de citas reservadas.',
@@ -357,47 +356,47 @@ final class CitasAdminController
         }
     }
 
-public static function citasDiarias(): void
-{
-    try {
-        self::requireAdmin();
+    public static function citasDiarias(): void
+    {
+        try {
+            self::requireAdmin();
 
-        $fechaInicio = self::fechaInicio();
-        $fechaFin = self::fechaFin();
+            $fechaInicio = self::fechaInicio();
+            $fechaFin = self::fechaFin();
 
-        /*
-           Consulta segura para SQL Server:
-           - No repite el mismo placeholder varias veces.
-           - Si las fechas vienen vacías, muestra programaciones anteriores y posteriores.
-           - Si existe IdEstadoCita, separa Otorgadas vs Atendidas.
-        */
-        $tieneEstadoCita = self::columnaExisteSigh('Citas', 'IdEstadoCita');
-        $estadoExpr = $tieneEstadoCita ? 'ISNULL(c.IdEstadoCita, 0)' : '0';
+            /*
+               Consulta segura para SQL Server:
+               - No repite el mismo placeholder varias veces.
+               - Si las fechas vienen vacías, muestra programaciones anteriores y posteriores.
+               - Si existe IdEstadoCita, separa Otorgadas vs Atendidas.
+            */
+            $tieneEstadoCita = self::columnaExisteSigh('Citas', 'IdEstadoCita');
+            $estadoExpr = $tieneEstadoCita ? 'ISNULL(c.IdEstadoCita, 0)' : '0';
 
-        $wherePm = [];
-        $joinCitasFechas = [];
-        $params = [];
+            $wherePm = [];
+            $joinCitasFechas = [];
+            $params = [];
 
-        if ($fechaInicio !== '') {
-            $wherePm[] = 'CAST(pm.Fecha AS date) >= CONVERT(date, :fechaInicioPm, 23)';
-            $joinCitasFechas[] = 'CAST(c.Fecha AS date) >= CONVERT(date, :fechaInicioCita, 23)';
-            $params[':fechaInicioPm'] = $fechaInicio;
-            $params[':fechaInicioCita'] = $fechaInicio;
-        }
+            if ($fechaInicio !== '') {
+                $wherePm[] = 'CAST(pm.Fecha AS date) >= CONVERT(date, :fechaInicioPm, 23)';
+                $joinCitasFechas[] = 'CAST(c.Fecha AS date) >= CONVERT(date, :fechaInicioCita, 23)';
+                $params[':fechaInicioPm'] = $fechaInicio;
+                $params[':fechaInicioCita'] = $fechaInicio;
+            }
 
-        if ($fechaFin !== '') {
-            $wherePm[] = 'CAST(pm.Fecha AS date) <= CONVERT(date, :fechaFinPm, 23)';
-            $joinCitasFechas[] = 'CAST(c.Fecha AS date) <= CONVERT(date, :fechaFinCita, 23)';
-            $params[':fechaFinPm'] = $fechaFin;
-            $params[':fechaFinCita'] = $fechaFin;
-        }
+            if ($fechaFin !== '') {
+                $wherePm[] = 'CAST(pm.Fecha AS date) <= CONVERT(date, :fechaFinPm, 23)';
+                $joinCitasFechas[] = 'CAST(c.Fecha AS date) <= CONVERT(date, :fechaFinCita, 23)';
+                $params[':fechaFinPm'] = $fechaFin;
+                $params[':fechaFinCita'] = $fechaFin;
+            }
 
-        $wherePmSql = $wherePm !== [] ? 'WHERE ' . implode(' AND ', $wherePm) : 'WHERE 1 = 1';
-        $joinCitasFechaSql = $joinCitasFechas !== []
-            ? "\n                AND " . implode("\n                AND ", $joinCitasFechas)
-            : '';
+            $wherePmSql = $wherePm !== [] ? 'WHERE '.implode(' AND ', $wherePm) : 'WHERE 1 = 1';
+            $joinCitasFechaSql = $joinCitasFechas !== []
+                ? "\n                AND ".implode("\n                AND ", $joinCitasFechas)
+                : '';
 
-        $sql = "
+            $sql = "
             SELECT TOP 1000
                 pm.IdProgramacion,
                 CAST(pm.Fecha AS date) AS Fecha,
@@ -533,29 +532,29 @@ public static function citasDiarias(): void
                 s.Nombre ASC
         ";
 
-        $stmt = self::dbSigh()->prepare($sql);
-        $stmt->execute($params);
+            $stmt = self::dbSigh()->prepare($sql);
+            $stmt->execute($params);
 
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $origen = 'programacion_medica';
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $origen = 'programacion_medica';
 
-        if ($rows === []) {
-            $whereCitas = [];
-            $paramsCitas = [];
+            if ($rows === []) {
+                $whereCitas = [];
+                $paramsCitas = [];
 
-            if ($fechaInicio !== '') {
-                $whereCitas[] = 'CAST(c.Fecha AS date) >= CONVERT(date, :fechaInicioCitasDirectas, 23)';
-                $paramsCitas[':fechaInicioCitasDirectas'] = $fechaInicio;
-            }
+                if ($fechaInicio !== '') {
+                    $whereCitas[] = 'CAST(c.Fecha AS date) >= CONVERT(date, :fechaInicioCitasDirectas, 23)';
+                    $paramsCitas[':fechaInicioCitasDirectas'] = $fechaInicio;
+                }
 
-            if ($fechaFin !== '') {
-                $whereCitas[] = 'CAST(c.Fecha AS date) <= CONVERT(date, :fechaFinCitasDirectas, 23)';
-                $paramsCitas[':fechaFinCitasDirectas'] = $fechaFin;
-            }
+                if ($fechaFin !== '') {
+                    $whereCitas[] = 'CAST(c.Fecha AS date) <= CONVERT(date, :fechaFinCitasDirectas, 23)';
+                    $paramsCitas[':fechaFinCitasDirectas'] = $fechaFin;
+                }
 
-            $whereCitasSql = $whereCitas !== [] ? 'WHERE ' . implode(' AND ', $whereCitas) : 'WHERE 1 = 1';
+                $whereCitasSql = $whereCitas !== [] ? 'WHERE '.implode(' AND ', $whereCitas) : 'WHERE 1 = 1';
 
-            $sqlCitas = "
+                $sqlCitas = "
                 SELECT TOP 1000
                     ISNULL(pm.IdProgramacion, c.IdProgramacion) AS IdProgramacion,
                     CAST(c.Fecha AS date) AS Fecha,
@@ -678,68 +677,67 @@ public static function citasDiarias(): void
                     s.Nombre ASC
             ";
 
-            $stmtCitas = self::dbSigh()->prepare($sqlCitas);
-            $stmtCitas->execute($paramsCitas);
+                $stmtCitas = self::dbSigh()->prepare($sqlCitas);
+                $stmtCitas->execute($paramsCitas);
 
-            $rows = $stmtCitas->fetchAll(PDO::FETCH_ASSOC);
-            $origen = 'citas_directas';
+                $rows = $stmtCitas->fetchAll(PDO::FETCH_ASSOC);
+                $origen = 'citas_directas';
+            }
+
+            $estadosGuardados = [];
+
+            $data = array_map(static function (array $row) use ($estadosGuardados): array {
+                $idProgramacion = (int) ($row['IdProgramacion'] ?? 0);
+                $estadoGuardado = $estadosGuardados[$idProgramacion] ?? null;
+
+                return [
+                    'idProgramacion' => $idProgramacion,
+                    'ticket' => 'PROG-'.$idProgramacion,
+                    'fecha' => CitasAdminController::valorFecha($row['Fecha'] ?? ''),
+                    'idDepartamento' => $row['IdDepartamento'] ?? null,
+                    'fechaProgramacion' => CitasAdminController::valorFecha($row['FechaProgramacion'] ?? ''),
+                    'departamento' => CitasAdminController::normalizarTexto($row['Departamento'] ?? ''),
+                    'idEspecialidad' => $row['IdEspecialidad'] ?? null,
+                    'especialidad' => CitasAdminController::normalizarTexto($row['Especialidad'] ?? ''),
+                    'idServicio' => $row['IdServicio'] ?? null,
+                    'servicio' => CitasAdminController::normalizarTexto($row['Servicio'] ?? ''),
+                    'idMedico' => $row['IdMedico'] ?? null,
+                    'medico' => CitasAdminController::normalizarTexto($row['Medico'] ?? ''),
+                    'horaInicio' => CitasAdminController::valorHora($row['HoraInicio'] ?? ''),
+                    'horaFin' => CitasAdminController::valorHora($row['HoraFin'] ?? ''),
+                    'idTurno' => $row['IdTurno'] ?? null,
+                    'turno' => CitasAdminController::normalizarTexto($row['Turno'] ?? ''),
+                    'tiempoPromedioAtencion' => (int) ($row['TiempoPromedioAtencion'] ?? 0),
+                    'minutosProgramados' => (int) ($row['MinutosProgramados'] ?? 0),
+                    'cuposProgramados' => max(0, (int) ($row['CuposProgramados'] ?? 0)),
+                    'citasOtorgadas' => max(0, (int) ($row['CitasOtorgadas'] ?? 0)),
+                    'citasAtendidas' => max(0, (int) ($row['CitasAtendidas'] ?? 0)),
+                    'citasAdicionales' => max(0, (int) ($row['CitasAdicionales'] ?? 0)),
+                    'citasBloqueadas' => max(0, (int) ($row['CitasBloqueadas'] ?? 0)),
+                    'cuposDisponibles' => max(0, (int) ($row['CuposDisponibles'] ?? 0)),
+                    'estado' => $estadoGuardado['estado'] ?? 'PROGRAMADO',
+                    'observacion' => $estadoGuardado['observacion'] ?? '',
+                ];
+            }, $rows);
+
+            self::json([
+                'ok' => true,
+                'success' => true,
+                'total' => count($data),
+                'fechaInicio' => $fechaInicio,
+                'fechaFin' => $fechaFin,
+                'origen' => $origen,
+                'data' => $data,
+            ]);
+        } catch (Throwable $e) {
+            self::json([
+                'ok' => false,
+                'success' => false,
+                'error' => 'Error cargando citas diarias desde SIGH.',
+                'debug' => $e->getMessage(),
+            ], 500);
         }
-
-        $estadosGuardados = [];
-
-        $data = array_map(static function (array $row) use ($estadosGuardados): array {
-            $idProgramacion = (int) ($row['IdProgramacion'] ?? 0);
-            $estadoGuardado = $estadosGuardados[$idProgramacion] ?? null;
-
-            return [
-                'idProgramacion' => $idProgramacion,
-                'ticket' => 'PROG-' . $idProgramacion,
-                'fecha' => CitasAdminController::valorFecha($row['Fecha'] ?? ''),
-                'idDepartamento' => $row['IdDepartamento'] ?? null,
-                'fechaProgramacion' => CitasAdminController::valorFecha($row['FechaProgramacion'] ?? ''),
-                'departamento' => CitasAdminController::normalizarTexto($row['Departamento'] ?? ''),
-                'idEspecialidad' => $row['IdEspecialidad'] ?? null,
-                'especialidad' => CitasAdminController::normalizarTexto($row['Especialidad'] ?? ''),
-                'idServicio' => $row['IdServicio'] ?? null,
-                'servicio' => CitasAdminController::normalizarTexto($row['Servicio'] ?? ''),
-                'idMedico' => $row['IdMedico'] ?? null,
-                'medico' => CitasAdminController::normalizarTexto($row['Medico'] ?? ''),
-                'horaInicio' => CitasAdminController::valorHora($row['HoraInicio'] ?? ''),
-                'horaFin' => CitasAdminController::valorHora($row['HoraFin'] ?? ''),
-                'idTurno' => $row['IdTurno'] ?? null,
-                'turno' => CitasAdminController::normalizarTexto($row['Turno'] ?? ''),
-                'tiempoPromedioAtencion' => (int) ($row['TiempoPromedioAtencion'] ?? 0),
-                'minutosProgramados' => (int) ($row['MinutosProgramados'] ?? 0),
-                'cuposProgramados' => max(0, (int) ($row['CuposProgramados'] ?? 0)),
-                'citasOtorgadas' => max(0, (int) ($row['CitasOtorgadas'] ?? 0)),
-                'citasAtendidas' => max(0, (int) ($row['CitasAtendidas'] ?? 0)),
-                'citasAdicionales' => max(0, (int) ($row['CitasAdicionales'] ?? 0)),
-                'citasBloqueadas' => max(0, (int) ($row['CitasBloqueadas'] ?? 0)),
-                'cuposDisponibles' => max(0, (int) ($row['CuposDisponibles'] ?? 0)),
-                'estado' => $estadoGuardado['estado'] ?? 'PROGRAMADO',
-                'observacion' => $estadoGuardado['observacion'] ?? '',
-            ];
-        }, $rows);
-
-        json_response([
-            'ok' => true,
-            'success' => true,
-            'total' => count($data),
-            'fechaInicio' => $fechaInicio,
-            'fechaFin' => $fechaFin,
-            'origen' => $origen,
-            'data' => $data,
-        ]);
-    } catch (Throwable $e) {
-        json_response([
-            'ok' => false,
-            'success' => false,
-            'error' => 'Error cargando citas diarias desde SIGH.',
-            'debug' => $e->getMessage(),
-        ], 500);
     }
-}
-
 
     public static function reportes(): void
     {
@@ -752,13 +750,13 @@ public static function citasDiarias(): void
 
             $mesReporte = trim((string) ($_GET['mes'] ?? ''));
 
-            if (!preg_match('/^\d{4}-\d{2}$/', $mesReporte)) {
+            if (! preg_match('/^\d{4}-\d{2}$/', $mesReporte)) {
                 $mesReporte = date('Y-m');
             }
 
             $inicioMes = DateTimeImmutable::createFromFormat('!Y-m', $mesReporte);
 
-            if (!$inicioMes || $inicioMes->format('Y-m') !== $mesReporte) {
+            if (! $inicioMes || $inicioMes->format('Y-m') !== $mesReporte) {
                 $inicioMes = new DateTimeImmutable(date('Y-m-01'));
                 $mesReporte = $inicioMes->format('Y-m');
             }
@@ -899,28 +897,28 @@ public static function citasDiarias(): void
                 $idMedico = (int) ($row['IdMedico'] ?? 0);
                 $medico = self::normalizarTexto($row['Medico'] ?? '');
 
-            if ($especialidad === '') {
-                $especialidad = $idEspecialidad > 0
-                    ? 'Especialidad ' . $idEspecialidad
-                    : 'Especialidad sin nombre';
-            }
+                if ($especialidad === '') {
+                    $especialidad = $idEspecialidad > 0
+                        ? 'Especialidad '.$idEspecialidad
+                        : 'Especialidad sin nombre';
+                }
 
-            /*
-            * Estas especialidades no deben aparecer en el ranking,
-            * en el detalle ni en el total del reporte.
-            */
-            if (self::especialidadExcluidaReporte($especialidad)) {
-                continue;
-            }
-                            if ($servicio === '') {
+                /*
+                * Estas especialidades no deben aparecer en el ranking,
+                * en el detalle ni en el total del reporte.
+                */
+                if (self::especialidadExcluidaReporte($especialidad)) {
+                    continue;
+                }
+                if ($servicio === '') {
                     $servicio = $idServicio > 0
-                        ? 'Consultorio ' . $idServicio
+                        ? 'Consultorio '.$idServicio
                         : 'Consultorio sin nombre';
                 }
 
                 if ($medico === '') {
                     $medico = $idMedico > 0
-                        ? 'Personal ' . $idMedico
+                        ? 'Personal '.$idMedico
                         : 'Personal no identificado';
                 }
 
@@ -930,18 +928,18 @@ public static function citasDiarias(): void
                 $cerrados = max(0, (int) ($row['Cerrados'] ?? 0));
 
                 $claveEspecialidad = $idEspecialidad > 0
-                    ? 'id:' . $idEspecialidad
-                    : 'nombre:' . strtolower($especialidad);
+                    ? 'id:'.$idEspecialidad
+                    : 'nombre:'.strtolower($especialidad);
 
                 $claveServicio = $idServicio > 0
-                    ? 'id:' . $idServicio
-                    : 'nombre:' . strtolower($servicio);
+                    ? 'id:'.$idServicio
+                    : 'nombre:'.strtolower($servicio);
 
                 $claveMedico = $idMedico > 0
-                    ? 'id:' . $idMedico
-                    : 'nombre:' . strtolower($medico);
+                    ? 'id:'.$idMedico
+                    : 'nombre:'.strtolower($medico);
 
-                if (!isset($especialidades[$claveEspecialidad])) {
+                if (! isset($especialidades[$claveEspecialidad])) {
                     $especialidades[$claveEspecialidad] = [
                         'idEspecialidad' => $idEspecialidad > 0
                             ? $idEspecialidad
@@ -962,7 +960,7 @@ public static function citasDiarias(): void
                 $especialidades[$claveEspecialidad]['registrados'] += $registrados;
                 $especialidades[$claveEspecialidad]['cerrados'] += $cerrados;
 
-                if (!isset($especialidades[$claveEspecialidad]['consultorios'][$claveServicio])) {
+                if (! isset($especialidades[$claveEspecialidad]['consultorios'][$claveServicio])) {
                     $especialidades[$claveEspecialidad]['consultorios'][$claveServicio] = [
                         'idServicio' => $idServicio > 0 ? $idServicio : null,
                         'servicio' => $servicio,
@@ -976,13 +974,13 @@ public static function citasDiarias(): void
                     ];
                 }
 
-                $consultorio =& $especialidades[$claveEspecialidad]['consultorios'][$claveServicio];
+                $consultorio = &$especialidades[$claveEspecialidad]['consultorios'][$claveServicio];
                 $consultorio['totalCitas'] += $totalCitas;
                 $consultorio['anulados'] += $anulados;
                 $consultorio['registrados'] += $registrados;
                 $consultorio['cerrados'] += $cerrados;
 
-                if (!isset($consultorio['personal'][$claveMedico])) {
+                if (! isset($consultorio['personal'][$claveMedico])) {
                     $consultorio['personal'][$claveMedico] = [
                         'idMedico' => $idMedico > 0 ? $idMedico : null,
                         'medico' => $medico,
@@ -1012,23 +1010,20 @@ public static function citasDiarias(): void
 
                     $personal = array_values($consultorio['personal']);
 
-                    usort($personal, static fn(array $a, array $b): int =>
-                        ($b['totalCitas'] <=> $a['totalCitas'])
+                    usort($personal, static fn (array $a, array $b): int => ($b['totalCitas'] <=> $a['totalCitas'])
                         ?: strcmp($a['medico'], $b['medico'])
                     );
 
                     $consultorio['personal'] = $personal;
                     $consultorio['totalPersonal'] = count($personal);
                     $consultorio['nombresPersonal'] = array_values(array_map(
-                        static fn(array $persona): string =>
-                            (string) ($persona['medico'] ?? 'Personal no identificado'),
+                        static fn (array $persona): string => (string) ($persona['medico'] ?? 'Personal no identificado'),
                         $personal
                     ));
                     $consultorios[] = $consultorio;
                 }
 
-                usort($consultorios, static fn(array $a, array $b): int =>
-                    ($b['totalCitas'] <=> $a['totalCitas'])
+                usort($consultorios, static fn (array $a, array $b): int => ($b['totalCitas'] <=> $a['totalCitas'])
                     ?: strcmp($a['servicio'], $b['servicio'])
                 );
 
@@ -1042,8 +1037,8 @@ public static function citasDiarias(): void
                         $idPersona = (int) ($personaFinal['idMedico'] ?? 0);
                         $nombrePersona = strtolower(trim((string) ($personaFinal['medico'] ?? '')));
                         $clavePersona = $idPersona > 0
-                            ? 'id:' . $idPersona
-                            : 'nombre:' . $nombrePersona;
+                            ? 'id:'.$idPersona
+                            : 'nombre:'.$nombrePersona;
 
                         if ($clavePersona !== 'nombre:') {
                             $personalUnico[$clavePersona] = true;
@@ -1058,8 +1053,7 @@ public static function citasDiarias(): void
                 }
             }
 
-            usort($data, static fn(array $a, array $b): int =>
-                ($b['totalCitas'] <=> $a['totalCitas'])
+            usort($data, static fn (array $a, array $b): int => ($b['totalCitas'] <=> $a['totalCitas'])
                 ?: strcmp($a['especialidad'], $b['especialidad'])
             );
 
@@ -1067,7 +1061,7 @@ public static function citasDiarias(): void
                 ob_end_clean();
             }
 
-            json_response([
+            self::json([
                 'ok' => true,
                 'success' => true,
                 'mes' => $mesReporte,
@@ -1082,7 +1076,7 @@ public static function citasDiarias(): void
                 ob_end_clean();
             }
 
-            json_response([
+            self::json([
                 'ok' => false,
                 'success' => false,
                 'error' => 'Error generando los reportes de citas diarias.',
@@ -1096,36 +1090,36 @@ public static function citasDiarias(): void
         try {
             self::requireAdmin();
 
-            $input = get_json_input();
+            $input = request()->json()->all();
             $estado = strtoupper(trim((string) ($input['estado'] ?? '')));
             $permitidos = ['REGISTRADO', 'ATENDIDO', 'ANULADO'];
 
-            if (!in_array($estado, $permitidos, true)) {
-                json_response([
+            if (! in_array($estado, $permitidos, true)) {
+                self::json([
                     'ok' => false,
                     'success' => false,
                     'error' => 'Estado inválido.',
                 ], 400);
             }
 
-            $stmt = self::dbCitas()->prepare("
+            $stmt = self::dbCitas()->prepare('
                 UPDATE salaesperaregistros
                 SET Estado = :estado
                 WHERE IdRegistro = :id
-            ");
+            ');
 
             $stmt->execute([
                 ':estado' => $estado,
                 ':id' => $id,
             ]);
 
-            json_response([
+            self::json([
                 'ok' => true,
                 'success' => true,
                 'message' => 'Estado actualizado correctamente.',
             ]);
         } catch (Throwable $e) {
-            json_response([
+            self::json([
                 'ok' => false,
                 'success' => false,
                 'error' => 'Error actualizando estado.',
@@ -1140,7 +1134,7 @@ public static function citasDiarias(): void
             self::requireAdmin();
             self::crearTablaEstadosDiarios();
 
-            $input = get_json_input();
+            $input = request()->json()->all();
             $estado = strtoupper(trim((string) ($input['estado'] ?? '')));
             $fecha = trim((string) ($input['fecha'] ?? date('Y-m-d')));
             $observacion = trim((string) ($input['observacion'] ?? ''));
@@ -1153,22 +1147,22 @@ public static function citasDiarias(): void
             ];
 
             if ($idProgramacion <= 0) {
-                json_response([
+                self::json([
                     'ok' => false,
                     'success' => false,
                     'error' => 'Programación inválida.',
                 ], 400);
             }
 
-            if (!in_array($estado, $permitidos, true)) {
-                json_response([
+            if (! in_array($estado, $permitidos, true)) {
+                self::json([
                     'ok' => false,
                     'success' => false,
                     'error' => 'Estado inválido para cita diaria.',
                 ], 400);
             }
 
-            $stmt = self::dbCitas()->prepare("
+            $stmt = self::dbCitas()->prepare('
                 INSERT INTO citas_diarias_admin_estados
                     (id_programacion, fecha, estado, observacion)
                 VALUES
@@ -1178,7 +1172,7 @@ public static function citasDiarias(): void
                     estado = VALUES(estado),
                     observacion = VALUES(observacion),
                     actualizado_en = CURRENT_TIMESTAMP
-            ");
+            ');
 
             $stmt->execute([
                 ':id_programacion' => $idProgramacion,
@@ -1187,13 +1181,13 @@ public static function citasDiarias(): void
                 ':observacion' => $observacion !== '' ? $observacion : null,
             ]);
 
-            json_response([
+            self::json([
                 'ok' => true,
                 'success' => true,
                 'message' => 'Estado de cita diaria actualizado correctamente.',
             ]);
         } catch (Throwable $e) {
-            json_response([
+            self::json([
                 'ok' => false,
                 'success' => false,
                 'error' => 'No se pudo guardar el estado porque MySQL citas no respondió.',
@@ -1208,7 +1202,7 @@ public static function citasDiarias(): void
             self::requireAdmin();
 
             if ($idProgramacion <= 0) {
-                json_response([
+                self::json([
                     'ok' => false,
                     'success' => false,
                     'error' => 'Programación inválida.',
@@ -1219,7 +1213,7 @@ public static function citasDiarias(): void
 
             foreach (['IdCuentaAtencion', 'NroCuenta', 'NumeroCuenta', 'NroCuentaAtencion'] as $columna) {
                 if (self::columnaExisteSigh('Citas', $columna)) {
-                    $columnaCuenta = 'c.' . $columna;
+                    $columnaCuenta = 'c.'.$columna;
                     break;
                 }
             }
@@ -1242,11 +1236,11 @@ public static function citasDiarias(): void
             ]);
 
             $selectFechaRegistro = $columnaFechaRegistro
-                ? 'c.' . $columnaFechaRegistro . ' AS FechaRegistroCita'
+                ? 'c.'.$columnaFechaRegistro.' AS FechaRegistroCita'
                 : 'NULL AS FechaRegistroCita';
 
             $selectFechaAtencion = $columnaFechaAtencion
-                ? 'c.' . $columnaFechaAtencion . ' AS FechaAtencionCita'
+                ? 'c.'.$columnaFechaAtencion.' AS FechaAtencionCita'
                 : 'NULL AS FechaAtencionCita';
 
             $selectEstadoCita = self::columnaExisteSigh('Citas', 'IdEstadoCita')
@@ -1292,10 +1286,10 @@ public static function citasDiarias(): void
 
             $data = array_map(static function (array $row) use ($hoy): array {
                 $paciente = trim(
-                    ($row['ApellidoPaterno'] ?? '') . ' ' .
-                    ($row['ApellidoMaterno'] ?? '') . ' ' .
-                    ($row['PrimerNombre'] ?? '') . ' ' .
-                    ($row['SegundoNombre'] ?? '') . ' ' .
+                    ($row['ApellidoPaterno'] ?? '').' '.
+                    ($row['ApellidoMaterno'] ?? '').' '.
+                    ($row['PrimerNombre'] ?? '').' '.
+                    ($row['SegundoNombre'] ?? '').' '.
                     ($row['TercerNombre'] ?? '')
                 );
 
@@ -1318,7 +1312,7 @@ public static function citasDiarias(): void
                 $esCitaAdicional = (int) ($row['EsCitaAdicional'] ?? 0) === 1;
                 $colorCita = $esCitaAdicional ? 'adicional' : 'programada';
 
-                if (!$esCitaAdicional && $fechaCita !== '') {
+                if (! $esCitaAdicional && $fechaCita !== '') {
                     if ($fechaCita < $hoy) {
                         $colorCita = 'anterior';
                     } elseif ($fechaCita === $hoy) {
@@ -1352,7 +1346,7 @@ public static function citasDiarias(): void
                 ];
             }, $rows);
 
-            json_response([
+            self::json([
                 'ok' => true,
                 'success' => true,
                 'total' => count($data),
@@ -1360,7 +1354,7 @@ public static function citasDiarias(): void
                 'data' => $data,
             ]);
         } catch (Throwable $e) {
-            json_response([
+            self::json([
                 'ok' => false,
                 'success' => false,
                 'error' => 'Error cargando pacientes de la cita diaria desde SIGH.',
@@ -1376,15 +1370,15 @@ public static function citasDiarias(): void
 
             $idCita = trim($idCita);
 
-            if ($idCita === '' || !ctype_digit($idCita)) {
-                json_response([
+            if ($idCita === '' || ! ctype_digit($idCita)) {
+                self::json([
                     'ok' => false,
                     'success' => false,
                     'error' => 'No se encontró el identificador de la cita.',
                 ], 400);
             }
 
-            $input = get_json_input();
+            $input = request()->json()->all();
             $estado = strtoupper(trim((string) ($input['estado'] ?? '')));
 
             $idEstado = match ($estado) {
@@ -1395,7 +1389,7 @@ public static function citasDiarias(): void
             };
 
             if ($idEstado === 0) {
-                json_response([
+                self::json([
                     'ok' => false,
                     'success' => false,
                     'error' => 'Estado inválido para la cita del paciente.',
@@ -1418,21 +1412,21 @@ public static function citasDiarias(): void
                 ]);
 
                 if ($columnaAtencion !== null) {
-                    $sets[] = $columnaAtencion . ' = GETDATE()';
+                    $sets[] = $columnaAtencion.' = GETDATE()';
                 }
             }
 
-            $sql = 'UPDATE Citas SET ' . implode(', ', $sets) . ' WHERE IdCita = :idCita';
+            $sql = 'UPDATE Citas SET '.implode(', ', $sets).' WHERE IdCita = :idCita';
             $stmt = self::dbSigh()->prepare($sql);
             $stmt->execute($params);
 
-            json_response([
+            self::json([
                 'ok' => true,
                 'success' => true,
                 'message' => 'Estado de la cita del paciente actualizado correctamente.',
             ]);
         } catch (Throwable $e) {
-            json_response([
+            self::json([
                 'ok' => false,
                 'success' => false,
                 'error' => 'No se pudo actualizar el estado de la cita del paciente.',
@@ -1441,4 +1435,18 @@ public static function citasDiarias(): void
         }
     }
 
+    private static function json(array $payload, int $status = 200): never
+    {
+        if (array_key_exists('debug', $payload)) {
+            $technical = (string) $payload['debug'];
+            unset($payload['debug']);
+            $payload['reference'] = UserFacingError::report(
+                new \RuntimeException($technical),
+                'INTRA-CITAS',
+                ['path' => request()->path()],
+            );
+        }
+
+        throw new HttpResponseException(response()->json($payload, $status));
+    }
 }

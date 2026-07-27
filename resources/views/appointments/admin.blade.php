@@ -1,7 +1,3 @@
-<?php
-$usuarioCitasAdmin = $_SESSION['citas_admin_usuario'] ?? '';
-?>
-
 <!doctype html>
 <html lang="es">
   <head>
@@ -10,8 +6,8 @@ $usuarioCitasAdmin = $_SESSION['citas_admin_usuario'] ?? '';
     <title>Citas Admin | Hospital San José</title>
 
     <link rel="icon" href="../assets/images/logohsj.png" />
-    <link rel="stylesheet" href="<?= e(url_path('/assets/css/tailwind.css')) ?>?v=3">
-    <link rel="stylesheet" href="<?= e(url_path('/assets/css/citasadmin.css')) ?>?v=1021">
+    <link rel="stylesheet" href="{{ asset('assets/css/tailwind.css') }}?v=3">
+    <link rel="stylesheet" href="{{ asset('assets/css/citasadmin.css') }}?v=1021">
     <style id="estilosReporteInteractivo">
       .reportes-graficos-grid--flujo {
         grid-template-columns: minmax(0, 1fr);
@@ -346,7 +342,7 @@ $usuarioCitasAdmin = $_SESSION['citas_admin_usuario'] ?? '';
         </a>
 
         <nav class="sidebar-menu" aria-label="Menú principal">
-          <a href="<?= e(url_path('/areas')) ?>" class="sidebar-link">
+          <a href="{{ url('/areas') }}" class="sidebar-link">
             <span class="sidebar-link__icon">⌂</span>
             <span>Inicio</span>
           </a>
@@ -955,10 +951,10 @@ $usuarioCitasAdmin = $_SESSION['citas_admin_usuario'] ?? '';
     </section>
 
    <script>
-    window.APP_BASE = "<?= e(app_base()) ?>";
-    window.CITAS_ADMIN_USUARIO = "<?= e($usuarioCitasAdmin) ?>";
+    window.APP_BASE = @json(request()->getBaseUrl());
+    window.CITAS_ADMIN_USUARIO = @json($usuarioCitasAdmin);
 </script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="<?= e(url_path('/assets/js/citasadmin.js')) ?>?v=1021"></script>
+  <script src="{{ asset('assets/js/citasadmin.js') }}?v=1021"></script>
   </body>
 </html>

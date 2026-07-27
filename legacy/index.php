@@ -6,7 +6,6 @@ require_once dirname(__DIR__) . '/app/config/app.php';
 require_once BASE_PATH . '/app/controllers/CirugiasAuthController.php';
 require_once BASE_PATH . '/app/controllers/CirugiasController.php';
 require_once BASE_PATH . '/app/helpers/modulos.php';
-require_once BASE_PATH . '/app/controllers/CitasAdminController.php';
 
 iniciar_sesion_segura();
 
@@ -74,21 +73,6 @@ function require_cirugias_permission_api(string $permission): void
     require_permiso_api($permission);
 }
 
-/*
-   NUEVA LÓGICA DE CITAS:
-   Ya no se usa la sesión antigua $_SESSION['citas_admin_usuario'].
-   Ahora Citas depende del login general del intranet y del permiso del módulo citas_admin.
-*/
-function require_citas_admin(): void
-{
-    require_modulo('citas_admin');
-}
-
-function require_citas_admin_api(): void
-{
-    require_modulo_api('citas_admin');
-}
-
 /* ==============================
    IDS DINÁMICOS
 ============================== */
@@ -109,24 +93,6 @@ $personalEstadoId = null;
 
 if (preg_match('#^/personal-medico/(\d+)/estado$#', $uri, $m)) {
     $personalEstadoId = (int) $m[1];
-}
-
-$citasRegistroId = null;
-
-if (preg_match('#^/api/citas-admin/registros/(\d+)/estado$#', $uri, $m)) {
-    $citasRegistroId = (int) $m[1];
-}
-
-$citaDiariaEstadoId = null;
-
-if (preg_match('#^/api/citas-admin/citas-diarias/(\d+)/estado$#', $uri, $m)) {
-    $citaDiariaEstadoId = (int) $m[1];
-}
-
-$citaDiariaPacientesId = null;
-
-if (preg_match('#^/api/citas-admin/citas-diarias/(\d+)/pacientes$#', $uri, $m)) {
-    $citaDiariaPacientesId = (int) $m[1];
 }
 
 /* ==============================
@@ -336,51 +302,6 @@ match (true) {
 
     $method === 'GET' && preg_match('#^/pacientes/dni/(\d{8})$#', $uri, $m)
         => CirugiasController::pacientes(),
-
-    /* ==============================
-       MÓDULO CITAS ADMIN
-       Acceso único desde login general del intranet.
-       Se elimina /citas-admin-login y el login propio de Citas.
-    ============================== */
-
-    $method === 'GET' && ($uri === '/citas-admin' || $uri === '/pages/CitasAdmi.html')
-        => (require_citas_admin()) ?? require BASE_PATH . '/views/pages/citas-admin.php',
-
-    $method === 'GET' && $uri === '/api/citas-admin/registros'
-        => (function (): void {
-            require_citas_admin_api();
-            CitasAdminController::registros();
-        })(),
-
-    $method === 'PUT' && $citasRegistroId !== null
-        => (function () use ($citasRegistroId): void {
-            require_citas_admin_api();
-            CitasAdminController::actualizarEstado($citasRegistroId);
-        })(),
-
-    $method === 'GET' && $uri === '/api/citas-admin/citas-diarias'
-        => (function (): void {
-            require_citas_admin_api();
-            CitasAdminController::citasDiarias();
-        })(),
-
-    $method === 'GET' && $uri === '/api/citas-admin/reportes'
-        => (function (): void {
-            require_citas_admin_api();
-            CitasAdminController::reportes();
-        })(),
-
-    $method === 'PUT' && $citaDiariaEstadoId !== null
-        => (function () use ($citaDiariaEstadoId): void {
-            require_citas_admin_api();
-            CitasAdminController::actualizarEstadoCitaDiaria($citaDiariaEstadoId);
-        })(),
-
-    $method === 'GET' && $citaDiariaPacientesId !== null
-        => (function () use ($citaDiariaPacientesId): void {
-            require_citas_admin_api();
-            CitasAdminController::pacientesCitaDiaria($citaDiariaPacientesId);
-        })(),
 
     default => (function (): void {
         http_response_code(404);

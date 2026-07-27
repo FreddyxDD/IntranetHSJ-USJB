@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Appointments\AppointmentApiController;
+use App\Http\Controllers\Appointments\AppointmentAdminController;
 use App\Http\Controllers\Admin\IdentityAdminController;
 use App\Http\Controllers\Auth\InstitutionalAuthController;
 use App\Http\Controllers\Egresos\AuditoriaController;
@@ -64,6 +65,12 @@ Route::middleware('central.auth')->group(function (): void {
 | Las vistas y respuestas JSON conservan exactamente sus contratos actuales.
 */
 Route::middleware('module.access:citas_admin')->group(function (): void {
+    Route::get('/citas-admin', [AppointmentAdminController::class, 'page'])->name('appointments.admin');
+    Route::get('/pages/CitasAdmi.html', [AppointmentAdminController::class, 'page']);
+    Route::get('/api/citas-admin/registros', [AppointmentAdminController::class, 'registros']);
+    Route::put('/api/citas-admin/registros/{registro}/estado', [AppointmentAdminController::class, 'actualizarEstado'])
+        ->whereNumber('registro');
+    Route::get('/api/citas-admin/reportes', [AppointmentAdminController::class, 'reportes']);
     Route::get('/api/citas-admin/citas-diarias', [AppointmentApiController::class, 'daily'])
         ->name('appointments.daily');
     Route::get('/api/citas-admin/citas-diarias/{programacion}/pacientes', [AppointmentApiController::class, 'patients'])

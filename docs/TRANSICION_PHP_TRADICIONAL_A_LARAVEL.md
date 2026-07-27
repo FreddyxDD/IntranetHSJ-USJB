@@ -108,7 +108,7 @@ autenticación API definida explícitamente; no deben copiar esa excepción.
 | Módulo | Estado | Enrutamiento y operación |
 | --- | --- | --- |
 | Egresos | Laravel nativo | Rutas, controladores, servicios, modelos, vistas y permisos declarados en Laravel. |
-| Citas administrativas | Híbrido | Las consultas de citas diarias, pacientes y cambio de estado están en controladores Laravel; otras funciones conservan temporalmente el despacho heredado. |
+| Citas administrativas | Laravel nativo | Página, reservas enviadas, reportes, programación diaria, pacientes y estados utilizan controladores, conexiones y rutas Laravel. |
 | Cirugías | Híbrido | Conserva controladores y vistas heredados, pero reutiliza la sesión, perfiles y permisos centrales. No debe mantener login ni CRUD local de cuentas. |
 | Administración del Intranet | Laravel nativo | El CRUD central utiliza `IdentityAdminController`, rutas Laravel, vista Blade y persistencia exclusiva en `HSJ_Identity`. |
 | Registro y perfil institucional | Laravel nativo | Login, validación de DNI, registro, confirmación, perfil y sesión se atienden mediante controlador, middleware y vistas Laravel. |
@@ -149,6 +149,12 @@ La administración institucional también quedó migrada:
 actualizaciones, estados y contraseñas. Las rutas dinámicas usan parámetros
 Laravel validados como numéricos y la interfaz reside en
 `resources/views/admin/identity.blade.php`.
+
+Citas administrativas dejó de participar en `legacy/index.php`. La página
+utiliza Blade; `AppointmentAdminController` conserva los contratos de reservas
+y reportes, mientras `AppointmentApiController` atiende la programación real
+de SIGH. La conexión `appointments_portal` encapsula los registros operativos
+que todavía residen en MySQL y la conexión `sigh` permanece separada.
 
 El middleware `legacy.module` también fue sustituido en las rutas Laravel por
 `module.access`. La nueva implementación consulta la cuenta, roles y permisos

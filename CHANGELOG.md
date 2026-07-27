@@ -7,6 +7,11 @@ los principios de Keep a Changelog.
 
 ### Arquitectura - transición a Laravel 13
 
+- Citas administrativas dejó `legacy/index.php`: página, reservas, reportes,
+  programación diaria, pacientes y estados se atienden con controladores,
+  conexiones y rutas Laravel.
+- La conexión `appointments_portal` encapsula los registros operativos MySQL
+  del portal de citas sin mezclar cuentas o permisos locales.
 - El CRUD institucional de usuarios, perfiles, estados y contraseñas fue
   migrado a `IdentityAdminController`, rutas Laravel y vista Blade, eliminando
   `AdminUeeiController.php` y su despacho manual.

@@ -8,6 +8,7 @@ use App\Http\Controllers\Egresos\ConstanciaController;
 use App\Http\Controllers\Egresos\EgresoController;
 use App\Http\Controllers\Egresos\ImportacionController;
 use App\Http\Controllers\Egresos\ReporteController;
+use App\Http\Controllers\Indicators\IndicatorController;
 use App\Http\Controllers\LegacyApplicationController;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
@@ -20,7 +21,7 @@ use Illuminate\Support\Facades\Route;
 | kernel institucional mientras los controladores se refactorizan por módulo.
 | Las vistas y respuestas JSON conservan exactamente sus contratos actuales.
 */
-Route::middleware('legacy.module:citas_admin')->group(function (): void {
+Route::middleware('module.access:citas_admin')->group(function (): void {
     Route::get('/api/citas-admin/citas-diarias', [AppointmentApiController::class, 'daily'])
         ->name('appointments.daily');
     Route::get('/api/citas-admin/citas-diarias/{programacion}/pacientes', [AppointmentApiController::class, 'patients'])
@@ -31,7 +32,39 @@ Route::middleware('legacy.module:citas_admin')->group(function (): void {
         ->name('appointments.program-state');
 });
 
-Route::prefix('egresos')->middleware('legacy.module:egresos')->group(function (): void {
+Route::middleware('module.access:produccion')->group(function (): void {
+    Route::get('/produccion', [IndicatorController::class, 'productionPage'])
+        ->name('indicators.production.page');
+    Route::get('/pages/produccion.html', [IndicatorController::class, 'productionPage']);
+    Route::get('/indicadores/produccion', [IndicatorController::class, 'production'])
+        ->name('indicators.production.index');
+});
+
+Route::middleware('module.access:eficiencia')->group(function (): void {
+    Route::get('/eficiencia', [IndicatorController::class, 'efficiencyPage'])
+        ->name('indicators.efficiency.page');
+    Route::get('/pages/eficiencia.html', [IndicatorController::class, 'efficiencyPage']);
+    Route::get('/indicadores/eficiencia', [IndicatorController::class, 'efficiency'])
+        ->name('indicators.efficiency.index');
+    Route::get('/admin/indicadores/eficiencia', [IndicatorController::class, 'efficiencyAdmin'])
+        ->name('indicators.efficiency.admin');
+    Route::put('/admin/indicadores/eficiencia', [IndicatorController::class, 'updateEfficiency'])
+        ->name('indicators.efficiency.update');
+});
+
+Route::middleware('module.access:calidad')->group(function (): void {
+    Route::get('/calidad', [IndicatorController::class, 'qualityPage'])
+        ->name('indicators.quality.page');
+    Route::get('/pages/calidad.html', [IndicatorController::class, 'qualityPage']);
+    Route::get('/indicadores/calidad', [IndicatorController::class, 'quality'])
+        ->name('indicators.quality.index');
+    Route::get('/admin/indicadores/calidad', [IndicatorController::class, 'qualityAdmin'])
+        ->name('indicators.quality.admin');
+    Route::put('/admin/indicadores/calidad', [IndicatorController::class, 'updateQuality'])
+        ->name('indicators.quality.update');
+});
+
+Route::prefix('egresos')->middleware('module.access:egresos')->group(function (): void {
     Route::get('/', [EgresoController::class, 'index'])
         ->middleware('central.permission:egresos.view')
         ->name('egresos.index');

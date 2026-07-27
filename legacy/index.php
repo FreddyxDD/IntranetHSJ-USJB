@@ -8,9 +8,6 @@ require_once BASE_PATH . '/app/controllers/AdminUeeiController.php';
 require_once BASE_PATH . '/app/controllers/CirugiasAuthController.php';
 require_once BASE_PATH . '/app/controllers/UviAuthController.php';
 require_once BASE_PATH . '/app/controllers/CirugiasController.php';
-require_once BASE_PATH . '/app/controllers/ProduccionController.php';
-require_once BASE_PATH . '/app/controllers/EficienciaController.php';
-require_once BASE_PATH . '/app/controllers/CalidadController.php';
 require_once BASE_PATH . '/app/controllers/UeeiPerfilController.php';
 require_once BASE_PATH . '/app/helpers/modulos.php';
 require_once BASE_PATH . '/app/controllers/CitasAdminController.php';
@@ -271,69 +268,6 @@ match (true) {
         => (function () use ($m): void {
             require_modulo_api('uvi');
             UviAuthController::cambiarEstadoUsuario((int) $m[1]);
-        })(),
-
-    /* ==============================
-       INDICADORES PRODUCCIÓN
-    ============================== */
-
-    $method === 'GET' && ($uri === '/produccion' || $uri === '/pages/produccion.html')
-        => (require_modulo('produccion')) ?? require BASE_PATH . '/views/pages/produccion.php',
-
-    $method === 'GET' && $uri === '/indicadores/produccion'
-        => (function (): void {
-            require_modulo_api('produccion');
-            ProduccionController::produccion();
-        })(),
-
-    /* ==============================
-       INDICADORES EFICIENCIA
-    ============================== */
-
-    $method === 'GET' && ($uri === '/eficiencia' || $uri === '/pages/eficiencia.html')
-        => (require_modulo('eficiencia')) ?? require BASE_PATH . '/views/pages/eficiencia.php',
-
-    $method === 'GET' && $uri === '/indicadores/eficiencia'
-        => (function (): void {
-            require_modulo_api('eficiencia');
-            EficienciaController::listar();
-        })(),
-
-    $method === 'GET' && $uri === '/admin/indicadores/eficiencia'
-        => (function (): void {
-            require_modulo_api('eficiencia');
-            EficienciaController::listarAdmin();
-        })(),
-
-    $method === 'PUT' && $uri === '/admin/indicadores/eficiencia'
-        => (function (): void {
-            require_modulo_api('eficiencia');
-            EficienciaController::actualizar();
-        })(),
-
-    /* ==============================
-       INDICADORES CALIDAD
-    ============================== */
-
-    $method === 'GET' && ($uri === '/calidad' || $uri === '/pages/calidad.html')
-        => (require_modulo('calidad')) ?? require BASE_PATH . '/views/pages/calidad.php',
-
-    $method === 'GET' && $uri === '/indicadores/calidad'
-        => (function (): void {
-            require_modulo_api('calidad');
-            CalidadController::listar();
-        })(),
-
-    $method === 'GET' && $uri === '/admin/indicadores/calidad'
-        => (function (): void {
-            require_modulo_api('calidad');
-            CalidadController::listarAdmin();
-        })(),
-
-    $method === 'PUT' && $uri === '/admin/indicadores/calidad'
-        => (function (): void {
-            require_modulo_api('calidad');
-            CalidadController::actualizar();
         })(),
 
     /* ==============================

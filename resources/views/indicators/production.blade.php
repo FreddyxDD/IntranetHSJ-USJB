@@ -1,8 +1,3 @@
-<?php
-$correo = $_SESSION['ueei_correo'] ?? '';
-$rol = $_SESSION['ueei_rol'] ?? '';
-?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -10,15 +5,15 @@ $rol = $_SESSION['ueei_rol'] ?? '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indicador de Producción y Rendimiento | Hospital San José</title>
 
-    <link rel="icon" href="<?= e(url_path('/assets/images/logohsj.png')) ?>" type="image/png">
-    <link rel="stylesheet" href="<?= e(url_path('/assets/css/produccion.css')) ?>?v=2">
+    <link rel="icon" href="{{ asset('assets/images/logohsj.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ asset('assets/css/produccion.css') }}?v=2">
 </head>
 
 <body>
     <header class="topbar">
         <div class="topbar__inner">
-            <a href="<?= e(url_path('/principal')) ?>" class="brand">
-                <img src="<?= e(url_path('/assets/images/logohsj.png')) ?>" alt="Logo Hospital San José">
+            <a href="{{ url('/principal') }}" class="brand">
+                <img src="{{ asset('assets/images/logohsj.png') }}" alt="Logo Hospital San José">
 
                 <div class="brand__text">
                     <h1>Hospital San José</h1>
@@ -26,7 +21,7 @@ $rol = $_SESSION['ueei_rol'] ?? '';
                 </div>
             </a>
 
-            <a href="<?= e(url_path('/principal')) ?>" class="back-btn">
+            <a href="{{ url('/principal') }}" class="back-btn">
                 Volver al inicio
             </a>
         </div>
@@ -135,14 +130,14 @@ $rol = $_SESSION['ueei_rol'] ?? '';
     </footer>
 
     <script>
-        window.APP_BASE = "<?= e(app_base()) ?>";
+        window.APP_BASE = @json(request()->getBaseUrl());
         window.UEEI_USER = {
-            correo: <?= json_encode($correo, JSON_UNESCAPED_UNICODE) ?>,
-            rol: <?= json_encode($rol, JSON_UNESCAPED_UNICODE) ?>
+            correo: @json($correo),
+            rol: @json($rol)
         };
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="<?= e(url_path('/assets/js/produccion.js')) ?>?v=1"></script>
+    <script src="{{ asset('assets/js/produccion.js') }}?v=1"></script>
 </body>
 </html>

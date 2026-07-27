@@ -94,7 +94,7 @@ final class EgresosArchitectureTest extends TestCase
         $cie10ImportConfirm = Route::getRoutes()->getByName('egresos.cie10.imports.confirm');
 
         self::assertNotNull($index);
-        self::assertContains('legacy.module:egresos', $index->gatherMiddleware());
+        self::assertContains('module.access:egresos', $index->gatherMiddleware());
         self::assertContains('central.permission:egresos.view', $index->gatherMiddleware());
         self::assertNotNull($create);
         self::assertNotNull($preview);

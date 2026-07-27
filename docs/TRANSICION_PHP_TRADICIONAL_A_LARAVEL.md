@@ -113,13 +113,29 @@ autenticación API definida explícitamente; no deben copiar esa excepción.
 | Administración del Intranet | Híbrido | Conserva parte de la interfaz y controladores heredados, pero administra identidad, roles y permisos en `HSJ_Identity`. |
 | Registro y perfil institucional | Híbrido | La interfaz mantiene compatibilidad heredada y la persistencia se realiza sobre la identidad central. |
 | UVI | Heredado pendiente | Continúa bajo `legacy/index.php`; debe migrarse sin crear otra fuente de usuarios. |
-| Indicadores de producción | Heredado pendiente | Continúa bajo el puente temporal. |
-| Indicadores de eficiencia | Heredado pendiente | Continúa bajo el puente temporal. |
-| Indicadores de calidad | Heredado pendiente | Continúa bajo el puente temporal. |
+| Indicadores de producción | Laravel nativo | Ruta, middleware, controlador, consulta y vista Blade migrados; ya no participa en `legacy/index.php`. |
+| Indicadores de eficiencia | Laravel nativo | Consulta y mantenimiento administrativo migrados a Laravel con validación y errores controlados. |
+| Indicadores de calidad | Laravel nativo | Consulta y mantenimiento administrativo migrados a Laravel con validación y errores controlados. |
 | Información institucional y páginas generales | Heredado pendiente | Conservan sus URL y vistas durante la refactorización. |
 
 La matriz debe actualizarse en el mismo commit que complete la migración de un
 módulo.
+
+### Avance del retiro
+
+El primer bloque retirado del enrutador heredado comprende Producción,
+Eficiencia y Calidad. Las rutas conservan sus URL públicas, ahora utilizan
+`IndicatorController`, vistas Blade y la conexión Laravel `modules`.
+
+El middleware `legacy.module` también fue sustituido en las rutas Laravel por
+`module.access`. La nueva implementación consulta la cuenta, roles y permisos
+de `HSJ_Identity` mediante `CentralAccessService`, sin cargar
+`app/config/app.php` ni `app/helpers/modulos.php`.
+
+La conexión `modules` representa la ubicación operativa actual de las tablas
+de indicadores. Su nombre no autoriza crear usuarios o contraseñas locales.
+Cuando esas tablas se consoliden en SQL Server solo deberá cambiarse su
+repositorio o conexión, sin modificar autenticación ni permisos.
 
 ## Cambios aplicados al enrutador original
 

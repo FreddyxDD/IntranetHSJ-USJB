@@ -33,7 +33,7 @@ Las credenciales y nombres reales de servidores se configuran únicamente en
 | `DB_CONNECTION` | Datos propios del aplicativo Intranet HSJ |
 | `identity` | Usuarios, cuentas, roles y permisos centralizados en `HSJ_Identity` |
 | `sigh` | Consulta de información clínica/citas en modo de solo lectura |
-| `legacy` | Compatibilidad temporal con módulos heredados |
+| `modules` | Datos operativos de indicadores y módulos pendientes de consolidación |
 
 ## Arquitectura de transición
 

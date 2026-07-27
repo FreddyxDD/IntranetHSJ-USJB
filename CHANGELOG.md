@@ -7,6 +7,16 @@ los principios de Keep a Changelog.
 
 ### Arquitectura - transición a Laravel 13
 
+- Producción, Eficiencia y Calidad dejaron de depender de `legacy/index.php`:
+  sus páginas son Blade y sus rutas, consultas, validaciones y respuestas se
+  atienden mediante un controlador Laravel.
+- El middleware `legacy.module` fue reemplazado por `module.access`, respaldado
+  por `CentralAccessService` y la identidad central, sin cargar configuración
+  ni helpers PHP tradicionales.
+- Se incorporó la conexión Laravel `modules` para los datos operativos que aún
+  residen en MySQL, separando su ubicación física de la autenticación central.
+- Los errores de indicadores se registran con referencia de soporte y ya no
+  entregan excepciones o detalles de conexión al usuario.
 - Se consolidó en un documento único el flujo HTTP desde `public/index.php`
   hasta las rutas Laravel o el puente `LegacyApplicationController`.
 - Se documentaron las responsabilidades de `routes/web.php`,

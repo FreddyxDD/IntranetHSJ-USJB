@@ -1,29 +1,24 @@
-<?php
-$correo = $_SESSION['ueei_correo'] ?? '';
-$rol = $_SESSION['ueei_rol'] ?? '';
-?>
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Indicador de Eficiencia | Hospital San José</title>
-    <link rel="icon" href="<?= e(url_path('/assets/images/logohsj.png')) ?>">
-    <link rel="stylesheet" href="<?= e(url_path('/assets/css/eficiencia.css')) ?>?v=2">
+    <link rel="icon" href="{{ asset('assets/images/logohsj.png') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/eficiencia.css') }}?v=2">
 </head>
 <body>
     <header class="topbar">
         <div class="topbar__inner">
-            <a href="<?= e(url_path('/principal')) ?>" class="brand">
-                <img src="<?= e(url_path('/assets/images/logohsj.png')) ?>" alt="Logo Hospital San José">
+            <a href="{{ url('/principal') }}" class="brand">
+                <img src="{{ asset('assets/images/logohsj.png') }}" alt="Logo Hospital San José">
                 <div class="brand__text">
                     <h1>Hospital San José</h1>
                     <p>Unidad de Estadística e Información</p>
                 </div>
             </a>
             
-            <a href="<?= e(url_path('/principal')) ?>" class="back-btn">Volver al inicio</a>
+            <a href="{{ url('/principal') }}" class="back-btn">Volver al inicio</a>
         </div>
     </header>
     
@@ -269,6 +264,6 @@ $rol = $_SESSION['ueei_rol'] ?? '';
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="<?= e(url_path('/assets/js/eficiencia.js')) ?>?v=1"></script>
+    <script src="{{ asset('assets/js/eficiencia.js') }}?v=1"></script>
 </body>
 </html>

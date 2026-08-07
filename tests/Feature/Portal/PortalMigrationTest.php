@@ -35,7 +35,7 @@ final class PortalMigrationTest extends TestCase
     {
         $this->withoutMiddleware(ValidateCsrfToken::class)
             ->post('/logout-ueei')
-            ->assertRedirect(route('login'));
+            ->assertRedirect(route('institutional.login'));
     }
 
     public function test_json_logout_preserves_the_async_contract_and_returns_redirect(): void
@@ -46,8 +46,14 @@ final class PortalMigrationTest extends TestCase
             ->assertJson([
                 'ok' => true,
                 'success' => true,
-                'redirect' => route('login'),
+                'redirect' => route('institutional.login'),
             ]);
+    }
+
+    public function test_institutional_login_name_cannot_be_overridden_by_fortify(): void
+    {
+        $this->assertSame('/', route('institutional.login', absolute: false));
+        $this->assertSame('/logout-ueei', route('institutional.logout', absolute: false));
     }
 
     public function test_identity_administration_requires_the_central_session(): void

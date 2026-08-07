@@ -308,11 +308,11 @@ final class InstitutionalAuthController extends Controller
                 'ok' => true,
                 'success' => true,
                 'message' => 'Sesión cerrada correctamente',
-                'redirect' => route('login'),
+                'redirect' => route('institutional.login'),
             ]);
         }
 
-        return redirect()->route('login');
+        return redirect()->route('institutional.login');
     }
 
     private static function userQuery()

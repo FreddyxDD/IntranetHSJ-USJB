@@ -18,7 +18,7 @@ use App\Http\Controllers\Surgery\SurgeryPortalController;
 use App\Http\Controllers\Uvi\UviController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'auth.login')->name('login');
+Route::view('/', 'auth.login')->name('institutional.login');
 Route::post('/crear-cuenta-ueei', [InstitutionalAuthController::class, 'register']);
 Route::post('/validar-dni-ueei', [InstitutionalAuthController::class, 'validateRegistrationDni']);
 Route::post('/confirmar-cuenta-ueei', [InstitutionalAuthController::class, 'confirmAccountInstructions']);

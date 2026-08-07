@@ -12,6 +12,8 @@ los principios de Keep a Changelog.
   asíncronas.
 - La vista de perfil vuelve a cargar su recurso JavaScript real y utiliza el
   endpoint central `/logout-ueei`.
+- Las rutas institucionales usan nombres propios para evitar que el login de
+  Fortify sustituya el destino `/` por `/login`.
 
 ### Arquitectura - transición a Laravel 13
 

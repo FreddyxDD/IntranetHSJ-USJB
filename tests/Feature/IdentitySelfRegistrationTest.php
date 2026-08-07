@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\AccessAccount;
+use App\Models\AccessRole;
+use App\Services\Identity\ApplicationRoleAssignmentService;
 use App\Services\Identity\SelfRegistrationService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -204,6 +207,59 @@ final class IdentitySelfRegistrationTest extends TestCase
         self::assertStringContainsString('Confirmo que leí y guardé mis datos de acceso.', $html);
         self::assertStringContainsString('Completa tus datos personales', $html);
         self::assertStringContainsString('Pendiente de aprobación', $html);
+    }
+
+    public function test_assigning_an_intranet_role_preserves_roles_from_other_applications(): void
+    {
+        $identity = DB::connection('identity');
+        $identity->table('access_applications')->insert([
+            ['id' => 1, 'code' => 'citashsj', 'is_active' => true],
+            ['id' => 2, 'code' => 'intranet_hsj', 'is_active' => true],
+        ]);
+        $identity->table('access_roles')->insert([
+            ['id' => 1, 'application_id' => 1, 'code' => 'administrador', 'name' => 'Administrador'],
+            ['id' => 9, 'application_id' => 2, 'code' => 'administrador', 'name' => 'Administrador'],
+        ]);
+        $identity->table('users')->insert([
+            'id' => 2,
+            'registration_source' => 'citashsj',
+            'name' => 'Freddy Richard Mondalgo Castilla',
+            'email' => 'freddyrichxd@gmail.com',
+            'password' => Hash::make('password'),
+            'rol' => 'administrador',
+            'tipo_usuario' => 'administrativo',
+            'activo' => true,
+        ]);
+        $identity->table('access_accounts')->insert([
+            'id' => 4,
+            'user_id' => 2,
+            'username' => 'freddyrichxd',
+            'email' => 'freddyrichxd@gmail.com',
+            'display_name' => 'Freddy Richard Mondalgo Castilla',
+            'status' => 'active',
+            'must_change_password' => false,
+        ]);
+        $identity->table('access_account_roles')->insert([
+            'account_id' => 4,
+            'role_id' => 1,
+            'assigned_at' => now(),
+            'assigned_by' => null,
+        ]);
+
+        app(ApplicationRoleAssignmentService::class)->assign(
+            AccessAccount::query()->findOrFail(4),
+            AccessRole::query()->findOrFail(9),
+            99,
+        );
+
+        $assignments = $identity->table('access_account_roles')
+            ->where('account_id', 4)
+            ->orderBy('role_id')
+            ->get();
+
+        self::assertSame([1, 9], $assignments->pluck('role_id')->map(fn ($id): int => (int) $id)->all());
+        self::assertSame(99, (int) $assignments->firstWhere('role_id', 9)->assigned_by);
+        self::assertNotNull($assignments->firstWhere('role_id', 9)->assigned_at);
     }
 
     private function createIdentitySchema(): void

@@ -15,6 +15,14 @@ los principios de Keep a Changelog.
 - Las rutas institucionales usan nombres propios para evitar que el login de
   Fortify sustituya el destino `/` por `/login`.
 
+### Identidad y perfiles
+
+- El mantenimiento de usuarios normaliza el correo dentro de Laravel y ya no
+  depende del helper PHP `normalize_email()` retirado con el legado.
+- La asignación de perfiles reemplaza solamente los roles de `intranet_hsj`,
+  conserva los roles del Portal de Citas y futuras aplicaciones, y registra
+  fecha y responsable en `access_account_roles`.
+
 ### Arquitectura - transición a Laravel 13
 
 - Cirugías fue migrado a controladores Laravel, vistas Blade, rutas explícitas

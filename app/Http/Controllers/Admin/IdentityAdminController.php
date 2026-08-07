@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AccessAccount;
 use App\Models\AccessRole;
 use App\Models\User;
+use App\Services\Identity\ApplicationRoleAssignmentService;
 use App\Services\Identity\CentralAccessService;
 use App\Services\Identity\ModuleCatalogService;
 use App\Services\Identity\SelfRegistrationService;
@@ -103,7 +104,7 @@ final class IdentityAdminController extends Controller
     {
         self::requireAdmin();
         $input = request()->json()->all();
-        $email = normalize_email($input['correo'] ?? '');
+        $email = self::normalizeEmail($input['correo'] ?? '');
         $password = (string) ($input['password'] ?? '');
         $legacyRole = (string) ($input['rol'] ?? 'trabajador');
 
@@ -137,7 +138,11 @@ final class IdentityAdminController extends Controller
                 'must_change_password' => true,
                 'created_by' => (int) ($_SESSION['ueei_id'] ?? 0) ?: null,
             ]);
-            $account->roles()->sync([$role->id]);
+            app(ApplicationRoleAssignmentService::class)->assign(
+                $account,
+                $role,
+                (int) ($_SESSION['ueei_id'] ?? 0) ?: null,
+            );
 
             return $user;
         });
@@ -149,7 +154,7 @@ final class IdentityAdminController extends Controller
     {
         self::requireAdmin();
         $input = request()->json()->all();
-        $email = normalize_email($input['correo'] ?? '');
+        $email = self::normalizeEmail($input['correo'] ?? '');
         $legacyRole = (string) ($input['rol'] ?? 'trabajador');
         self::validateInput($email, '', $legacyRole, false);
 
@@ -182,7 +187,11 @@ final class IdentityAdminController extends Controller
                 $account->forceFill(['email' => $email])->save();
             }
 
-            $account->roles()->sync([$role->id]);
+            app(ApplicationRoleAssignmentService::class)->assign(
+                $account,
+                $role,
+                (int) ($_SESSION['ueei_id'] ?? 0) ?: null,
+            );
         });
 
         $updatedUser = User::query()
@@ -379,6 +388,11 @@ final class IdentityAdminController extends Controller
     private static function displayNameFromEmail(string $email): string
     {
         return ucwords(str_replace(['.', '_', '-'], ' ', strstr($email, '@', true) ?: $email));
+    }
+
+    private static function normalizeEmail(mixed $email): string
+    {
+        return mb_strtolower(trim((string) $email));
     }
 
     private static function uniqueUsername(string $email): string

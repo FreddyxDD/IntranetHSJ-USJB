@@ -11,6 +11,7 @@ use App\Models\Egresos\Egreso;
 use App\Services\Egresos\AnnualCertificateSequence;
 use App\Services\Egresos\EgresoTrace;
 use App\Services\Egresos\SighPatientSource;
+use App\Services\Identity\CentralAccessService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,29 +21,33 @@ use Illuminate\View\View;
 
 final class EgresoController extends Controller
 {
+    public function __construct(private readonly CentralAccessService $access) {}
+
     public function index(): View
     {
+        $user = $this->access->user();
+
         return view('egresos.index', [
             'centralUser' => [
-                'id' => (int) ($_SESSION['ueei_id'] ?? 0),
-                'name' => (string) ($_SESSION['ueei_nombre'] ?? 'Usuario'),
-                'email' => (string) ($_SESSION['ueei_correo'] ?? ''),
-                'roles' => array_values($_SESSION['identity_roles'] ?? []),
+                'id' => (int) ($user?->id ?? 0),
+                'name' => (string) ($user?->name ?? 'Usuario'),
+                'email' => (string) ($user?->email ?? ''),
+                'roles' => $this->access->roleCodes(),
             ],
-            'permissions' => array_values($_SESSION['identity_permissions'] ?? []),
+            'permissions' => $this->access->permissionCodes(),
             'abilities' => [
-                'viewRecords' => ueei_tiene_permiso('egresos.records.view'),
-                'createRecords' => ueei_tiene_permiso('egresos.records.create'),
-                'updateRecords' => ueei_tiene_permiso('egresos.records.update'),
-                'manageImports' => ueei_tiene_permiso('egresos.imports.manage'),
-                'createCertificates' => ueei_tiene_permiso('egresos.certificates.create'),
-                'updateCertificates' => ueei_tiene_permiso('egresos.certificates.update'),
-                'cancelCertificates' => ueei_tiene_permiso('egresos.certificates.cancel'),
-                'viewHistory' => ueei_tiene_permiso('egresos.history.view'),
-                'viewReports' => ueei_tiene_permiso('egresos.reports.view'),
-                'manageConfiguration' => ueei_tiene_permiso('egresos.configuration.manage'),
-                'manageCatalogs' => ueei_tiene_permiso('egresos.catalogs.manage'),
-                'viewAudit' => ueei_tiene_permiso('egresos.history.view'),
+                'viewRecords' => $this->access->hasPermission('egresos.records.view'),
+                'createRecords' => $this->access->hasPermission('egresos.records.create'),
+                'updateRecords' => $this->access->hasPermission('egresos.records.update'),
+                'manageImports' => $this->access->hasPermission('egresos.imports.manage'),
+                'createCertificates' => $this->access->hasPermission('egresos.certificates.create'),
+                'updateCertificates' => $this->access->hasPermission('egresos.certificates.update'),
+                'cancelCertificates' => $this->access->hasPermission('egresos.certificates.cancel'),
+                'viewHistory' => $this->access->hasPermission('egresos.history.view'),
+                'viewReports' => $this->access->hasPermission('egresos.reports.view'),
+                'manageConfiguration' => $this->access->hasPermission('egresos.configuration.manage'),
+                'manageCatalogs' => $this->access->hasPermission('egresos.catalogs.manage'),
+                'viewAudit' => $this->access->hasPermission('egresos.history.view'),
             ],
         ]);
     }

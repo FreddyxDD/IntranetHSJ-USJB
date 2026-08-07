@@ -69,6 +69,36 @@ final class CentralAccessService
         return is_string($permission) && $this->hasPermission($permission);
     }
 
+    public function roleCodes(): array
+    {
+        $application = (string) config('access.application');
+        $roles = $this->user()?->accessAccount?->roles ?? collect();
+
+        return $roles
+            ->filter(fn ($role): bool => $role->application?->code === $application
+                && $role->application?->is_active)
+            ->pluck('code')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function permissionCodes(): array
+    {
+        $application = (string) config('access.application');
+        $roles = $this->user()?->accessAccount?->roles ?? collect();
+
+        return $roles
+            ->filter(fn ($role): bool => $role->application?->code === $application
+                && $role->application?->is_active)
+            ->flatMap->permissions
+            ->filter(fn ($permission): bool => $permission->application?->code === $application)
+            ->pluck('code')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function modules(): array
     {
         return $this->modules->forUser($this->user());

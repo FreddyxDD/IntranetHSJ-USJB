@@ -11,6 +11,7 @@ use App\Services\Egresos\AnnualCertificateSequence;
 use App\Services\Egresos\ConstanciaDocumentPresenter;
 use App\Services\Egresos\ConstanciaEpisodeSelection;
 use App\Services\Egresos\ConstanciaTrace;
+use App\Services\Identity\CentralAccessService;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,8 @@ use Illuminate\View\View;
 
 final class ConstanciaController extends Controller
 {
+    public function __construct(private readonly CentralAccessService $access) {}
+
     public function preview(
         Request $request,
         AnnualCertificateSequence $sequence,
@@ -399,8 +402,8 @@ final class ConstanciaController extends Controller
 
     private function authorizeDocumentAccess(): void
     {
-        if (! ueei_tiene_permiso('egresos.history.view')
-            && ! ueei_tiene_permiso('egresos.certificates.create')) {
+        if (! $this->access->hasPermission('egresos.history.view')
+            && ! $this->access->hasPermission('egresos.certificates.create')) {
             abort(403);
         }
     }

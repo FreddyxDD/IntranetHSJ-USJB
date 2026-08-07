@@ -127,4 +127,15 @@ final class EgresosArchitectureTest extends TestCase
         self::assertContains('central.permission:egresos.certificates.create',
             Route::getRoutes()->getByName('egresos.certificates.store')->gatherMiddleware());
     }
+
+    public function test_egresos_has_no_dependency_on_removed_identity_helpers(): void
+    {
+        $controller = file_get_contents(app_path('Http/Controllers/Egresos/EgresoController.php'));
+        $certificates = file_get_contents(app_path('Http/Controllers/Egresos/ConstanciaController.php'));
+
+        self::assertStringNotContainsString('ueei_tiene_permiso(', $controller);
+        self::assertStringNotContainsString('ueei_tiene_permiso(', $certificates);
+        self::assertStringContainsString('CentralAccessService', $controller);
+        self::assertStringContainsString('CentralAccessService', $certificates);
+    }
 }

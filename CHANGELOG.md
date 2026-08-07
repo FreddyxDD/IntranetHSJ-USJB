@@ -22,6 +22,9 @@ los principios de Keep a Changelog.
 - La asignación de perfiles reemplaza solamente los roles de `intranet_hsj`,
   conserva los roles del Portal de Citas y futuras aplicaciones, y registra
   fecha y responsable en `access_account_roles`.
+- Egresos obtiene usuario, roles y permisos desde `CentralAccessService`; se
+  retiraron sus últimas llamadas al helper `ueei_tiene_permiso()` eliminado
+  junto con el enrutador PHP tradicional.
 
 ### Arquitectura - transición a Laravel 13
 

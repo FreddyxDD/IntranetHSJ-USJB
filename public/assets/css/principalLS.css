@@ -380,6 +380,8 @@ option {
 }
 
 .portal-context {
+    position: relative;
+    z-index: 50;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -391,6 +393,7 @@ option {
     background: rgba(255, 255, 255, 0.88);
     box-shadow: var(--shadow-sm);
     backdrop-filter: blur(14px);
+    overflow: visible;
 }
 
 .portal-context > div {
@@ -422,7 +425,12 @@ option {
 
 .portal-user-menu {
     position: relative;
+    z-index: 51;
     min-width: 240px;
+}
+
+.portal-user-menu[open] {
+    z-index: 60;
 }
 
 .portal-user-menu summary {
@@ -494,7 +502,7 @@ option {
 
 .portal-user-menu__dropdown {
     position: absolute;
-    z-index: 100;
+    z-index: 61;
     top: calc(100% + 9px);
     right: 0;
     width: 280px;

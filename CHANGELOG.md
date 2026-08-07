@@ -26,6 +26,8 @@ los principios de Keep a Changelog.
 - Cirugías trasladó Mi perfil, regreso a módulos, cierre de sesión y la opción
   administrativa condicional al menú del usuario en el navbar; retiró estas
   opciones del menú funcional lateral.
+- El desplegable del usuario en Cirugías conserva una capa superior propia para
+  no quedar oculto detrás de las acciones, indicadores o tarjetas del módulo.
 - El mantenimiento de accesos dejó de depender del helper PHP
   `normalize_email()` retirado con el legado.
 - La asignación de perfiles reemplaza solamente los roles de `intranet_hsj`,

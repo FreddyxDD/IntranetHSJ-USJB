@@ -67,6 +67,11 @@ final class SurgeryMigrationTest extends TestCase
         self::assertStringContainsString('Mi perfil', $html);
         self::assertStringContainsString('Cerrar sesión', $html);
         self::assertStringNotContainsString('Perfiles y accesos', $html);
+
+        $styles = file_get_contents(public_path('assets/css/principalLS.css'));
+        self::assertStringContainsString('.portal-context {', $styles);
+        self::assertStringContainsString('z-index: 50;', $styles);
+        self::assertStringContainsString('.portal-user-menu[open]', $styles);
     }
 
     public function test_surgery_access_administration_is_hidden_from_non_administrators(): void

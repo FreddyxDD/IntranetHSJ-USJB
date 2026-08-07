@@ -1469,13 +1469,13 @@
     window.CIRUGIAS_USUARIO = @json($usuario);
     window.CIRUGIAS_ROL = @json((int) $rol);
     window.CIRUGIAS_ES_ADMIN = @json($esAdmin);
-    window.CIRUGIAS_PERMISOS = @json([
+    window.CIRUGIAS_PERMISOS = {{ Illuminate\Support\Js::from([
         'analytics' => $puedeAnalisis,
         'reports' => $puedeReportes,
         'records_manage' => $puedeGestionarRegistros,
         'imports_manage' => $puedeImportar,
         'staff_manage' => $puedeGestionarPersonal,
-    ]);
+    ]) }};
 
     const fetchOriginalCirugias = window.fetch.bind(window);
 

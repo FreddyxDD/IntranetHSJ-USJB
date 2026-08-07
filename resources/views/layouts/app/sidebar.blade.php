@@ -346,7 +346,7 @@
                                     <flux:icon icon="cog-6-tooth" class="size-4" />
                                     Configuracion
                                 </a>
-                                <form method="POST" action="{{ route('logout') }}" class="w-full">
+                                <form method="POST" action="{{ route('institutional.logout') }}" class="w-full">
                                     @csrf
                                     <button type="submit" class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-rose-700 hover:bg-rose-50 dark:text-rose-200 dark:hover:bg-rose-950" data-test="logout-button">
                                         <flux:icon icon="arrow-right-start-on-rectangle" class="size-4" />

@@ -25,6 +25,12 @@ los principios de Keep a Changelog.
 - Egresos obtiene usuario, roles y permisos desde `CentralAccessService`; se
   retiraron sus últimas llamadas al helper `ueei_tiene_permiso()` eliminado
   junto con el enrutador PHP tradicional.
+- `/login` y `/logout` quedaron como alias del acceso institucional y los
+  layouts compartidos dejaron de publicar al logout local de Fortify.
+- Se incorporó una prueba transversal que bloquea llamadas a helpers retirados
+  y rutas que apunten a acciones de controlador inexistentes.
+- La configuración JavaScript de permisos de Cirugías usa serialización Blade
+  segura y su vista principal cuenta con una prueba de renderizado real.
 
 ### Arquitectura - transición a Laravel 13
 

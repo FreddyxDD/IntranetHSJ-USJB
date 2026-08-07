@@ -19,6 +19,7 @@ use App\Http\Controllers\Uvi\UviController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'auth.login')->name('institutional.login');
+Route::redirect('/login', '/')->name('institutional.login.compatibility');
 Route::post('/crear-cuenta-ueei', [InstitutionalAuthController::class, 'register']);
 Route::post('/validar-dni-ueei', [InstitutionalAuthController::class, 'validateRegistrationDni']);
 Route::post('/confirmar-cuenta-ueei', [InstitutionalAuthController::class, 'confirmAccountInstructions']);
@@ -26,6 +27,8 @@ Route::post('/login-ueei', [InstitutionalAuthController::class, 'login']);
 Route::get('/me-ueei', [InstitutionalAuthController::class, 'me']);
 Route::post('/logout-ueei', [InstitutionalAuthController::class, 'logout'])
     ->name('institutional.logout');
+Route::post('/logout', [InstitutionalAuthController::class, 'logout'])
+    ->name('institutional.logout.compatibility');
 
 Route::middleware('central.auth')->group(function (): void {
     Route::get('/principal', [PortalController::class, 'principal'])->name('portal.principal');
@@ -59,11 +62,10 @@ Route::middleware('central.auth')->group(function (): void {
 
 /*
 |--------------------------------------------------------------------------
-| Puente de compatibilidad del Intranet HSJ
+| URLs compatibles del Intranet HSJ
 |--------------------------------------------------------------------------
-| Laravel 13 es ahora el punto de entrada. Las URLs existentes se delegan al
-| kernel institucional mientras los controladores se refactorizan por módulo.
-| Las vistas y respuestas JSON conservan exactamente sus contratos actuales.
+| Laravel 13 es el único punto de entrada. Las URL históricas se conservan
+| como alias explícitos de controladores Laravel, sin enrutador PHP heredado.
 */
 Route::middleware('module.access:citas_admin')->group(function (): void {
     Route::get('/citas-admin', [AppointmentAdminController::class, 'page'])->name('appointments.admin');

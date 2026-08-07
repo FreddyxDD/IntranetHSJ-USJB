@@ -19,7 +19,7 @@
     </nav>
     <div class="user-menu">
         <span>{{ auth()->user()->name }}</span>
-        <form method="POST" action="{{ route('logout') }}">@csrf<button class="link-button">Cerrar sesión</button></form>
+        <form method="POST" action="{{ route('institutional.logout') }}">@csrf<button class="link-button">Cerrar sesión</button></form>
     </div>
 </header>
 <main class="container">

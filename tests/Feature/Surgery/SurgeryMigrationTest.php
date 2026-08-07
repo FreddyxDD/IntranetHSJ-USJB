@@ -45,4 +45,23 @@ final class SurgeryMigrationTest extends TestCase
         $this->assertStringContainsString('meta name="csrf-token"', $view);
         $this->assertStringContainsString('assets/js/csrf.js', $view);
     }
+
+    public function test_surgery_main_view_renders_its_permission_configuration(): void
+    {
+        $html = view('surgery.principal', [
+            'usuario' => 'admin@example.test',
+            'correo' => 'admin@example.test',
+            'rol' => 0,
+            'esAdmin' => true,
+            'puedeAnalisis' => true,
+            'puedeReportes' => true,
+            'puedeGestionarRegistros' => true,
+            'puedeImportar' => true,
+            'puedeGestionarPersonal' => true,
+        ])->render();
+
+        self::assertStringContainsString('window.CIRUGIAS_PERMISOS', $html);
+        self::assertStringContainsString('JSON.parse(', $html);
+        self::assertStringContainsString('staff_manage', $html);
+    }
 }

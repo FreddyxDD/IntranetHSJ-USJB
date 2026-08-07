@@ -24,7 +24,8 @@ Route::post('/validar-dni-ueei', [InstitutionalAuthController::class, 'validateR
 Route::post('/confirmar-cuenta-ueei', [InstitutionalAuthController::class, 'confirmAccountInstructions']);
 Route::post('/login-ueei', [InstitutionalAuthController::class, 'login']);
 Route::get('/me-ueei', [InstitutionalAuthController::class, 'me']);
-Route::post('/logout-ueei', [InstitutionalAuthController::class, 'logout']);
+Route::post('/logout-ueei', [InstitutionalAuthController::class, 'logout'])
+    ->name('institutional.logout');
 
 Route::middleware('central.auth')->group(function (): void {
     Route::get('/principal', [PortalController::class, 'principal'])->name('portal.principal');

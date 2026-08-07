@@ -2,7 +2,7 @@
     const $ = (id) => document.getElementById(id);
 
     const body = document.body;
-    const loginUrl = body.dataset.loginUrl || "/ueei-login";
+    const loginUrl = body.dataset.loginUrl || "/";
 
     const year = $("year");
     if (year) {
@@ -107,10 +107,7 @@
 
     async function cerrarSesion() {
         try {
-            /*
-             | Si tu ruta de logout se llama /logout-ueei, cambia aquí /logout por /logout-ueei.
-             */
-            const res = await fetch("/logout", {
+            const res = await fetch("/logout-ueei", {
                 method: "POST",
                 credentials: "include",
                 headers: {

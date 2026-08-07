@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Portal;
 
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Tests\TestCase;
 
 final class PortalMigrationTest extends TestCase
@@ -27,6 +28,25 @@ final class PortalMigrationTest extends TestCase
             ->assertJson([
                 'ok' => false,
                 'message' => 'No autenticado UEeI',
+            ]);
+    }
+
+    public function test_html_logout_redirects_to_login_instead_of_rendering_json(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class)
+            ->post('/logout-ueei')
+            ->assertRedirect(route('login'));
+    }
+
+    public function test_json_logout_preserves_the_async_contract_and_returns_redirect(): void
+    {
+        $this->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/logout-ueei')
+            ->assertOk()
+            ->assertJson([
+                'ok' => true,
+                'success' => true,
+                'redirect' => route('login'),
             ]);
     }
 

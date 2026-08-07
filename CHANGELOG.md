@@ -5,6 +5,14 @@ los principios de Keep a Changelog.
 
 ## [Sin publicar]
 
+### Autenticación
+
+- El cierre de sesión institucional ahora redirige al login cuando se envía
+  desde un formulario y conserva JSON con una URL de retorno para llamadas
+  asíncronas.
+- La vista de perfil vuelve a cargar su recurso JavaScript real y utiliza el
+  endpoint central `/logout-ueei`.
+
 ### Arquitectura - transición a Laravel 13
 
 - Cirugías fue migrado a controladores Laravel, vistas Blade, rutas explícitas

@@ -11,6 +11,9 @@ use App\Services\Identity\SelfRegistrationService;
 use DomainException;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -291,10 +294,25 @@ final class InstitutionalAuthController extends Controller
         self::respondAuthenticated($user, 'Inicio de sesión correcto.', $extras);
     }
 
-    public static function logout(): void
+    public function logout(Request $request): JsonResponse|RedirectResponse
     {
         self::destruirSesion();
-        self::json(['ok' => true, 'success' => true, 'message' => 'Sesión cerrada correctamente']);
+
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'success' => true,
+                'message' => 'Sesión cerrada correctamente',
+                'redirect' => route('login'),
+            ]);
+        }
+
+        return redirect()->route('login');
     }
 
     private static function userQuery()

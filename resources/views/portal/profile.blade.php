@@ -47,7 +47,7 @@ $fotoPerfil = $url('/assets/images/logohsj.png');
 </head>
 
 <body
-    data-login-url="<?= $esc($url('/ueei-login')) ?>"
+    data-login-url="<?= $esc($url('/')) ?>"
     data-home-url="<?= $esc($url('/principal')) ?>"
 >
     <header class="topbar">
@@ -227,6 +227,6 @@ $fotoPerfil = $url('/assets/images/logohsj.png');
         </footer>
     </main>
 
-    <script src="<?= $esc($url('/assets/js/ueei/perfil.js')) ?>?v=1"></script>
+    <script src="<?= $esc($url('/assets/js/perfil.js')) ?>?v=2"></script>
 </body>
 </html>

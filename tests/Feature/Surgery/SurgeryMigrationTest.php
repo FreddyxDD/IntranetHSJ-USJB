@@ -63,5 +63,28 @@ final class SurgeryMigrationTest extends TestCase
         self::assertStringContainsString('window.CIRUGIAS_PERMISOS', $html);
         self::assertStringContainsString('JSON.parse(', $html);
         self::assertStringContainsString('staff_manage', $html);
+        self::assertStringContainsString('Administrar accesos', $html);
+        self::assertStringContainsString('Mi perfil', $html);
+        self::assertStringContainsString('Cerrar sesión', $html);
+        self::assertStringNotContainsString('Perfiles y accesos', $html);
+    }
+
+    public function test_surgery_access_administration_is_hidden_from_non_administrators(): void
+    {
+        $html = view('surgery.principal', [
+            'usuario' => 'usuario@example.test',
+            'correo' => 'usuario@example.test',
+            'rol' => 1,
+            'esAdmin' => false,
+            'puedeAnalisis' => true,
+            'puedeReportes' => true,
+            'puedeGestionarRegistros' => false,
+            'puedeImportar' => false,
+            'puedeGestionarPersonal' => false,
+        ])->render();
+
+        self::assertStringContainsString('Mi perfil', $html);
+        self::assertStringContainsString('Cerrar sesión', $html);
+        self::assertStringNotContainsString('Administrar accesos', $html);
     }
 }

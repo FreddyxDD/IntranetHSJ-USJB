@@ -17,8 +17,17 @@ los principios de Keep a Changelog.
 
 ### Identidad y perfiles
 
-- El mantenimiento de usuarios normaliza el correo dentro de Laravel y ya no
-  depende del helper PHP `normalize_email()` retirado con el legado.
+- Los datos personales quedaron como información de solo lectura proveniente
+  de Legajos; la API rechaza su edición y el alta manual de identidades desde
+  el mantenimiento de accesos.
+- El administrador puede conceder o retirar módulos por cuenta sin quedar
+  limitado al rol base, mediante excepciones trazables almacenadas en
+  `access_account_permission_overrides` dentro de `HSJ_Identity`.
+- Cirugías trasladó Mi perfil, regreso a módulos, cierre de sesión y la opción
+  administrativa condicional al menú del usuario en el navbar; retiró estas
+  opciones del menú funcional lateral.
+- El mantenimiento de accesos dejó de depender del helper PHP
+  `normalize_email()` retirado con el legado.
 - La asignación de perfiles reemplaza solamente los roles de `intranet_hsj`,
   conserva los roles del Portal de Citas y futuras aplicaciones, y registra
   fecha y responsable en `access_account_roles`.
@@ -245,10 +254,11 @@ los principios de Keep a Changelog.
   Cirugías y del personal autorizado al panel operativo.
 - Persistencia del perfil de acceso al editar usuarios: el formulario ya no
   mezcla el rol central con un área anterior y recarga el registro guardado.
-- Los módulos del usuario se muestran como permisos heredados del perfil
-  central, evitando selecciones visuales que antes no se almacenaban.
+- Los módulos del usuario se calculan desde el perfil central y sus
+  concesiones o revocaciones específicas, evitando selecciones visuales que no
+  se almacenen.
 - Actualización inmediata de la sesión cuando el administrador modifica su
-  propio correo o perfil.
+  propio perfil de acceso.
 - Deformación de la página `/areas` en resoluciones intermedias y móviles.
 - Desbordamiento horizontal de tarjetas y accesos rápidos.
 - Tamaño sin restricciones de imágenes utilizadas como iconos de módulos.

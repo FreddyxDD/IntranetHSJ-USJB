@@ -33,6 +33,7 @@ final class CentralAccessService
             ->with([
                 'accessAccount.roles.application',
                 'accessAccount.roles.permissions.application',
+                'accessAccount.permissionOverrides.application',
             ])
             ->find($id);
 

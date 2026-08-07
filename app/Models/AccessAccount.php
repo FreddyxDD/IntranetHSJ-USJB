@@ -34,4 +34,14 @@ final class AccessAccount extends Model
         return $this->belongsToMany(AccessRole::class, 'access_account_roles', 'account_id', 'role_id')
             ->withPivot(['assigned_at', 'assigned_by']);
     }
+
+    public function permissionOverrides(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            AccessPermission::class,
+            'access_account_permission_overrides',
+            'account_id',
+            'permission_id',
+        )->withPivot(['is_granted', 'assigned_at', 'assigned_by']);
+    }
 }

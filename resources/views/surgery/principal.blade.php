@@ -8,7 +8,7 @@
     <script src="{{ asset('assets/js/csrf.js') }}" defer></script>
     <title>Cirugías</title>
 
-    <link rel="stylesheet" href="{{ asset('assets/css/principalLS.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/principalLS.css') }}?v=2.1.0">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
 
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -58,18 +58,6 @@
                     Gestión
                 </a>
 
-                <a href="{{ url('/perfil') }}">
-                    <i class="fa-solid fa-user-shield"></i>
-                    Mi perfil
-                </a>
-
-                <?php if ($esAdmin): ?>
-                    <a href="{{ url('/admin-ueei') }}">
-                        <i class="fa-solid fa-users-gear"></i>
-                        Perfiles y accesos
-                    </a>
-                <?php endif; ?>
-
                 <a href="{{ url('/areas') }}" id="btnCerrarSesion" class="btn-logout">
                     <i class="fa-solid fa-arrow-left"></i>
                     Volver a módulos
@@ -82,10 +70,46 @@
                     <span>Hospital San José · Intranet institucional</span>
                     <strong>Módulo de Cirugías</strong>
                 </div>
-                <div class="portal-context__user">
-                    <span><?= e($usuario ?: $correo) ?></span>
-                    <small><?= e($correo) ?></small>
-                </div>
+                <details class="portal-user-menu">
+                    <summary>
+                        <span class="portal-user-menu__avatar" aria-hidden="true">
+                            {{ mb_strtoupper(mb_substr($usuario ?: $correo, 0, 1)) }}
+                        </span>
+                        <span class="portal-user-menu__identity">
+                            <strong>{{ $usuario ?: $correo }}</strong>
+                            <small>{{ $esAdmin ? 'Administrador' : 'Usuario autorizado' }}</small>
+                        </span>
+                        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                    </summary>
+
+                    <div class="portal-user-menu__dropdown">
+                        <div class="portal-user-menu__account">
+                            <strong>{{ $usuario ?: $correo }}</strong>
+                            <small>{{ $correo }}</small>
+                        </div>
+                        <a href="{{ route('portal.profile') }}">
+                            <i class="fa-regular fa-user"></i>
+                            Mi perfil
+                        </a>
+                        @if ($esAdmin)
+                            <a href="{{ route('identity.admin') }}">
+                                <i class="fa-solid fa-users-gear"></i>
+                                Administrar accesos
+                            </a>
+                        @endif
+                        <a href="{{ route('portal.areas') }}">
+                            <i class="fa-solid fa-table-cells-large"></i>
+                            Volver a módulos
+                        </a>
+                        <form method="POST" action="{{ route('institutional.logout') }}">
+                            @csrf
+                            <button type="submit">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                                Cerrar sesión
+                            </button>
+                        </form>
+                    </div>
+                </details>
             </header>
 
             <div id="vistaInicio">
@@ -1455,7 +1479,6 @@
                 <nav aria-label="Enlaces institucionales">
                     <a href="{{ url('/principal') }}">Inicio</a>
                     <a href="{{ url('/areas') }}">Módulos</a>
-                    <a href="{{ url('/perfil') }}">Mi perfil</a>
                 </nav>
                 <small>Acceso administrado centralmente por HSJ Identity.</small>
             </footer>

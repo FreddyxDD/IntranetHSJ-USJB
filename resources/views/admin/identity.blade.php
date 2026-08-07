@@ -248,12 +248,8 @@
             <div class="section-header">
                 <div>
                     <h3>Gestión de usuarios</h3>
-                    <p>Crea, edita y asigna accesos a los trabajadores del intranet.</p>
+                    <p>Consulta la identidad proveniente de Legajos y administra únicamente sus accesos.</p>
                 </div>
-
-                <button class="btn-primary" type="button" id="btnNuevoUsuario">
-                    + Nuevo usuario
-                </button>
             </div>
 
             <div class="content-grid content-grid--solo-tabla">
@@ -263,8 +259,8 @@
         <div class="modal-card modal-card-usuario">
             <div class="modal-header">
                 <div>
-                    <h3 id="formTitulo">Crear usuario</h3>
-                    <p id="formSubtitulo">Registra una nueva cuenta y asigna sus módulos.</p>
+                    <h3 id="formTitulo">Editar accesos</h3>
+                    <p id="formSubtitulo">Los datos personales son administrados desde Legajos.</p>
                 </div>
 
                 <button type="button" class="modal-close" id="btnCerrarModalUsuario">
@@ -274,62 +270,53 @@
 
             <article class="panel-card form-card form-card-modal">
                     <div class="panel-title">
-                        <h4 id="formTitulo">Crear usuario</h4>
-                        <p id="formSubtitulo">Registra una nueva cuenta y asigna sus módulos.</p>
+                        <h4>Identidad institucional</h4>
+                        <p>Información de solo lectura sincronizada desde Legajos.</p>
                     </div>
 
                     <form id="formUsuario" autocomplete="off">
                         <input type="hidden" id="usuarioId" value="">
 
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="nombrePersona">Nombres y apellidos</label>
+                                <input type="text" id="nombrePersona" readonly aria-readonly="true">
+                            </div>
+                            <div class="form-group">
+                                <label for="dniPersona">DNI</label>
+                                <input type="text" id="dniPersona" readonly aria-readonly="true">
+                            </div>
+                        </div>
+
                         <div class="form-group">
-                            <label for="correo">Correo institucional</label>
+                            <label for="correo">Correo institucional (solo lectura)</label>
                             <input
                                 type="email"
                                 id="correo"
                                 name="correo"
-                                placeholder="usuario@hospital.gob.pe"
-                                required
+                                readonly
+                                aria-readonly="true"
                             >
+                            <small>Para corregir este dato se debe actualizar el registro correspondiente en Legajos.</small>
                         </div>
 
-                        <div class="form-group" id="grupoPassword">
-                            <label for="password">Contraseña</label>
-                            <input
-                                type="password"
-                                id="password"
-                                name="password"
-                                placeholder="Mínimo 8 caracteres"
-                                autocomplete="new-password"
-                            >
-                            <small>Para nuevos usuarios es obligatoria. Para editar, usa “Cambiar contraseña”.</small>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="rol">Rol</label>
-                                <select id="rol" name="rol" required>
-                                    <option value="trabajador">Trabajador</option>
-                                    <option value="supervisor">Supervisor</option>
-                                    <option value="director">Director</option>
-                                    <option value="admin">Administrador</option>
-                                </select>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="areaId">Perfil de acceso</label>
-                                <select id="areaId" name="area_id" required>
-                                    <option value="">Selecciona un perfil</option>
-                                </select>
-                            </div>
+                        <div class="form-group">
+                            <label for="areaId">Rol en Intranet HSJ</label>
+                            <select id="areaId" name="area_id" required>
+                                <option value="">Selecciona un rol</option>
+                            </select>
+                            <small>El rol aporta permisos base solamente para esta aplicación.</small>
                         </div>
 
                         <div class="form-group">
                             <div class="modules-header">
-                                <label>Módulos heredados del perfil</label>
-                                <button type="button" class="btn-link" id="btnSeleccionarTodo" disabled>
-                                    Asignación central
+                                <label>Módulos autorizados</label>
+                                <button type="button" class="btn-link" id="btnSeleccionarTodo">
+                                    Seleccionar todo
                                 </button>
                             </div>
+
+                            <small>Puedes agregar o retirar módulos independientemente de los permisos base del rol.</small>
 
                             <div class="modules-list" id="modulosLista">
                                 <div class="empty-box">Cargando módulos...</div>
@@ -338,7 +325,7 @@
 
                         <div class="form-actions">
                             <button class="btn-secondary" type="button" id="btnCancelarEdicion">
-                                Limpiar
+                                Cancelar
                             </button>
 
                             <button class="btn-primary" type="submit" id="btnGuardarUsuario">
@@ -490,7 +477,7 @@
     };
 </script>
 
-<script src="{{ asset('assets/js/admin-ueei.js') }}?v=1.2.0"></script>
+<script src="{{ asset('assets/js/admin-ueei.js') }}?v=1.3.0"></script>
 
 </body>
 </html>

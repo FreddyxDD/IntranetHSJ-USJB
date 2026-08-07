@@ -40,15 +40,13 @@
         totalAreas: $("#totalAreas"),
         totalModulos: $("#totalModulos"),
 
-        btnNuevoUsuario: $("#btnNuevoUsuario"),
         btnCerrarSesionAdmin: $("#btnCerrarSesionAdmin"),
 
         formUsuario: $("#formUsuario"),
         usuarioId: $("#usuarioId"),
+        nombrePersona: $("#nombrePersona"),
+        dniPersona: $("#dniPersona"),
         correo: $("#correo"),
-        password: $("#password"),
-        grupoPassword: $("#grupoPassword"),
-        rol: $("#rol"),
         areaId: $("#areaId"),
         modulosLista: $("#modulosLista"),
         btnSeleccionarTodo: $("#btnSeleccionarTodo"),
@@ -192,7 +190,7 @@
         const inputs = $$(".modulo-check-input");
 
         if (elementos.btnSeleccionarTodo?.disabled) {
-            elementos.btnSeleccionarTodo.textContent = "Asignación central";
+            elementos.btnSeleccionarTodo.textContent = "Acceso total por rol";
             return;
         }
 
@@ -352,7 +350,7 @@
         if (!elementos.areaId) return;
 
         const options = [
-            `<option value="">Selecciona un perfil</option>`,
+            `<option value="">Selecciona un rol</option>`,
             ...state.catalogos.areas.map((area) => {
                 return `
                     <option value="${Number(area.id)}">
@@ -384,13 +382,16 @@
                         type="checkbox"
                         class="modulo-check-input"
                         value="${Number(modulo.id)}"
-                        disabled
                     >
                     <strong>${escapeHtml(modulo.nombre)}</strong>
                     <span>${escapeHtml(modulo.descripcion || modulo.codigo || "Módulo del sistema")}</span>
                 </label>
             `;
         }).join("");
+
+        $$(".modulo-check-input").forEach((input) => {
+            input.addEventListener("change", actualizarTextoSeleccionarTodo);
+        });
 
         actualizarTextoSeleccionarTodo();
     }
@@ -400,25 +401,22 @@
         const perfil = state.catalogos.areas.find((item) => Number(item.id) === perfilId);
 
         if (!perfil) {
+            $$(".modulo-check-input").forEach((input) => {
+                input.disabled = false;
+            });
+            if (elementos.btnSeleccionarTodo) elementos.btnSeleccionarTodo.disabled = false;
             marcarModulosSeleccionados([]);
             return;
         }
 
-        if (elementos.rol) {
-            elementos.rol.value = perfil.rol || "trabajador";
-        }
-
         marcarModulosSeleccionados(perfil.modulo_ids || []);
-    }
 
-    function aplicarRolSeleccionado() {
-        const rol = elementos.rol?.value || "trabajador";
-        const perfil = state.catalogos.areas.find((item) => item.rol === rol);
-
-        if (perfil && elementos.areaId) {
-            elementos.areaId.value = String(perfil.id);
-            aplicarPerfilSeleccionado();
-        }
+        const accesoTotal = perfil.rol === "admin";
+        $$(".modulo-check-input").forEach((input) => {
+            input.disabled = accesoTotal;
+        });
+        if (elementos.btnSeleccionarTodo) elementos.btnSeleccionarTodo.disabled = accesoTotal;
+        actualizarTextoSeleccionarTodo();
     }
 
     function renderModulosCards() {
@@ -643,33 +641,19 @@
         if (elementos.usuarioId) elementos.usuarioId.value = "";
         if (elementos.formUsuario) elementos.formUsuario.reset();
 
-        if (elementos.password) {
-            elementos.password.required = true;
-            elementos.password.value = "";
-        }
-
-        if (elementos.grupoPassword) {
-            elementos.grupoPassword.style.display = "";
-        }
-
         if (elementos.formTitulo) {
-            elementos.formTitulo.textContent = "Crear usuario";
+            elementos.formTitulo.textContent = "Editar accesos";
         }
 
         if (elementos.formSubtitulo) {
-            elementos.formSubtitulo.textContent = "Registra una nueva cuenta y asigna sus módulos.";
+            elementos.formSubtitulo.textContent = "Los datos personales son administrados desde Legajos.";
         }
 
         if (elementos.btnGuardarUsuario) {
-            elementos.btnGuardarUsuario.textContent = "Guardar usuario";
+            elementos.btnGuardarUsuario.textContent = "Actualizar accesos";
         }
 
         marcarModulosSeleccionados([]);
-    }
-
-    function nuevoUsuario() {
-    limpiarFormulario();
-    abrirModalUsuario();
     }
 
     function editarUsuario(id) {
@@ -683,32 +667,25 @@
         state.editandoId = Number(usuario.id);
 
         if (elementos.usuarioId) elementos.usuarioId.value = String(usuario.id);
+        if (elementos.nombrePersona) elementos.nombrePersona.value = usuario.nombre || "";
+        if (elementos.dniPersona) elementos.dniPersona.value = usuario.dni || "";
         if (elementos.correo) elementos.correo.value = usuario.correo || "";
-        if (elementos.rol) elementos.rol.value = usuario.rol || "trabajador";
         if (elementos.areaId) elementos.areaId.value = usuario.area_id ?? "";
 
-        if (elementos.password) {
-            elementos.password.required = false;
-            elementos.password.value = "";
-        }
-
-        if (elementos.grupoPassword) {
-            elementos.grupoPassword.style.display = "none";
-        }
-
         if (elementos.formTitulo) {
-            elementos.formTitulo.textContent = "Editar usuario";
+            elementos.formTitulo.textContent = "Editar accesos";
         }
 
         if (elementos.formSubtitulo) {
-            elementos.formSubtitulo.textContent = "Actualiza el rol, área y módulos asignados.";
+            elementos.formSubtitulo.textContent = "La identidad proviene de Legajos; aquí solo se administran rol y módulos de Intranet HSJ.";
         }
 
         if (elementos.btnGuardarUsuario) {
-            elementos.btnGuardarUsuario.textContent = "Actualizar usuario";
+            elementos.btnGuardarUsuario.textContent = "Actualizar accesos";
         }
 
         aplicarPerfilSeleccionado();
+        marcarModulosSeleccionados(usuario.modulo_ids || []);
 
         abrirModalUsuario();
     }
@@ -717,58 +694,37 @@
         event.preventDefault();
 
         const id = Number(elementos.usuarioId?.value || 0);
-        const editando = id > 0;
-
         const payload = {
-            correo: elementos.correo?.value.trim() || "",
-            rol: elementos.rol?.value || "trabajador",
             area_id: elementos.areaId?.value || null,
             modulos: obtenerModulosSeleccionados()
         };
 
-        if (!editando) {
-            payload.password = elementos.password?.value || "";
-        }
-
-        if (!payload.correo) {
-            mostrarAlerta("Ingrese el correo institucional.", "error");
-            elementos.correo?.focus();
+        if (id <= 0) {
+            mostrarAlerta("Selecciona un usuario registrado para administrar sus accesos.", "error");
             return;
         }
 
         if (!payload.area_id) {
-            mostrarAlerta("Selecciona el perfil de acceso del usuario.", "error");
+            mostrarAlerta("Selecciona el rol del usuario en Intranet HSJ.", "error");
             elementos.areaId?.focus();
             return;
         }
 
-        if (!editando && !payload.password) {
-            mostrarAlerta("Ingrese la contraseña del nuevo usuario.", "error");
-            elementos.password?.focus();
-            return;
-        }
-
-        const url = editando
-            ? `${API.usuarios}/${id}`
-            : API.usuarios;
-
-        const method = editando ? "PUT" : "POST";
+        const url = `${API.usuarios}/${id}`;
 
         try {
             setLoadingBoton(
                 elementos.btnGuardarUsuario,
                 true,
-                editando ? "Actualizar usuario" : "Guardar usuario"
+                "Actualizar accesos"
             );
 
             const data = await requestJson(url, {
-                method,
+                method: "PUT",
                 body: JSON.stringify(payload)
             });
 
-            const mensajeOk = editando
-                ? "El usuario fue actualizado correctamente."
-                : "El usuario fue creado correctamente.";
+            const mensajeOk = "Los accesos fueron actualizados correctamente.";
 
             mostrarAlerta(data.message || mensajeOk, "success");
             mostrarToastGuardado(data.message || mensajeOk);
@@ -786,7 +742,7 @@
             setLoadingBoton(
                 elementos.btnGuardarUsuario,
                 false,
-                editando ? "Actualizar usuario" : "Guardar usuario"
+                "Actualizar accesos"
             );
         }
     }
@@ -823,7 +779,13 @@
     }
 
     function seleccionarTodoModulos() {
-        aplicarPerfilSeleccionado();
+        const inputs = $$(".modulo-check-input");
+        const seleccionar = !inputs.every((input) => input.checked);
+
+        inputs.forEach((input) => {
+            input.checked = seleccionar;
+        });
+        actualizarTextoSeleccionarTodo();
     }
 
     /* =========================================================
@@ -1018,11 +980,9 @@
         configurarNavegacion();
         activarSeccion("usuarios");
 
-        elementos.btnNuevoUsuario?.addEventListener("click", nuevoUsuario);
-        elementos.btnCancelarEdicion?.addEventListener("click", limpiarFormulario);
+        elementos.btnCancelarEdicion?.addEventListener("click", cerrarModalUsuario);
         elementos.btnSeleccionarTodo?.addEventListener("click", seleccionarTodoModulos);
         elementos.areaId?.addEventListener("change", aplicarPerfilSeleccionado);
-        elementos.rol?.addEventListener("change", aplicarRolSeleccionado);
 
         elementos.formUsuario?.addEventListener("submit", guardarUsuario);
 

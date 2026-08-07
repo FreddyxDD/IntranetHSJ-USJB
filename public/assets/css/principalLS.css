@@ -420,6 +420,134 @@ option {
     font-weight: 800;
 }
 
+.portal-user-menu {
+    position: relative;
+    min-width: 240px;
+}
+
+.portal-user-menu summary {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 7px 10px;
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    background: #ffffff;
+    cursor: pointer;
+    list-style: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.portal-user-menu summary::-webkit-details-marker {
+    display: none;
+}
+
+.portal-user-menu summary:hover,
+.portal-user-menu[open] summary {
+    border-color: rgba(9, 200, 165, 0.45);
+    box-shadow: 0 10px 24px rgba(7, 63, 68, 0.1);
+}
+
+.portal-user-menu summary > i {
+    margin-left: auto;
+    color: var(--text-muted);
+    font-size: 12px;
+    transition: transform 0.2s ease;
+}
+
+.portal-user-menu[open] summary > i {
+    transform: rotate(180deg);
+}
+
+.portal-user-menu__avatar {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    flex: 0 0 38px;
+    place-items: center;
+    border-radius: 12px;
+    color: #ffffff !important;
+    font-size: 16px !important;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-deep));
+}
+
+.portal-user-menu__identity {
+    min-width: 0;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    text-align: left;
+}
+
+.portal-user-menu__identity strong,
+.portal-user-menu__identity small {
+    max-width: 170px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.portal-user-menu__identity strong {
+    font-size: 13px;
+}
+
+.portal-user-menu__dropdown {
+    position: absolute;
+    z-index: 100;
+    top: calc(100% + 9px);
+    right: 0;
+    width: 280px;
+    padding: 9px;
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 22px 54px rgba(7, 63, 68, 0.18);
+}
+
+.portal-user-menu__account {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 6px;
+    padding: 10px 11px 12px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.portal-user-menu__account small {
+    overflow-wrap: anywhere;
+}
+
+.portal-user-menu__dropdown a,
+.portal-user-menu__dropdown button {
+    width: 100%;
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 0 11px;
+    border: 0;
+    border-radius: 10px;
+    color: var(--text-body);
+    background: transparent;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.portal-user-menu__dropdown a:hover,
+.portal-user-menu__dropdown button:hover {
+    color: var(--color-primary-dark);
+    background: rgba(9, 200, 165, 0.08);
+}
+
+.portal-user-menu__dropdown button {
+    color: #b42318;
+}
+
 .cirugias-footer {
     display: grid;
     grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
@@ -3445,6 +3573,17 @@ body.dark-mode #modalForm {
     .portal-context__user {
         align-items: flex-start;
         text-align: left;
+    }
+
+    .portal-user-menu {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .portal-user-menu__dropdown {
+        right: auto;
+        left: 0;
+        width: min(100%, 320px);
     }
 
     .cirugias-footer nav {

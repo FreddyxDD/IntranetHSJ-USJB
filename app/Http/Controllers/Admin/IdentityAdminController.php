@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AccessAccount;
 use App\Models\AccessRole;
 use App\Models\User;
+use App\Services\Identity\ApplicationModuleAssignmentService;
 use App\Services\Identity\ApplicationRoleAssignmentService;
 use App\Services\Identity\CentralAccessService;
 use App\Services\Identity\ModuleCatalogService;
@@ -21,13 +22,6 @@ use Illuminate\Support\Facades\Hash;
 final class IdentityAdminController extends Controller
 {
     private const LEGACY_ROLES = ['admin', 'director', 'supervisor', 'trabajador'];
-
-    private const ROLE_MAP = [
-        'admin' => 'administrador',
-        'director' => 'indicadores',
-        'supervisor' => 'consulta_citas',
-        'trabajador' => 'consulta',
-    ];
 
     public function page(): View
     {
@@ -91,7 +85,12 @@ final class IdentityAdminController extends Controller
         self::requireAdmin();
 
         $users = User::query()
-            ->with(['person', 'accessAccount.roles.application', 'accessAccount.roles.permissions.application'])
+            ->with([
+                'person',
+                'accessAccount.roles.application',
+                'accessAccount.roles.permissions.application',
+                'accessAccount.permissionOverrides.application',
+            ])
             ->latest('id')
             ->get()
             ->map(fn (User $user): array => self::serializeUser($user))
@@ -103,63 +102,23 @@ final class IdentityAdminController extends Controller
     public static function crearUsuario(): void
     {
         self::requireAdmin();
-        $input = request()->json()->all();
-        $email = self::normalizeEmail($input['correo'] ?? '');
-        $password = (string) ($input['password'] ?? '');
-        $legacyRole = (string) ($input['rol'] ?? 'trabajador');
 
-        self::validateInput($email, $password, $legacyRole, true);
-
-        if (User::query()->where('email', $email)->exists()) {
-            self::json(['ok' => false, 'message' => 'Ya existe una cuenta con ese correo.'], 409);
-        }
-
-        $role = self::resolveRole($legacyRole, $input['area_id'] ?? null);
-
-        $user = DB::connection('identity')->transaction(function () use ($email, $password, $legacyRole, $role): User {
-            $name = self::displayNameFromEmail($email);
-            $user = User::query()->create([
-                'name' => $name,
-                'email' => $email,
-                'password' => Hash::make($password),
-                'rol' => $role->code,
-                'tipo_usuario' => $legacyRole === 'admin' ? 'administrativo' : 'asistencial',
-                'activo' => true,
-                'registration_source' => 'intranet_hsj',
-            ]);
-
-            $account = AccessAccount::query()->create([
-                'user_id' => $user->id,
-                'username' => self::uniqueUsername($email),
-                'email' => $email,
-                'password' => null,
-                'display_name' => $name,
-                'status' => 'active',
-                'must_change_password' => true,
-                'created_by' => (int) ($_SESSION['ueei_id'] ?? 0) ?: null,
-            ]);
-            app(ApplicationRoleAssignmentService::class)->assign(
-                $account,
-                $role,
-                (int) ($_SESSION['ueei_id'] ?? 0) ?: null,
-            );
-
-            return $user;
-        });
-
-        self::json(['ok' => true, 'message' => 'Usuario creado correctamente.', 'id' => (int) $user->id]);
+        self::json([
+            'ok' => false,
+            'message' => 'Las cuentas se crean validando el DNI y los datos personales de Legajos. Este panel solo administra accesos.',
+        ], 422);
     }
 
     public static function actualizarUsuario(int $id): void
     {
         self::requireAdmin();
         $input = request()->json()->all();
-        $email = self::normalizeEmail($input['correo'] ?? '');
-        $legacyRole = (string) ($input['rol'] ?? 'trabajador');
-        self::validateInput($email, '', $legacyRole, false);
-
-        if (User::query()->where('email', $email)->where('id', '<>', $id)->exists()) {
-            self::json(['ok' => false, 'message' => 'Ya existe otra cuenta con ese correo.'], 409);
+        $protectedFields = ['correo', 'email', 'nombre', 'name', 'dni', 'telefono', 'fecha_nacimiento'];
+        if (array_intersect($protectedFields, array_keys($input)) !== []) {
+            self::json([
+                'ok' => false,
+                'message' => 'Los datos personales son de solo lectura y deben actualizarse desde Legajos.',
+            ], 422);
         }
 
         $user = User::query()->with(['person', 'accessAccount'])->find($id);
@@ -167,35 +126,50 @@ final class IdentityAdminController extends Controller
             self::json(['ok' => false, 'message' => 'Usuario no encontrado.'], 404);
         }
 
-        $role = self::resolveRole($legacyRole, $input['area_id'] ?? null);
+        $role = self::resolveRole($input['area_id'] ?? null);
+        $moduleIds = $input['modulos'] ?? null;
+        if (! is_array($moduleIds)) {
+            self::json(['ok' => false, 'message' => 'Debes indicar los módulos asignados al usuario.'], 422);
+        }
+        $actorAccountId = app(CentralAccessService::class)->user()?->accessAccount?->id;
 
-        DB::connection('identity')->transaction(function () use ($user, $email, $role): void {
-            $user->forceFill(['email' => $email, 'rol' => $role->code])->save();
+        DB::connection('identity')->transaction(function () use ($user, $role, $moduleIds, $actorAccountId): void {
+            $user->forceFill(['rol' => $role->code])->save();
             $account = $user->accessAccount;
 
             if (! $account) {
                 $account = AccessAccount::query()->create([
                     'user_id' => $user->id,
-                    'username' => self::uniqueUsername($email),
-                    'email' => $email,
+                    'person_id' => $user->person_id,
+                    'username' => $user->registration_document_number ?: (string) $user->id,
+                    'email' => $user->email,
                     'display_name' => $user->name,
                     'status' => $user->activo ? 'active' : 'inactive',
                     'must_change_password' => false,
-                    'created_by' => (int) ($_SESSION['ueei_id'] ?? 0) ?: null,
+                    'created_by' => $actorAccountId,
                 ]);
-            } else {
-                $account->forceFill(['email' => $email])->save();
             }
 
             app(ApplicationRoleAssignmentService::class)->assign(
                 $account,
                 $role,
-                (int) ($_SESSION['ueei_id'] ?? 0) ?: null,
+                $actorAccountId,
+            );
+            app(ApplicationModuleAssignmentService::class)->sync(
+                $account,
+                $role,
+                $moduleIds,
+                $actorAccountId,
             );
         });
 
         $updatedUser = User::query()
-            ->with(['accessAccount.roles.application', 'accessAccount.roles.permissions.application'])
+            ->with([
+                'person',
+                'accessAccount.roles.application',
+                'accessAccount.roles.permissions.application',
+                'accessAccount.permissionOverrides.application',
+            ])
             ->findOrFail($id);
 
         if ($id === (int) ($_SESSION['ueei_id'] ?? 0)) {
@@ -282,6 +256,11 @@ final class IdentityAdminController extends Controller
 
     private static function serializeUser(User $user): array
     {
+        $personName = collect([
+            $user->person?->names,
+            $user->person?->paternal_last_name,
+            $user->person?->maternal_last_name,
+        ])->filter()->implode(' ');
         $application = (string) config('access.application');
         $roles = $user->accessAccount?->roles
             ->filter(fn ($role): bool => $role->application?->code === $application && $role->application?->is_active)
@@ -292,11 +271,12 @@ final class IdentityAdminController extends Controller
 
         return [
             'id' => (int) $user->id,
-            'correo' => $user->email,
-            'nombre' => $user->name,
-            'dni' => $user->registration_document_number,
+            'correo' => $user->person?->email ?: $user->email,
+            'nombre' => $personName ?: $user->name,
+            'dni' => $user->person?->document_number ?: $user->registration_document_number,
             'telefono' => $user->person?->phone,
             'fecha_nacimiento' => $user->person?->birth_date?->format('Y-m-d'),
+            'fuente_datos' => 'Legajos / HSJ_Identity',
             'rol' => self::legacyRole($primaryRole?->code ?? $user->rol),
             'area_id' => $primaryRole?->id ? (int) $primaryRole->id : null,
             'area_nombre' => $primaryRole?->name,
@@ -314,7 +294,7 @@ final class IdentityAdminController extends Controller
         ];
     }
 
-    private static function resolveRole(string $legacyRole, mixed $roleId): AccessRole
+    private static function resolveRole(mixed $roleId): AccessRole
     {
         if ((int) $roleId > 0) {
             $selected = self::rolesQuery()->find((int) $roleId);
@@ -323,9 +303,7 @@ final class IdentityAdminController extends Controller
             }
         }
 
-        $code = self::ROLE_MAP[$legacyRole] ?? 'consulta';
-
-        return self::rolesQuery()->where('access_roles.code', $code)->firstOrFail();
+        self::json(['ok' => false, 'message' => 'Selecciona un rol válido para Intranet HSJ.'], 422);
     }
 
     private static function rolesQuery()
@@ -333,19 +311,6 @@ final class IdentityAdminController extends Controller
         return AccessRole::query()->whereHas('application', fn ($query) => $query
             ->where('code', config('access.application'))
             ->where('is_active', true));
-    }
-
-    private static function validateInput(string $email, string $password, string $role, bool $requiresPassword): void
-    {
-        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            self::json(['ok' => false, 'message' => 'El correo no es válido.'], 400);
-        }
-        if ($requiresPassword && (strlen($password) < 8 || strlen($password) > 72)) {
-            self::json(['ok' => false, 'message' => 'La contraseña debe tener entre 8 y 72 caracteres.'], 400);
-        }
-        if (! in_array($role, self::LEGACY_ROLES, true)) {
-            self::json(['ok' => false, 'message' => 'Rol inválido.'], 400);
-        }
     }
 
     private static function legacyRole(string $code): string
@@ -383,28 +348,6 @@ final class IdentityAdminController extends Controller
                 )
             )
         ));
-    }
-
-    private static function displayNameFromEmail(string $email): string
-    {
-        return ucwords(str_replace(['.', '_', '-'], ' ', strstr($email, '@', true) ?: $email));
-    }
-
-    private static function normalizeEmail(mixed $email): string
-    {
-        return mb_strtolower(trim((string) $email));
-    }
-
-    private static function uniqueUsername(string $email): string
-    {
-        $base = substr((string) (strstr($email, '@', true) ?: 'usuario'), 0, 50);
-        $candidate = $base;
-        $suffix = 1;
-        while (AccessAccount::query()->where('username', $candidate)->exists()) {
-            $candidate = substr($base, 0, 50).'-'.$suffix++;
-        }
-
-        return $candidate;
     }
 
     private static function json(array $payload, int $status = 200): never

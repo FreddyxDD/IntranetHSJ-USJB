@@ -13,7 +13,7 @@ importaciones, pero no administra cuentas.
 
 ## Modelo de autorización
 
-La autorización se compone de cuatro elementos centrales:
+La autorización se compone de cinco elementos centrales:
 
 1. **Aplicación:** sistema registrado, por ejemplo `intranet_hsj`.
 2. **Permiso:** capacidad atómica con nombre estable, por ejemplo
@@ -21,9 +21,32 @@ La autorización se compone de cuatro elementos centrales:
 3. **Rol o perfil:** agrupación reutilizable de permisos dentro de una
    aplicación.
 4. **Cuenta:** usuario central al que se asignan uno o más perfiles.
+5. **Excepción por cuenta:** concesión o revocación puntual de un permiso para
+   una cuenta, sin modificar el rol compartido ni otras aplicaciones.
 
 Los aplicativos consultan los permisos efectivos de la sesión. Nunca deben
 inferir privilegios a partir del nombre, correo, cargo o una tabla local.
+
+El permiso efectivo se resuelve en este orden: una excepción explícita de la
+cuenta para la aplicación activa tiene prioridad; si no existe, se utiliza el
+permiso heredado del rol. La tabla
+`access_account_permission_overrides` registra `account_id`, `permission_id`,
+`is_granted`, fecha y administrador responsable. El panel elimina las
+excepciones redundantes cuando la selección coincide con el rol base.
+
+## Propiedad de los datos personales
+
+Legajos es responsable de nombres, apellidos, DNI, correo, teléfono, fecha de
+nacimiento y vínculo laboral. Estos datos se consultan desde `people` y
+`personnel_records` y son de solo lectura para el portal padre y todos los
+módulos hijos.
+
+El panel administrativo de Intranet únicamente puede cambiar el rol de
+`intranet_hsj`, sus módulos autorizados, el estado de acceso y las credenciales
+de la cuenta. La API rechaza los campos personales aunque una interfaz externa
+intente enviarlos manualmente. Las cuentas nuevas deben originarse en el flujo
+de validación por DNI; no se permite crear identidades manualmente desde el
+mantenimiento de accesos.
 
 ## Autoservicio de registro institucional
 
@@ -142,6 +165,9 @@ y `administrador` conserva todas las capacidades.
 
 El módulo no contiene un CRUD propio de cuentas. Los cambios posteriores a
 esta matriz se realizan en `HSJ_Identity`, no en la base operativa de Cirugías.
+Cada usuario encuentra **Mi perfil** y **Cerrar sesión** en el menú de su nombre
+del navbar; **Administrar accesos** aparece allí exclusivamente para el
+administrador central.
 
 ## Estándar para aplicaciones nuevas
 

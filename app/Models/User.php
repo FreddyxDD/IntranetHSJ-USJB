@@ -43,6 +43,15 @@ final class User extends Authenticatable
     {
         $application ??= (string) config('access.application');
 
+        $override = $this->accessAccount?->permissionOverrides
+            ->first(fn (AccessPermission $permission): bool => $permission->code === $code
+                && $permission->application?->code === $application
+            );
+
+        if ($override) {
+            return (bool) $override->pivot->is_granted;
+        }
+
         return $this->accessAccount?->roles
             ->contains(fn (AccessRole $role): bool => $role->application?->code === $application
                 && $role->application?->is_active
